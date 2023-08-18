@@ -12,8 +12,6 @@ from functions import utils as ut
 
 conn = ut.create_db()
 player_data = ut.select_game_shot(conn)
-xlocs = player_data['XSPOT']
-ylocs = player_data['YSPOT']
 games = player_data['GAME_ID'].unique()
 team_selected = st.multiselect('Choose Games', games)
 this_game = player_data[player_data['GAME_ID'].isin(team_selected)]
@@ -32,15 +30,23 @@ def ellipse_arc(x_center=0.0, y_center=0.0, a=8.5, b=8.5, start_angle=0.0, end_a
 
 if team_selected:
     totals = this_game.groupby(by=['GAME_ID', 'SHOT_SPOT', 'XSPOT', 'YSPOT'], as_index=False)[['MAKE', 'ATTEMPT']].sum()
+    totals['POINT_VALUE'] = totals['SHOT_SPOT'].str.strip().str[-1].astype('int64')
     totals['MAKE_PERCENT'] = totals['MAKE']/(totals['ATTEMPT'].replace(0, 1))
+    totals['POINTS_PER_ATTEMPT'] = (totals['MAKE'] * totals['POINT_VALUE']) / totals['ATTEMPT'].replace(0, 1)
+    xlocs = totals['XSPOT']
+    ylocs = totals['YSPOT']
     print(totals)
     freq_by_hex = totals['ATTEMPT']
-    accs_by_hex = totals['MAKE_PERCENT']
-    marker_cmin = 0.2
-    marker_cmax = 0.7
-    ticktexts = [str(marker_cmin*100)+'%-', "", str(marker_cmax*100)+'%+']
+    accs_by_hex = totals['POINTS_PER_ATTEMPT']
+    spot = totals['SHOT_SPOT']
+    marker_cmin = 0.0
+    marker_cmax = 1.5
+    ticktexts = [str(marker_cmin)+'-', "", str(marker_cmax)+'+']
     hexbin_text = [
-        '<i>Shooting Percentage: </i>' + str(round(accs_by_hex[i]*100, 1)) + '%<BR>'
+        '<i>Points Per Attempt: </i>' + str(round(accs_by_hex[i], 1)) + '<BR>'
+        '<i>Spot: </i>' + str((spot[i])) + '<BR>'
+        '<i>XSpot: </i>' + str((xlocs[i])) + '<BR>'
+        '<i>YSpot: </i>' + str((ylocs[i])) + '<BR>'
         '<i>Attempts: </i>' + str(round(freq_by_hex[i], 2))
         for i in range(len(freq_by_hex))
     ]
@@ -66,7 +72,7 @@ if team_selected:
             yanchor='middle',
             len=0.2,
             title=dict(
-                text="<B>Accuracy</B>",
+                text="<B>Points Per Attempt</B>",
                 font=dict(
                     size=11,
                     color='#4d4d4d'

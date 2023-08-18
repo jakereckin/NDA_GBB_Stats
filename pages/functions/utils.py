@@ -5,11 +5,9 @@ import os
 
 def create_db():
     #conn = sql.connect(r'C:\Users\Jake\Documents\GitHub\NDA_GBB_Stats\NDA_BB.db', 
-    #                   check_same_thread=False
-    #)
+   #                    check_same_thread=False
+   # )
     conn = sql.connect('NDA_BB.db', check_same_thread=False)
-    #conn = sql.connect(r'C:\Users\Jake\Documents\GitHub\Katelyn_School_DP\kmo13.db',
-    #                    check_same_thread=False)
     return conn
 
 def close_db(conn):
