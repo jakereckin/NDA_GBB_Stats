@@ -10,6 +10,8 @@ import plotly.express as px
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from functions import utils as ut
 
+st.set_page_config(initial_sidebar_state='expanded')
+
 conn = ut.create_db()
 player_data = ut.select_game_shot(conn)
 games = player_data['GAME_ID'].unique()

@@ -13,7 +13,7 @@ players = ut.select_players(conn)
 spots = ut.select_spot(conn)
 game = ut.select_games(conn)
 
-st.set_page_config('Game Shots')
+st.set_page_config('Game Shots', initial_sidebar_state='expanded')
 st.sidebar.header('Add Shots')
 
 with st.form('Player Shot', clear_on_submit=True):
