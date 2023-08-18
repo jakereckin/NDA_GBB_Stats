@@ -44,9 +44,6 @@ if team_selected:
     ticktexts = [str(marker_cmin)+'-', "", str(marker_cmax)+'+']
     hexbin_text = [
         '<i>Points Per Attempt: </i>' + str(round(accs_by_hex[i], 1)) + '<BR>'
-        '<i>Spot: </i>' + str((spot[i])) + '<BR>'
-        '<i>XSpot: </i>' + str((xlocs[i])) + '<BR>'
-        '<i>YSpot: </i>' + str((ylocs[i])) + '<BR>'
         '<i>Attempts: </i>' + str(round(freq_by_hex[i], 2))
         for i in range(len(freq_by_hex))
     ]
