@@ -4,9 +4,10 @@ import os
 
 
 def create_db():
-    conn = sql.connect(r'C:\Users\Jake\Documents\GitHub\NDA_GBB_Stats\NDA_BB.db', 
-                       check_same_thread=False
-    )
+    #conn = sql.connect(r'C:\Users\Jake\Documents\GitHub\NDA_GBB_Stats\NDA_BB.db', 
+    #                   check_same_thread=False
+    #)
+    conn = sql.connect('NDA_BB.db', check_same_thread=False)
     #conn = sql.connect(r'C:\Users\Jake\Documents\GitHub\Katelyn_School_DP\kmo13.db',
     #                    check_same_thread=False)
     return conn
@@ -56,7 +57,9 @@ def create_player_shot(conn):
 def create_shot_spots(conn):
     cursor = conn.cursor()
     CREATE = """ CREATE TABLE IF NOT EXISTS SPOT (
-        SPOT VARCHAR(255) NOT NULL
+        SPOT VARCHAR(255) NOT NULL,
+        XSPOT INTEGER NOT NULL,
+        YSPOT INTEGER NOT NULL
     )
     """
     cursor.execute(CREATE)
@@ -120,18 +123,18 @@ def insert_games(conn, data):
     cursor.close()
     return None
 
-def insert_games(conn, data):
+def insert_spot(conn, data):
     cursor = conn.cursor()
-    GAME_SHOT = """ INSERT INTO GAME_SHOT VALUES(?, ?, ?, ?) """
-    cursor.executemany(GAME_SHOT, data)
+    INSERT_SPOT = """ INSERT INTO SPOT VALUES(?, ?, ?) """
+    cursor.executemany(INSERT_SPOT, data)
     conn.commit()
     cursor.close()
     return None
 
-def insert_spot(conn, data):
+def insert_player_shot_spot(conn, data):
     cursor = conn.cursor()
-    INSERT_SPOT = """ INSERT INTO SPOT VALUES(?) """
-    cursor.executemany(INSERT_SPOT, data)
+    GAME_SHOT = """ INSERT INTO GAME_SHOT VALUES(?, ?, ?, ?) """
+    cursor.executemany(GAME_SHOT, data)
     conn.commit()
     cursor.close()
     return None
@@ -159,8 +162,20 @@ def select_spot(conn):
 
 def select_game_shot(conn):
     SELECT = """ 
-    SELECT *
+    SELECT GAME_ID,
+           PLAYER_ID,
+           SHOT_SPOT,
+           CASE
+             WHEN MAKE_MISS = 'Y'
+               THEN 1
+             ELSE 0
+           END AS MAKE,
+           1 AS ATTEMPT,
+           SPOT.XSPOT,
+           SPOT.YSPOT
        FROM GAME_SHOT
+       INNER JOIN SPOT
+         ON SPOT.SPOT = GAME_SHOT.SHOT_SPOT
     """
     df = pd.read_sql_query(SELECT, conn)
     return df
