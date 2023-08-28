@@ -37,8 +37,8 @@ if team_selected:
     totals['POINTS_PER_ATTEMPT'] = (totals['MAKE'] * totals['POINT_VALUE']) / totals['ATTEMPT'].replace(0, 1)
     xlocs = totals['XSPOT']
     ylocs = totals['YSPOT']
-    totals_sorted = totals.sort_values(by=['POINTS_PER_ATTEMPT', 'ATTEMPTS'], ascending=False)
-    totals_sorted = totals_sorted[totals_sorted['ATTEMPTS'] > 1]
+    totals_sorted = totals.sort_values(by=['POINTS_PER_ATTEMPT', 'ATTEMPT'], ascending=False)
+    totals_sorted = totals_sorted[totals_sorted['ATTEMPT'] > 1]
     st.header('Top 5 Spots')
     st.dataframe(totals_sorted.head(5), use_container_width=True)
     freq_by_hex = totals['ATTEMPT']
