@@ -4,10 +4,14 @@ import os
 
 
 def create_db():
-    #conn = sql.connect(r'C:\Users\Jake\Documents\GitHub\NDA_GBB_Stats\NDA_BB.db', 
-    #                   check_same_thread=False
-    #)
-    conn = sql.connect('NDA_BB.db', check_same_thread=False)
+    if os.path.exists(r'C:\Users\Jake\Documents\GitHub\NDA_GBB_Stats'):
+        conn = sql.connect(r'C:\Users\Jake\Documents\GitHub\NDA_GBB_Stats\NDA_BB.db', 
+                           check_same_thread=False
+        )
+    else:
+        conn = sql.connect('NDA_BB.db', 
+                           check_same_thread=False
+        )
     return conn
 
 def close_db(conn):
