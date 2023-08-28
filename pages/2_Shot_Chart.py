@@ -39,6 +39,11 @@ if team_selected:
     ylocs = totals['YSPOT']
     totals_sorted = totals.sort_values(by=['POINTS_PER_ATTEMPT', 'ATTEMPT'], ascending=False)
     totals_sorted = totals_sorted[totals_sorted['ATTEMPT'] > 1]
+    totals_sorted = totals_sorted[['SHOT_SPOT',
+                                   'MAKE',
+                                   'ATTEMPT',
+                                   'MAKE_PERCENT',
+                                   'POINTS_PER_ATTEMPT']]
     st.header('Top 5 Spots')
     st.dataframe(totals_sorted.head(5), use_container_width=True)
     freq_by_hex = totals['ATTEMPT']
