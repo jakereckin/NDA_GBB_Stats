@@ -18,12 +18,38 @@ def close_db(conn):
     conn.close()
     return None
 
+def create_game_summary(conn):
+    cursor = conn.cursor()
+    CREATE = """ CREATE TABLE IF NOT EXISTS GAME_SUMMARY_STATS (
+    PLAYER_ID VARCHAR(255) NOT NULL,
+    GAME_ID VARCHAR(255) NOT NULL,
+    TWO_FGA INTEGER NOT NULL,
+    TWO_FGM INTEGER NOT NULL,
+    THREE_FGA INTEGER NOT NULL,
+    THREE_FGM INTEGER NOT NULL,
+    FTA INTEGER NOT NULL,
+    FTM INTEGER NOT NULL,
+    ASSITS INTEGER NOT NULL,
+    TURNOVER INTEGER NOT NULL,
+    OFFENSIVE_REBOUNDS INTEGER NOT NULL,
+    DEFENSIVE_REBOUNDS INTEGER NOT NULL,
+    BLOCKS INTEGER NOT NULL,
+    STEALS INTEGER NOT NULL,
+    PRIMARY KEY (PLAYER_ID, GAME_ID)
+    )"""
+    cursor.execute(CREATE)
+    conn.commit()
+    cursor.close()
+    return None
+
 def create_players(conn):
     cursor = conn.cursor()
     CREATE = """ CREATE TABLE IF NOT EXISTS PLAYERS (
         NUMBER VARCHAR(255) NOT NULL,
         FIRST_NAME VARCHAR(255) NOT NULL,
-        LAST_NAME VARCHAR(255) NOT NULL)
+        LAST_NAME VARCHAR(255) NOT NULL,
+        YEAR VARCHAR(255) NOT NULL
+        )
     """
     cursor.execute(CREATE)
     conn.commit()
@@ -34,7 +60,10 @@ def create_games(conn):
     cursor = conn.cursor()
     CREATE = """ CREATE TABLE IF NOT EXISTS GAMES (
         GAME_ID VARCHAR(255) NOT NULL,
-        OPPONENT VARCHAR(25) NOT NULL
+        OPPONENT VARCHAR(255) NOT NULL,
+        LOCATION VARCHAR(255) NOT NULL,
+        DATE VARCHAR(255) NOT NULL,
+        SEASON VARCHAR(255) NOT NULL
     )
     """
     cursor.execute(CREATE)
@@ -42,13 +71,19 @@ def create_games(conn):
     cursor.close()
     return None
 
-def create_player_shot(conn):
+def create_event(conn):
     cursor = conn.cursor()
-    CREATE = """ CREATE TABLE IF NOT EXISTS GAME_SHOT (
+    CREATE = """ CREATE TABLE IF NOT EXISTS PLAY_EVENT (
         GAME_ID VARCHAR(255) NOT NULL,
         PLAYER_ID VARCHAR(255) NOT NULL,
-        SHOT_SPOT VARCHAR(255) NOT NULL,
-        MAKE_MISS VARCHAR(25) NOT NULL
+        TIME VARCHAR(255) NOT NULL,
+        HALF VARCHAR(25) NOT NULL,
+        EVENT_TYPE VARCHAR(255) NOT NULL,
+        TEAM_SCORE VARCHAR(255) NOT NULL,
+        OPPONENT_SCORE VARCHAR(255) NOT NULL,
+        SHOT_SPOT VARCHAR(255),
+        SHOT_DEFENSE VARCHAR(255),
+        MAKE_MISS VARCHAR(25)
     )
     """
     cursor.execute(CREATE)
@@ -99,10 +134,28 @@ def drop_spots(conn):
     cursor.close()
     return None
 
-def drop_shot_game(conn):
+def drop_event(conn):
     cursor = conn.cursor()
     DROP = """ 
-    DROP TABLE GAME_SHOT;
+    DROP TABLE PLAY_EVENT;
+    """
+    cursor.execute(DROP)
+    conn.commit()
+    cursor.close()
+    return None
+
+def insert_game_data (conn, data):
+    cursor = conn.cursor()
+    INSERT_DATA = """ INSERT OR REPLACE INTO GAME_SUMMARY_STATS VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+    cursor.executemany(INSERT_DATA, data)
+    conn.commit()
+    cursor.close()
+    return None
+
+def drop_game_summary(conn):
+    cursor = conn.cursor()
+    DROP = """ 
+    DROP TABLE GAME_SUMMARY_STATS;
     """
     cursor.execute(DROP)
     conn.commit()
@@ -111,7 +164,7 @@ def drop_shot_game(conn):
 
 def insert_players(conn, data):
     cursor = conn.cursor()
-    INSERT_PLAYER = """ INSERT INTO PLAYERS VALUES (?, ?, ?)"""
+    INSERT_PLAYER = """ INSERT INTO PLAYERS VALUES (?, ?, ?, ?)"""
     cursor.executemany(INSERT_PLAYER, data)
     conn.commit()
     cursor.close()
@@ -119,7 +172,7 @@ def insert_players(conn, data):
 
 def insert_games(conn, data):
     cursor = conn.cursor()
-    INSERT_GAMES = """ INSERT INTO GAMES VALUES(?, ?) """
+    INSERT_GAMES = """ INSERT INTO GAMES VALUES(?, ?, ?, ?, ? ) """
     cursor.executemany(INSERT_GAMES, data)
     conn.commit()
     cursor.close()
@@ -133,13 +186,18 @@ def insert_spot(conn, data):
     cursor.close()
     return None
 
-def insert_player_shot_spot(conn, data):
+def insert_event(conn, data):
     cursor = conn.cursor()
-    GAME_SHOT = """ INSERT INTO GAME_SHOT VALUES(?, ?, ?, ?) """
+    GAME_SHOT = """ INSERT INTO PLAY_EVENT VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?) """
     cursor.executemany(GAME_SHOT, data)
     conn.commit()
     cursor.close()
     return None
+
+def select_game_summary(conn):
+    SELECT = "SELECT * FROM GAME_SUMMARY_STATS"
+    df = pd.read_sql_query(SELECT, conn)
+    return df
 
 def select_players(conn):
     SELECT = "SELECT * FROM PLAYERS"
@@ -164,7 +222,11 @@ def select_spot(conn):
 
 def select_game_shot(conn):
     SELECT = """ 
-    SELECT GAME_ID,
+    SELECT GAMES.OPPONENT + ' ' + GAMES.DATE AS GAME,
+           GAMES.GAME_ID,
+           PLAY_EVENT.GAME_ID AS T_ID,
+           GAMES.OPPONENT,
+           GAMES.DATE,
            PLAYER_ID,
            SHOT_SPOT,
            CASE
@@ -175,9 +237,12 @@ def select_game_shot(conn):
            1 AS ATTEMPT,
            SPOT.XSPOT,
            SPOT.YSPOT
-       FROM GAME_SHOT
+       FROM PLAY_EVENT
        INNER JOIN SPOT
-         ON SPOT.SPOT = GAME_SHOT.SHOT_SPOT
+         ON SPOT.SPOT = PLAY_EVENT.SHOT_SPOT
+       INNER JOIN GAMES 
+         ON GAMES.GAME_ID = PLAY_EVENT.GAME_ID
+       WHERE PLAY_EVENT.EVENT_TYPE = 'SHOT_ATTEMPT'
     """
     df = pd.read_sql_query(SELECT, conn)
     return df

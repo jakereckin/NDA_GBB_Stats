@@ -1,4 +1,3 @@
-
 from matplotlib.patches import Circle, Rectangle, Arc
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,6 +6,7 @@ import plotly.graph_objects as go
 import sys
 import os
 import plotly.express as px
+import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from functions import utils as ut
 
@@ -14,11 +14,28 @@ st.set_page_config(initial_sidebar_state='expanded')
 
 conn = ut.create_db()
 player_data = ut.select_game_shot(conn)
-games = player_data['GAME_ID'].unique()
+player_data['U_ID'] = (player_data['OPPONENT']
+                       + ' - '
+                       + player_data['DATE']
+)
+games = player_data['U_ID'].unique()
 team_selected = st.multiselect('Choose Games', games)
-this_game = player_data[player_data['GAME_ID'].isin(team_selected)]
+return_frame = pd.DataFrame(team_selected, columns=['U_ID'])
+return_frame['OPP'] = return_frame['U_ID'].str.split(' - ').str[0]
+return_frame['DATE'] = return_frame['U_ID'].str.split(' - ').str[1]
+opps = return_frame['OPP'].unique().tolist()
+dates = return_frame['DATE'].unique().tolist()
+this_game = player_data[(player_data['OPPONENT'].isin(opps))
+                        & (player_data['DATE'].isin(dates))]
 
-def ellipse_arc(x_center=0.0, y_center=0.0, a=8.5, b=8.5, start_angle=0.0, end_angle=2 * np.pi, N=200, closed=False):
+def ellipse_arc(x_center=0.0,
+                 y_center=0.0, 
+                 a=8.5, 
+                 b=8.5, 
+                 start_angle=0.0, 
+                 end_angle=2 * np.pi, 
+                 N=200, 
+                 closed=False):
         t = np.linspace(start_angle, end_angle, N)
         x = x_center + a * np.cos(t)
         y = y_center + b * np.sin(t)
@@ -31,7 +48,7 @@ def ellipse_arc(x_center=0.0, y_center=0.0, a=8.5, b=8.5, start_angle=0.0, end_a
 
 
 if team_selected:
-    totals = this_game.groupby(by=['GAME_ID', 'SHOT_SPOT', 'XSPOT', 'YSPOT'], as_index=False)[['MAKE', 'ATTEMPT']].sum()
+    totals = this_game.groupby(by=['GAME', 'SHOT_SPOT', 'XSPOT', 'YSPOT'], as_index=False)[['MAKE', 'ATTEMPT']].sum()
     totals['POINT_VALUE'] = totals['SHOT_SPOT'].str.strip().str[-1].astype('int64')
     totals['MAKE_PERCENT'] = totals['MAKE']/(totals['ATTEMPT'].replace(0, 1))
     totals['POINTS_PER_ATTEMPT'] = (totals['MAKE'] * totals['POINT_VALUE']) / totals['ATTEMPT'].replace(0, 1)
