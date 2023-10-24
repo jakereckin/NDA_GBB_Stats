@@ -1,7 +1,11 @@
 import pandas as pd
 import sqlite3 as sql
 import os
-
+import smtplib
+import ssl 
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
 
 def create_db():
     if os.path.exists(r'C:\Users\Jake\Documents\GitHub\NDA_GBB_Stats'):
@@ -246,3 +250,19 @@ def select_game_shot(conn):
     """
     df = pd.read_sql_query(SELECT, conn)
     return df
+
+def my_email(password):
+    msg = MIMEMultipart()
+    msg['From'] = 'jjrekn@gmail.com'
+    msg['To'] = 'jjrekn@gmail.com'
+    msg['Subject'] = 'Homework Submission'
+    attachment = MIMEApplication()
+    attachment["Content-Disposition"] = 'attachment; filename=" {}"'.format("NDA_BB.db")
+    msg.attach(attachment)
+
+    with smtplib.SMTP('smtp.gmail.com', 587) as e:
+        e.ehlo()
+        e.starttls(context=ssl.create_default_context())
+        e.login('jjrekn@gmail.com', password=password.strip())
+        e.sendmail('jjrekn@gmail.com', 'jjrekn@gmail.com', msg.as_string())
+    return None
