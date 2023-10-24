@@ -124,17 +124,31 @@ season_list = game_summary['SEASON'].unique().tolist()
 season = st.multiselect(label='Select Season',
                         options=season_list
 )
-game_summary_season = game_summary[game_summary['SEASON'].isin(season)]
-games_list = game_summary_season['LABEL'].unique().tolist()
-game = st.multiselect(label='Select Games',
-                      options=games_list
-)
-final_data = game_summary_season[game_summary_season['LABEL'].isin(game)]
-data_list = st.selectbox(label='Select Stat',
-                         options=list_of_stats
-)
 if season_list:
+    game_summary_season = game_summary[game_summary['SEASON'].isin(season)]
+    games_list = game_summary_season['LABEL'].unique().tolist()
+    game = st.multiselect(label='Select Games',
+                        options=games_list
+    )
     if games_list:
+        final_data = game_summary_season[game_summary_season['LABEL'].isin(game)]
+        table = (pd.DataFrame(final_data[list_of_stats].mean())
+                   .T
+        )
+        st.dataframe(table, 
+                     use_container_width=True, 
+                     hide_index=True
+                     )
+        data_list = st.radio(label='Select Stat',
+                             options=list_of_stats,
+                             horizontal=True
+        )
         if data_list:
-            fig = px.bar(final_data, x=data_list, y='NAME', orientation='h')
+            final_data[data_list] = final_data[data_list].round(2)
+            fig = px.bar(final_data, 
+                         x=data_list, 
+                         y='NAME', 
+                         orientation='h',
+                         text=data_list
+            )
             st.plotly_chart(fig, use_container_width=True)
