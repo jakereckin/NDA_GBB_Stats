@@ -14,8 +14,7 @@ with open("NDA_BB.db", "rb") as fp:
         label="Download DB File",
         data=fp,
         file_name="NDA_BB.db",
-        mime="application/octet-stream",
-        type='primary'
+        mime="application/octet-stream"
     )
     if btn:
         ut.my_email(st.secrets['email_password'])
