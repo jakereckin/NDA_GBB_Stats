@@ -1,15 +1,6 @@
 import pandas as pd
 import sqlite3 as sql
 import os
-import smtplib
-import ssl 
-from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
-from email.mime.multipart import MIMEMultipart
-import base64
-from email.mime.base import MIMEBase
-import mimetypes
-from email import encoders
 
 def create_db():
     if os.path.exists(r'C:\Users\Jake\Documents\GitHub\NDA_GBB_Stats'):
@@ -254,28 +245,3 @@ def select_game_shot(conn):
     """
     df = pd.read_sql_query(SELECT, conn)
     return df
-
-def my_email(password):
-    ctype, encoding = mimetypes.guess_type('NDA_BB.db')
-    maintype, subtype = ctype.split('/', 1)
-    msg = MIMEMultipart()
-    msg['From'] = 'jjrekn@gmail.com'
-    msg['To'] = 'jjrekn@gmail.com'
-    msg['Subject'] = 'Homework Submission'
-    fp = open('NDA_BB.db', 'rb')
-    part = MIMEBase(maintype, subtype)
-    part.set_payload(fp.read())
-    fp.close()
-    # Encode the payload using Base64
-    encoders.encode_base64(part)
-    part.set_payload(part.get_payload().decode())
-        
-    part.add_header('Content-Disposition', 'attachment', filename='NDA_BB.db')
-    msg.attach(part)
-
-    with smtplib.SMTP('smtp.gmail.com', 587) as e:
-        e.ehlo()
-        e.starttls(context=ssl.create_default_context())
-        e.login('jjrekn@gmail.com', password=password.strip())
-        e.sendmail('jjrekn@gmail.com', 'jjrekn@gmail.com', msg.as_string())
-    return None

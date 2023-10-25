@@ -16,5 +16,3 @@ with open("NDA_BB.db", "rb") as fp:
         file_name="NDA_BB.db",
         mime="application/octet-stream"
     )
-    if btn:
-        ut.my_email(st.secrets['email_password'])
