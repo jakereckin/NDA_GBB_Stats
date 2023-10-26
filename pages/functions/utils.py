@@ -47,7 +47,8 @@ def create_players(conn):
         NUMBER VARCHAR(255) NOT NULL,
         FIRST_NAME VARCHAR(255) NOT NULL,
         LAST_NAME VARCHAR(255) NOT NULL,
-        YEAR VARCHAR(255) NOT NULL
+        YEAR VARCHAR(255) NOT NULL,
+        PRIMARY KEY (NUMBER, YEAR)
         )
     """
     cursor.execute(CREATE)
@@ -62,7 +63,8 @@ def create_games(conn):
         OPPONENT VARCHAR(255) NOT NULL,
         LOCATION VARCHAR(255) NOT NULL,
         DATE VARCHAR(255) NOT NULL,
-        SEASON VARCHAR(255) NOT NULL
+        SEASON VARCHAR(255) NOT NULL,
+        PRIMARY KEY (GAME_ID)
     )
     """
     cursor.execute(CREATE)
