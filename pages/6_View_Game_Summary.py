@@ -28,6 +28,10 @@ def get_games(game_summary, games):
                             left_on='PLAYER_ID',
                             right_on='NUMBER'
     )
+    game_summary['LABEL'] = (game_summary['OPPONENT']
+                            + ' - '
+                            + game_summary['DATE']
+    )
     game_summary['NAME'] = (game_summary['FIRST_NAME']
                             + ' '
                             + game_summary['LAST_NAME']
@@ -42,6 +46,7 @@ def get_games(game_summary, games):
                             + (3*game_summary['THREE_FGM'])
                             + (game_summary['FGM'])
     )
+    team_data = game_summary.copy().groupby(by='LABEL', as_index=False).sum()
     def get_ppa_two(row):
         total_points = 2 * row['TWO_FGM']
         total_attempts = row['TWO_FGA']
@@ -104,14 +109,28 @@ def get_games(game_summary, games):
     game_summary['PPA'] = game_summary.apply(get_total_ppa, 
                                             axis='columns'
     )
-    game_summary['LABEL'] = (game_summary['OPPONENT']
-                            + ' - '
-                            + game_summary['DATE']
+    team_data['OFFENSIVE_EFFICENCY'] = team_data.apply(offensive_efficiency, 
+                                                            axis='columns'
     )
-    return game_summary
+    team_data['EFF_POINTS'] = team_data.apply(efficient_offense, 
+                                                    axis='columns'
+    )
+    team_data['EFG%'] = team_data.apply(effective_fgp, 
+                                            axis='columns'
+    )
+    team_data['2PPA'] = team_data.apply(get_ppa_two, 
+                                            axis='columns'
+    )
+    team_data['3PPA'] = team_data.apply(get_ppa_three, 
+                                            axis='columns'
+    )
+    team_data['PPA'] = team_data.apply(get_total_ppa, 
+                                            axis='columns'
+    )
+    return game_summary, team_data
 
-game_summary = get_games(game_summary=game_summary,
-                         games=games
+game_summary, team_data = get_games(game_summary=game_summary,
+                                    games=games
 )
 list_of_stats = ['OFFENSIVE_EFFICENCY',
                  'EFF_POINTS',
@@ -128,14 +147,14 @@ if season_list:
     game_summary_season = game_summary[game_summary['SEASON'].isin(season)]
     games_list = game_summary_season['LABEL'].unique().tolist()
     game = st.multiselect(label='Select Games',
-                        options=games_list
+                          options=games_list
     )
     if games_list:
         final_data = game_summary_season[game_summary_season['LABEL'].isin(game)]
-        table = (pd.DataFrame(final_data[list_of_stats].mean())
-                   .T
-        )
-        st.dataframe(table, 
+        team_data = team_data[team_data['LABEL'].isin(game)]
+        team_data = team_data[list_of_stats].round(2)
+        st.text('Team Level Data')
+        st.dataframe(team_data, 
                      use_container_width=True, 
                      hide_index=True
                      )
