@@ -33,7 +33,10 @@ event_types = ['SHOT_ATTEMPT',
                'DEFLECTION',
                'HUSTLE_PLAY',
                'SUB_IN',
-               'SUB_OUT'
+               'SUB_OUT',
+               'DREW FOUL',
+               'COMMIT FOUL'
+
 ]
 half = ['FIRST HALF',
         'SECOND_HALF',
@@ -57,8 +60,9 @@ min_sec['MIN_SEC'] = (min_sec['MINS'].astype('str')
                       + min_sec['SECS'].astype('str')
 )
 min_sec_20 = (min_sec.head(1201)
-                     .drop(columns=['MINS', 'TMP', 'SECS'])
-                     #.sort_values(by='MIN_SEC')
+                     .drop(columns=['MINS', 
+                                    'TMP', 
+                                    'SECS'])
 )
 min_list = min_sec_20['MIN_SEC'].unique().tolist()
 st.set_page_config('Game Shots', initial_sidebar_state='expanded')
@@ -78,7 +82,7 @@ with st.form('Play Event', clear_on_submit=True):
                         horizontal=True
     )
     min_val = st.select_slider(label='Time Left',
-                           options=min_list
+                           options=reversed(min_list)
     )
     event_val = st.radio(label='Play Type',
                          options=event_types,
@@ -101,7 +105,9 @@ with st.form('Play Event', clear_on_submit=True):
                          horizontal=True
     )
     shot_defense = st.radio(label='Shot Defense',
-                            options=['OPEN', 'GUARDED', 'HEAVILY_GUARDED'],
+                            options=['OPEN', 
+                                     'GUARDED', 
+                                     'HEAVILY_GUARDED'],
                             horizontal=True
     )
     add = st.form_submit_button("Add To DB")
