@@ -47,6 +47,9 @@ def get_games(game_summary, games):
                             + (game_summary['FGM'])
     )
     team_data = game_summary.copy().groupby(by='LABEL', as_index=False).sum()
+    return game_summary, team_data
+
+def apply_derived(data):
     def get_ppa_two(row):
         total_points = 2 * row['TWO_FGM']
         total_attempts = row['TWO_FGA']
@@ -91,48 +94,38 @@ def get_games(game_summary, games):
         else:
             return 0
         
-    game_summary['OFFENSIVE_EFFICENCY'] = game_summary.apply(offensive_efficiency, 
-                                                            axis='columns'
+    data['OFFENSIVE_EFFICENCY'] = data.apply(offensive_efficiency, 
+                                             axis='columns'
     )
-    game_summary['EFF_POINTS'] = game_summary.apply(efficient_offense, 
+    data['EFF_POINTS'] = data.apply(efficient_offense, 
                                                     axis='columns'
     )
-    game_summary['EFG%'] = game_summary.apply(effective_fgp, 
+    data['EFG%'] = data.apply(effective_fgp, 
                                             axis='columns'
     )
-    game_summary['2PPA'] = game_summary.apply(get_ppa_two, 
+    data['2PPA'] = data.apply(get_ppa_two, 
                                             axis='columns'
     )
-    game_summary['3PPA'] = game_summary.apply(get_ppa_three, 
+    data['3PPA'] = data.apply(get_ppa_three, 
                                             axis='columns'
     )
-    game_summary['PPA'] = game_summary.apply(get_total_ppa, 
+    data['PPA'] = data.apply(get_total_ppa, 
                                             axis='columns'
     )
-    team_data['OFFENSIVE_EFFICENCY'] = team_data.apply(offensive_efficiency, 
-                                                            axis='columns'
-    )
-    team_data['EFF_POINTS'] = team_data.apply(efficient_offense, 
-                                                    axis='columns'
-    )
-    team_data['EFG%'] = team_data.apply(effective_fgp, 
-                                            axis='columns'
-    )
-    team_data['2PPA'] = team_data.apply(get_ppa_two, 
-                                            axis='columns'
-    )
-    team_data['3PPA'] = team_data.apply(get_ppa_three, 
-                                            axis='columns'
-    )
-    team_data['PPA'] = team_data.apply(get_total_ppa, 
-                                            axis='columns'
-    )
-    return game_summary, team_data
+    return data
 
 game_summary, team_data = get_games(game_summary=game_summary,
                                     games=games
 )
-list_of_stats = ['OFFENSIVE_EFFICENCY',
+list_of_stats = ['LABEL',
+                 'OFFENSIVE_EFFICENCY',
+                 'EFF_POINTS',
+                 'EFG%',
+                 '2PPA',
+                 '3PPA',
+                 'PPA'
+]
+other_stats = ['OFFENSIVE_EFFICENCY',
                  'EFF_POINTS',
                  'EFG%',
                  '2PPA',
@@ -149,22 +142,29 @@ if season_list:
     game = st.multiselect(label='Select Games',
                           options=games_list
     )
-    if games_list:
+    if game != []:
         final_data = game_summary_season[game_summary_season['LABEL'].isin(game)]
         team_data = team_data[team_data['LABEL'].isin(game)]
-        team_data = team_data[list_of_stats].round(2)
+        team_data = apply_derived(team_data)
+        team_data = team_data[list_of_stats]
+        team_data = team_data.rename(columns={'LABEL': 'Opponent'})
+        team_data = team_data.round(2)
+        present = final_data.groupby(by='NAME', 
+                                     as_index=False).agg('sum')
+        
+        present = apply_derived(present).round(2)
         st.text('Team Level Data')
         st.dataframe(team_data, 
                      use_container_width=True, 
                      hide_index=True
                      )
         data_list = st.radio(label='Select Stat',
-                             options=list_of_stats,
+                             options=other_stats,
                              horizontal=True
         )
         if data_list:
-            final_data[data_list] = final_data[data_list].round(2)
-            fig = px.bar(final_data, 
+            #final_data[other_stats] = final_data[other_stats].round(2)
+            fig = px.bar(present, 
                          x=data_list, 
                          y='NAME', 
                          orientation='h',
