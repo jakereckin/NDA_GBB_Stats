@@ -150,8 +150,7 @@ if season_list:
         team_data = team_data.rename(columns={'LABEL': 'Opponent'})
         team_data = team_data.round(2)
         present = final_data.groupby(by='NAME', 
-                                     as_index=False).agg('sum')
-        
+                                     as_index=False).sum()
         present = apply_derived(present).round(2)
         st.text('Team Level Data')
         st.dataframe(team_data, 
