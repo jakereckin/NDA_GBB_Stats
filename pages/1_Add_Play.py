@@ -16,6 +16,7 @@ players = players[players['YEAR']=='2024']
 spots = ut.select_spot(conn)
 game = ut.select_games(conn)
 game = game[game['SEASON']=='2024']
+st.dataframe(game)
 game['LABEL'] = (game['OPPONENT']
                  + ' - '
                  + game['DATE']
