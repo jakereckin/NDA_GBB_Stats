@@ -12,7 +12,7 @@ from functions import utils as ut
 conn = ut.create_db()
 #ut.create_event(conn)
 players = ut.select_players(conn)
-players = players[players['YEAR']=='2023']
+players = players[players['YEAR']=='2024']
 spots = ut.select_spot(conn)
 game = ut.select_games(conn)
 game['LABEL'] = (game['OPPONENT']
