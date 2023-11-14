@@ -68,8 +68,7 @@ min_sec_20 = (min_sec.head(1201)
 min_list = min_sec_20['MIN_SEC'].unique().tolist()
 st.set_page_config('Game Shots', initial_sidebar_state='expanded')
 st.sidebar.header('Add Shots')
-
-with st.form('Play Event', clear_on_submit=True):
+with st.form('Play Event', clear_on_submit=False):
     game_val = st.radio(label='Game',
                         options=reversed(game['LABEL']),
                         horizontal=True
@@ -78,20 +77,19 @@ with st.form('Play Event', clear_on_submit=True):
                           options=players['LABEL'],
                           horizontal=True
     )
-    half_val = st.radio(label='Half',
-                        options=half,
-                        horizontal=True
+    half_val = st.select_slider(label='Half',
+                        options=half
     )
     min_val = st.select_slider(label='Time Left',
-                           options=reversed(min_list)
+                               options=reversed(min_list)
     )
     event_val = st.radio(label='Play Type',
                          options=event_types,
                          horizontal=True
     )
     nda_val = st.slider(label='NDA Score',
-                        min_value=0,
-                        max_value=120
+                               min_value=0,
+                               max_value=120
     )
     opp_val = st.slider(label='Opponent Score',
                         min_value=0,
@@ -113,6 +111,7 @@ with st.form('Play Event', clear_on_submit=True):
     )
     add = st.form_submit_button("Add To DB")
     if add:
+        time.sleep(.5)
         game_val_opp = game_val.split(' - ')[0]
         game_val_date = game_val.split(' - ')[1]
         game_val_this = game[(game['OPPONENT']==game_val_opp)
