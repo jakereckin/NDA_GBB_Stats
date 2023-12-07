@@ -12,10 +12,13 @@ from functions import utils as ut
 
 #st.set_page_config(initial_sidebar_state='expanded')
 
-conn = ut.create_db()
-game_summary = ut.select_game_summary(conn)
-games = ut.select_games(conn)
-players = ut.select_players(conn)
+from streamlit_gsheets import GSheetsConnection
+from functions import utils as ut
+
+conn = st.connection("gsheets", type=GSheetsConnection)
+players = conn.read(worksheet='players')
+games = conn.read(worksheet='games')
+game_summary = conn.read(worksheet='game_summary')
 
 @st.cache_data
 def get_games(game_summary, games):

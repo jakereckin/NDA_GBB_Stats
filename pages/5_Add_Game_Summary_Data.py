@@ -7,11 +7,13 @@ import numpy as np
 import os
 import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
+from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 
-conn = ut.create_db()
-players = ut.select_players(conn)
-games = ut.select_games(conn)
+conn = st.connection("gsheets", type=GSheetsConnection)
+players = conn.read(worksheet='players')
+games = conn.read(worksheet='games')
+game_summary_data = conn.read(worksheet='game_summary')
 
 season = st.selectbox(label='Select Season',
                       options=games['SEASON'].unique().tolist()
@@ -29,8 +31,7 @@ game_val_opp = game_select.split(' - ')[0]
 game_val_date = game_select.split(' - ')[1]
 game_val_this = games_season[(games_season['OPPONENT']==game_val_opp)
                              & (games_season['DATE']==game_val_date)]
-#ut.select_game_summary(conn)
-game_summary_data = ut.select_game_summary(conn)
+
 data_columns = game_summary_data.columns.tolist()
 player_values = players_season['NUMBER'].tolist()
 
@@ -50,21 +51,15 @@ data = edited_df.copy()
 save = st.button('Save')
 if save:
     data = data.fillna(0)
-    save_data = list(zip(data['PLAYER_ID'],
-                         data['GAME_ID'],
-                         data['TWO_FGA'],
-                         data['TWO_FGM'],
-                         data['THREE_FGA'],
-                         data['THREE_FGM'],
-                         data['FTA'],
-                         data['FTM'],
-                         data['ASSITS'],
-                         data['TURNOVER'],
-                         data['OFFENSIVE_REBOUNDS'],
-                         data['DEFENSIVE_REBOUNDS'],
-                         data['BLOCKS'],
-                         data['STEALS'])
+    all_data = (pd.concat([game_summary_data,
+                           data])
+                  .drop_duplicates(subset=['PLAYER_ID',
+                                           'GAME_ID'],
+                                   keep='last')
+                  .reset_index(drop=True)
     )
-    ut.insert_game_data(conn, save_data)
+    conn.update(worksheet='game_summary',
+                data=all_data)          
     st.write('Added to DB!')
-    #st.rerun()
+    st.cache_data.clear()
+    st.rerun()

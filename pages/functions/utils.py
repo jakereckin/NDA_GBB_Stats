@@ -195,6 +195,11 @@ def insert_event(conn, data):
     cursor.close()
     return None
 
+def select_event(conn):
+    SELECT = "SELECT * FROM PLAY_EVENT"
+    df = pd.read_sql_query(SELECT, conn)
+    return df
+
 def select_game_summary(conn):
     SELECT = "SELECT * FROM GAME_SUMMARY_STATS"
     df = pd.read_sql_query(SELECT, conn)
