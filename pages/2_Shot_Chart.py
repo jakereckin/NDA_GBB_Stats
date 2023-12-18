@@ -5,15 +5,47 @@ import streamlit as st
 import plotly.graph_objects as go
 import sys
 import os
-import plotly.express as px
 import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
+from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 
 st.set_page_config(initial_sidebar_state='expanded')
 
-conn = ut.create_db()
-player_data = ut.select_game_shot(conn)
+conn = st.connection("gsheets", type=GSheetsConnection)
+play_event = conn.read(worksheet='play_event')
+spot = conn.read(worksheet='spots')
+games = conn.read(worksheet='games')
+player_data = (play_event.merge(spot,
+                                left_on=['SHOT_SPOT'],
+                                right_on=['SPOT'])
+                         .merge(games,
+                                on=['GAME_ID'])
+)
+player_data['GAME'] = (player_data['OPPONENT']
+                       + ' '
+                       + player_data['DATE']
+)
+player_data['MAKE'] = np.where(player_data['MAKE_MISS']=='Y',
+                               1,
+                               0
+)
+player_data['WAS_ASSIST'] = np.where(player_data['ASSISTED']=='Y',
+                               1,
+                               0
+)
+player_data['ATTEMPT'] = 1
+player_data = player_data[['GAME',
+                           'GAME_ID',
+                           'OPPONENT',
+                           'DATE',
+                           'SHOT_SPOT',
+                           'MAKE',
+                           'ATTEMPT',
+                           'XSPOT',
+                           'YSPOT',
+                           'WAS_ASSIST'
+]]
 player_data['U_ID'] = (player_data['OPPONENT']
                        + ' - '
                        + player_data['DATE']
@@ -48,9 +80,10 @@ def ellipse_arc(x_center=0.0,
 
 
 if team_selected:
-    totals = this_game.groupby(by=['GAME', 'SHOT_SPOT', 'XSPOT', 'YSPOT'], as_index=False)[['MAKE', 'ATTEMPT']].sum()
+    totals = this_game.groupby(by=['GAME', 'SHOT_SPOT', 'XSPOT', 'YSPOT'], as_index=False)[['MAKE', 'ATTEMPT', 'WAS_ASSIST']].sum()
     totals['POINT_VALUE'] = totals['SHOT_SPOT'].str.strip().str[-1].astype('int64')
     totals['MAKE_PERCENT'] = totals['MAKE']/(totals['ATTEMPT'].replace(0, 1))
+    totals['ASSIST_PERCENT'] = totals['MAKE']/(totals['WAS_ASSIST'].replace(0, 1))
     totals['POINTS_PER_ATTEMPT'] = (totals['MAKE'] * totals['POINT_VALUE']) / totals['ATTEMPT'].replace(0, 1)
     xlocs = totals['XSPOT']
     ylocs = totals['YSPOT']
@@ -60,18 +93,21 @@ if team_selected:
                                    'MAKE',
                                    'ATTEMPT',
                                    'MAKE_PERCENT',
-                                   'POINTS_PER_ATTEMPT']]
+                                   'POINTS_PER_ATTEMPT',
+                                   'ASSIST_PERCENT']]
     st.header('Top 5 Spots')
     st.dataframe(totals_sorted.head(5), use_container_width=True)
     freq_by_hex = totals['ATTEMPT']
     accs_by_hex = totals['POINTS_PER_ATTEMPT']
     spot = totals['SHOT_SPOT']
+    assist_percent = totals['ASSIST_PERCENT'].round(3)
     marker_cmin = 0.0
     marker_cmax = 1.5
     ticktexts = [str(marker_cmin)+'-', "", str(marker_cmax)+'+']
     hexbin_text = [
         '<i>Points Per Attempt: </i>' + str(round(accs_by_hex[i], 1)) + '<BR>'
-        '<i>Attempts: </i>' + str(round(freq_by_hex[i], 2))
+        '<i>Attempts: </i>' + str(round(freq_by_hex[i], 2)) + '<BR>'
+        '<i>Assist %: </i>' + str(round(assist_percent[i], 3))
         for i in range(len(freq_by_hex))
     ]
     str_selected = ','.join(team_selected)

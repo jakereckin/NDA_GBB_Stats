@@ -46,7 +46,7 @@ edited_df = st.data_editor(update_frame,
                            num_rows='dynamic', 
                            key='data_editor'
 )
-#data = pd.DataFrame(st.session_state['data_editor']['added_rows'])
+
 data = edited_df.copy()
 save = st.button('Save')
 if save:

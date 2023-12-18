@@ -7,66 +7,28 @@ import numpy as np
 import os
 import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
+from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 
-conn = ut.create_db()
-#ut.create_event(conn)
-players = ut.select_players(conn)
-players = players[players['YEAR']=='2024']
-spots = ut.select_spot(conn)
-game = ut.select_games(conn)
-game = game[game['SEASON']=='2024'].reset_index(drop=True)
+conn = st.connection("gsheets", type=GSheetsConnection)
+players = conn.read(worksheet='players')
+games = conn.read(worksheet='games')
+players = players[players['YEAR'].astype('str')=='2024']
+spots = conn.read(worksheet='spots')
+game = games[games['SEASON'].astype('str')=='2024'].reset_index(drop=True)
 game['LABEL'] = (game['OPPONENT']
                  + ' - '
                  + game['DATE']
 )
-players['LABEL'] = (players['NUMBER']
+players['LABEL'] = (players['NUMBER'].astype('str')
                     + ' - '
                     + players['FIRST_NAME']
 )
-event_types = ['SHOT_ATTEMPT',
-               'ASSIST',
-               'BLOCK',
-               'O_REBOUND',
-               'D_REBOUND',
-               'TURNOVER',
-               'STEAL',
-               'DEFLECTION',
-               'HUSTLE_PLAY',
-               'SUB_IN',
-               'SUB_OUT',
-               'DREW FOUL',
-               'COMMIT FOUL'
-
-]
 half = ['FIRST HALF',
         'SECOND_HALF',
         'OT'
 ]
-mins = (pd.DataFrame(data=[x for x in range(0, 21)],
-                    columns=['MINS'])
-          .assign(TMP='1')
-)
-secs = (pd.DataFrame(data=[x for x in range(0, 60)],
-                     columns=['SECS'])
-          .assign(TMP='1')
-)
-min_sec = (pd.merge(mins,
-                    secs,
-                    on='TMP',
-                    how='inner')
-)
-min_sec['MIN_SEC'] = (min_sec['MINS'].astype('str')
-                      + ':'
-                      + min_sec['SECS'].astype('str')
-)
-min_sec_20 = (min_sec.head(1201)
-                     .drop(columns=['MINS', 
-                                    'TMP', 
-                                    'SECS'])
-)
-min_list = min_sec_20['MIN_SEC'].unique().tolist()
-st.set_page_config('Game Shots', initial_sidebar_state='expanded')
+all_plays = conn.read(worksheet='play_event')
 st.sidebar.header('Add Shots')
 with st.form('Play Event', clear_on_submit=False):
     game_val = st.radio(label='Game',
@@ -77,23 +39,9 @@ with st.form('Play Event', clear_on_submit=False):
                           options=players['LABEL'],
                           horizontal=True
     )
-    half_val = st.select_slider(label='Half',
-                        options=half
-    )
-    min_val = st.select_slider(label='Time Left',
-                               options=reversed(min_list)
-    )
-    event_val = st.radio(label='Play Type',
-                         options=event_types,
-                         horizontal=True
-    )
-    nda_val = st.slider(label='NDA Score',
-                               min_value=0,
-                               max_value=120
-    )
-    opp_val = st.slider(label='Opponent Score',
-                        min_value=0,
-                        max_value=120
+    half_val = st.radio(label='Half',
+                        options=half,
+                        horizontal=True
     )
     spot_val = st.radio(label='Shot Spot',
                         options=spots['SPOT'],
@@ -103,13 +51,18 @@ with st.form('Play Event', clear_on_submit=False):
                          options=['Y', 'N'],
                          horizontal=True
     )
+    assisted = st.radio(label='Assited?',
+                       options=['Y', 'N'],
+                       horizontal=True
+    )
     shot_defense = st.radio(label='Shot Defense',
                             options=['OPEN', 
                                      'GUARDED', 
                                      'HEAVILY_GUARDED'],
                             horizontal=True
     )
-    add = st.form_submit_button("Add To DB")
+    add = st.form_submit_button("Add Play")
+    final_add = st.form_submit_button('Final Submit')
     if add:
         time.sleep(.5)
         game_val_opp = game_val.split(' - ')[0]
@@ -121,34 +74,31 @@ with st.form('Play Event', clear_on_submit=False):
         st.text('Submitted!')
         this_data = [game_val_final, 
                      player_number, 
-                     min_val,
                      half_val,
-                     event_val,
-                     nda_val,
-                     opp_val,
                      spot_val,
                      shot_defense,
+                     assisted,
                      make_miss]
         my_df = pd.DataFrame(data=[this_data],
-                             columns=['GAME', 
-                                      'PLAYER', 
-                                      'TIME',
+                             columns=['GAME_ID', 
+                                      'PLAYER_ID', 
                                       'HALF',
-                                      'EVENT_TYPE',
-                                      'TEAM_SCORE',
-                                      'OPPONENT_SCORE',
-                                      'SPOT', 
+                                      'SHOT_SPOT', 
                                       'SHOT_DEFENSE',
+                                      'ASSISTED',
                                       'MAKE_MISS'])
-        data = list(zip(my_df['GAME'],
-                        my_df['PLAYER'],
-                        my_df['TIME'],
-                        my_df['HALF'],
-                        my_df['EVENT_TYPE'],
-                        my_df['TEAM_SCORE'], 
-                        my_df['OPPONENT_SCORE'], 
-                        my_df['SPOT'],
-                        my_df['SHOT_DEFENSE'],
-                        my_df['MAKE_MISS'])
+        st.session_state.temp_df.append(my_df)
+    if final_add:
+        print(st.session_state.temp_df)
+        final_temp_df = pd.concat(st.session_state.temp_df,
+                                  axis=0)
+        all_data = (pd.concat([final_temp_df,
+                           all_plays])
+                  .reset_index(drop=True)
         )
-        ut.insert_event(conn, data)
+        conn.update(worksheet='play_event',
+                data=all_data) 
+        st.session_state.temp_df = []
+        st.write('Added to DB!')
+        st.cache_data.clear()
+        st.rerun()
