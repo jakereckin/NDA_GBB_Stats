@@ -80,10 +80,19 @@ def ellipse_arc(x_center=0.0,
 
 
 if team_selected:
-    totals = this_game.groupby(by=['GAME', 'SHOT_SPOT', 'XSPOT', 'YSPOT'], as_index=False)[['MAKE', 'ATTEMPT', 'WAS_ASSIST']].sum()
+    totals = (this_game.groupby(by=['GAME', 
+                                    'SHOT_SPOT', 
+                                    'XSPOT', 
+                                    'YSPOT'], 
+                                as_index=False)
+                       [['MAKE', 
+                         'ATTEMPT', 
+                         'WAS_ASSIST']]
+                       .sum()
+    )
     totals['POINT_VALUE'] = totals['SHOT_SPOT'].str.strip().str[-1].astype('int64')
     totals['MAKE_PERCENT'] = totals['MAKE']/(totals['ATTEMPT'].replace(0, 1))
-    totals['ASSIST_PERCENT'] = totals['MAKE']/(totals['WAS_ASSIST'].replace(0, 1))
+    totals['ASSIST_PERCENT'] = totals['WAS_ASSIST']/(totals['MAKE'].replace(0, 1))
     totals['POINTS_PER_ATTEMPT'] = (totals['MAKE'] * totals['POINT_VALUE']) / totals['ATTEMPT'].replace(0, 1)
     xlocs = totals['XSPOT']
     ylocs = totals['YSPOT']
@@ -96,7 +105,8 @@ if team_selected:
                                    'POINTS_PER_ATTEMPT',
                                    'ASSIST_PERCENT']]
     st.header('Top 5 Spots')
-    st.dataframe(totals_sorted.head(5), use_container_width=True)
+    st.dataframe(totals_sorted.head(5), 
+                 use_container_width=True)
     freq_by_hex = totals['ATTEMPT']
     accs_by_hex = totals['POINTS_PER_ATTEMPT']
     spot = totals['SHOT_SPOT']
