@@ -126,14 +126,16 @@ list_of_stats = ['LABEL',
                  'EFG%',
                  '2PPA',
                  '3PPA',
-                 'PPA'
+                 'PPA',
+                 'POINTS'
 ]
 other_stats = ['OFFENSIVE_EFFICENCY',
                  'EFF_POINTS',
                  'EFG%',
                  '2PPA',
                  '3PPA',
-                 'PPA'
+                 'PPA',
+                 'POINTS'
 ]
 season_list = game_summary['SEASON'].unique().tolist()
 season = st.multiselect(label='Select Season',
