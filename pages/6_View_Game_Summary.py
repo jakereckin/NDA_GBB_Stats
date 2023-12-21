@@ -28,8 +28,10 @@ def get_games(game_summary, games):
     )
     game_summary = pd.merge(game_summary,
                             players,
-                            left_on='PLAYER_ID',
-                            right_on='NUMBER'
+                            left_on=['PLAYER_ID',
+                                     'SEASON'],
+                            right_on=['NUMBER',
+                                      'YEAR']
     )
     game_summary['LABEL'] = (game_summary['OPPONENT']
                             + ' - '
