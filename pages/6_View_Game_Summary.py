@@ -47,7 +47,7 @@ def get_games(game_summary, games):
     )
     game_summary['POINTS'] = ((2*game_summary['TWO_FGM'])
                             + (3*game_summary['THREE_FGM'])
-                            + (game_summary['FGM'])
+                            + (game_summary['FTM'])
     )
     team_data = game_summary.copy().groupby(by='LABEL', as_index=False).sum()
     return game_summary, team_data
