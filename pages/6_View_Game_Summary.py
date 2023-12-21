@@ -86,7 +86,7 @@ def apply_derived(data):
             return 0
 
     def efficient_offense(row):
-        val = (.76 * row['ASSITS'] + row['POINTS'])* row['OFFENSIVE_EFFICENCY']
+        val = row['POINTS'] * row['OFFENSIVE_EFFICENCY']
         return val
 
     def effective_fgp(row):
