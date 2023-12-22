@@ -61,26 +61,11 @@ players_selected = st.radio(label='Choose Player',
                             horizontal=True
 )
 view_chart = st.button('View Chart')
-return_frame = pd.DataFrame(list(players_selected), 
-                            columns=['U_ID']
-)
-return_frame['FIRST_NAME'] = (return_frame['U_ID'].str
-                                                  .split(' ')
-                                                  .str[0]
-)
-return_frame['LAST_NAME'] = (return_frame['U_ID'].str
-                                                 .split(' ')
-                                                 .str[1]
-)
-opps = (return_frame['FIRST_NAME'].unique()
-                                  .tolist()
-)
-dates = (return_frame['LAST_NAME'].unique()
-                                  .tolist()
-)
-this_game = player_data[(player_data['FIRST_NAME'].isin(opps))
-                        & (player_data['LAST_NAME'].isin(dates))]
-
+first_name = players_selected.split(' ')[0]
+last_name = players_selected.split(' ')[1]
+this_game = player_data[(player_data['FIRST_NAME']==first_name)
+                        & (player_data['LAST_NAME']==last_name)
+]
 def ellipse_arc(x_center=0.0,
                  y_center=0.0, 
                  a=8.5, 
