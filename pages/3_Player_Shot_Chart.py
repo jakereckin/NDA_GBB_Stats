@@ -60,7 +60,7 @@ players_selected = st.radio(label='Choose Player',
                             options=player_names,
                             horizontal=True
 )
-print(list(players_selected))
+view_chart = st.button('View Chart')
 return_frame = pd.DataFrame(list(players_selected), 
                             columns=['U_ID']
 )
@@ -100,7 +100,7 @@ def ellipse_arc(x_center=0.0,
         return path
 
 
-if players_selected:
+if view_chart:
     totals = (this_game.groupby(by=['NAME', 
                                     'SHOT_SPOT', 
                                     'XSPOT', 
