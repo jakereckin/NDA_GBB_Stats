@@ -60,7 +60,6 @@ players_selected = st.radio(label='Choose Player',
                             options=player_names,
                             horizontal=True
 )
-view_chart = st.button('View Chart')
 first_name = players_selected.split(' ')[0]
 last_name = players_selected.split(' ')[1]
 this_game = player_data[(player_data['FIRST_NAME']==first_name)
@@ -85,7 +84,7 @@ def ellipse_arc(x_center=0.0,
         return path
 
 
-if view_chart:
+if players_selected:
     st.write(players_selected)
     totals = (this_game.groupby(by=['NAME', 
                                     'SHOT_SPOT', 
@@ -123,7 +122,7 @@ if view_chart:
                                    'MAKE_PERCENT',
                                    'POINTS_PER_ATTEMPT',
                                    'ASSIST_PERCENT']]
-    st.header('Top 5 Spots')
+    st.header(f'Top 5 Spots for {players_selected}')
     st.dataframe(totals_sorted.head(5), 
                  use_container_width=True)
     freq_by_hex = totals['ATTEMPT']
