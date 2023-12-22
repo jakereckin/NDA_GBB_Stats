@@ -60,7 +60,7 @@ players_selected = st.radio(label='Choose Player',
                             options=player_names,
                             horizontal=True
 )
-return_frame = pd.DataFrame(players_selected, 
+return_frame = pd.DataFrame(list(players_selected), 
                             columns=['U_ID']
 )
 return_frame['FIRST_NAME'] = (return_frame['U_ID'].str
