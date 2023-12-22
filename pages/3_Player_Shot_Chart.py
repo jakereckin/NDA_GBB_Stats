@@ -56,8 +56,10 @@ player_data['U_ID'] = (player_data['FIRST_NAME']
                        + player_data['LAST_NAME']
 )
 player_names = player_data['U_ID'].unique()
-players_selected = st.multiselect('Choose Player', 
-                                  player_names)
+players_selected = st.radio(label='Choose Player', 
+                            options=player_names,
+                            horizontal=True
+)
 return_frame = pd.DataFrame(players_selected, 
                             columns=['U_ID']
 )

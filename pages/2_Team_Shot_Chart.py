@@ -97,8 +97,7 @@ def ellipse_arc(x_center=0.0,
 
 
 if team_selected:
-    totals = (this_game.groupby(by=['GAME', 
-                                    'SHOT_SPOT', 
+    totals = (this_game.groupby(by=['SHOT_SPOT', 
                                     'XSPOT', 
                                     'YSPOT'], 
                                 as_index=False)
