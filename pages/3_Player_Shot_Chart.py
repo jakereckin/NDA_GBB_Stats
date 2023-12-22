@@ -85,7 +85,6 @@ def ellipse_arc(x_center=0.0,
 
 
 if players_selected:
-    st.write(players_selected)
     totals = (this_game.groupby(by=['NAME', 
                                     'SHOT_SPOT', 
                                     'XSPOT', 
@@ -308,5 +307,7 @@ if players_selected:
                                             width=1), 
                                   layer='below'),]
     )
-    st.header('Shot Chart')
-    st.plotly_chart(fig, use_container_width=True)
+    st.header(f'Shot Chart for {players_selected}')
+    st.plotly_chart(fig, 
+                    use_container_width=True
+    )
