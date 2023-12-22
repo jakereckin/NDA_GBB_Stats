@@ -101,4 +101,4 @@ with st.form('Play Event', clear_on_submit=False):
         st.write('Added to DB!')
         st.cache_data.clear()
        # st.session_state.temp_df = []
-        st.rerun()
+        #st.rerun()
