@@ -11,7 +11,9 @@ from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 pd.options.mode.chained_assignment = None
 
-conn = st.connection("gsheets", type=GSheetsConnection)
+conn = st.connection("gsheets", 
+                     type=GSheetsConnection
+)
 players = conn.read(worksheet='players')
 games = conn.read(worksheet='games')
 game_summary_data = conn.read(worksheet='game_summary')

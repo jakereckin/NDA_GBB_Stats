@@ -11,12 +11,16 @@ pd.options.mode.chained_assignment = None
 from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 
-conn = st.connection("gsheets", type=GSheetsConnection)
+conn = st.connection("gsheets", 
+                     type=GSheetsConnection
+)
 players = conn.read(worksheet='players')
 games = conn.read(worksheet='games')
 players = players[players['YEAR'].astype('str')=='2024']
 spots = conn.read(worksheet='spots')
-game = games[games['SEASON'].astype('str')=='2024'].reset_index(drop=True)
+game = (games[games['SEASON'].astype('str')=='2024']
+             .reset_index(drop=True)
+)
 game['LABEL'] = (game['OPPONENT']
                  + ' - '
                  + game['DATE']
@@ -31,7 +35,8 @@ half = ['FIRST HALF',
 ]
 all_plays = conn.read(worksheet='play_event')
 st.sidebar.header('Add Shots')
-with st.form('Play Event', clear_on_submit=False):
+with st.form('Play Event', 
+             clear_on_submit=False):
     game_val = st.radio(label='Game',
                         options=reversed(game['LABEL']),
                         horizontal=True
@@ -49,11 +54,13 @@ with st.form('Play Event', clear_on_submit=False):
                         horizontal=True
     )
     make_miss = st.radio(label='Make/Miss',
-                         options=['Y', 'N'],
+                         options=['Y', 
+                                  'N'],
                          horizontal=True
     )
     assisted = st.radio(label='Assited?',
-                       options=['Y', 'N'],
+                       options=['Y', 
+                                'N'],
                        horizontal=True
     )
     shot_defense = st.radio(label='Shot Defense',
@@ -91,14 +98,15 @@ with st.form('Play Event', clear_on_submit=False):
         st.session_state.temp_df.append(my_df)
     if final_add:
         final_temp_df = pd.concat(st.session_state.temp_df,
-                                  axis=0)
+                                  axis=0
+        )
         all_data = (pd.concat([final_temp_df,
-                           all_plays])
-                  .reset_index(drop=True)
+                               all_plays])
+                      .reset_index(drop=True)
         )
         conn.update(worksheet='play_event',
-                    data=all_data) 
+                    data=all_data
+        )
         st.write('Added to DB!')
         st.cache_data.clear()
         st.session_state.temp_df = []
-        #st.rerun()

@@ -16,7 +16,9 @@ pd.options.mode.chained_assignment = None
 from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 
-conn = st.connection("gsheets", type=GSheetsConnection)
+conn = st.connection("gsheets", 
+                     type=GSheetsConnection
+)
 players = conn.read(worksheet='players')
 games = conn.read(worksheet='games')
 game_summary = conn.read(worksheet='game_summary')
@@ -35,24 +37,28 @@ def get_games(game_summary, games):
                                       'YEAR']
     )
     game_summary['LABEL'] = (game_summary['OPPONENT']
-                            + ' - '
-                            + game_summary['DATE']
+                             + ' - '
+                             + game_summary['DATE']
     )
     game_summary['NAME'] = (game_summary['FIRST_NAME']
                             + ' '
                             + game_summary['LAST_NAME']
     )
     game_summary['FGA'] = (game_summary['TWO_FGA']
-                        + game_summary['THREE_FGA']
+                           + game_summary['THREE_FGA']
     )
     game_summary['FGM'] = (game_summary['TWO_FGM']
-                        + game_summary['THREE_FGM']
+                           + game_summary['THREE_FGM']
     )
     game_summary['POINTS'] = ((2*game_summary['TWO_FGM'])
-                            + (3*game_summary['THREE_FGM'])
-                            + (game_summary['FTM'])
+                              + (3*game_summary['THREE_FGM'])
+                              + (game_summary['FTM'])
     )
-    team_data = game_summary.copy().groupby(by='LABEL', as_index=False).sum()
+    team_data = (game_summary.copy()
+                             .groupby(by='LABEL', 
+                                      as_index=False)
+                             .sum()
+    )
     return game_summary, team_data
 
 def apply_derived(data):
@@ -104,19 +110,19 @@ def apply_derived(data):
                                              axis='columns'
     )
     data['EFF_POINTS'] = data.apply(efficient_offense, 
-                                                    axis='columns'
+                                    axis='columns'
     )
     data['EFG%'] = data.apply(effective_fgp, 
-                                            axis='columns'
+                              axis='columns'
     )
     data['2PPA'] = data.apply(get_ppa_two, 
-                                            axis='columns'
+                              axis='columns'
     )
     data['3PPA'] = data.apply(get_ppa_three, 
-                                            axis='columns'
+                              axis='columns'
     )
     data['PPA'] = data.apply(get_total_ppa, 
-                                            axis='columns'
+                             axis='columns'
     )
     return data
 
@@ -154,27 +160,31 @@ if season_list:
         final_data = game_summary_season[game_summary_season['LABEL'].isin(game)]
         team_data = team_data[team_data['LABEL'].isin(game)]
         team_data = apply_derived(team_data)
-        team_data = team_data[list_of_stats]
-        team_data = team_data.rename(columns={'LABEL': 'Opponent'})
-        team_data = team_data.round(2)
-        present = final_data.groupby(by='NAME', 
-                                     as_index=False).sum()
+        team_data = (team_data[list_of_stats]
+                              .rename(columns={'LABEL': 'Opponent'})
+                              .round(2)
+        )
+        present = (final_data.groupby(by='NAME', 
+                                      as_index=False)
+                             .sum()
+        )
         present = apply_derived(present).round(2)
         st.text('Team Level Data')
         st.dataframe(team_data, 
                      use_container_width=True, 
                      hide_index=True
-                     )
+        )
         data_list = st.radio(label='Select Stat',
                              options=other_stats,
                              horizontal=True
         )
         if data_list:
-            #final_data[other_stats] = final_data[other_stats].round(2)
             fig = px.bar(present, 
                          x=data_list, 
                          y='NAME', 
                          orientation='h',
                          text=data_list
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, 
+                            use_container_width=True
+            )
