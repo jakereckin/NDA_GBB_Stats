@@ -8,6 +8,7 @@ import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from pages.functions import utils as ut
 import streamlit as st
+pd.options.mode.chained_assignment = None
 
 
 st.session_state.temp_df = []

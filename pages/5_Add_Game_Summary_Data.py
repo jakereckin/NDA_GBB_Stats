@@ -9,6 +9,7 @@ import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
+pd.options.mode.chained_assignment = None
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 players = conn.read(worksheet='players')
@@ -46,7 +47,6 @@ edited_df = st.data_editor(update_frame,
                            num_rows='dynamic', 
                            key='data_editor'
 )
-
 data = edited_df.copy()
 save = st.button('Save')
 if save:

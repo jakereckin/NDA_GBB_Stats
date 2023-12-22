@@ -7,6 +7,7 @@ import numpy as np
 import os
 import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
+pd.options.mode.chained_assignment = None
 from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 
@@ -89,7 +90,6 @@ with st.form('Play Event', clear_on_submit=False):
                                       'MAKE_MISS'])
         st.session_state.temp_df.append(my_df)
     if final_add:
-        print(st.session_state.temp_df)
         final_temp_df = pd.concat(st.session_state.temp_df,
                                   axis=0)
         all_data = (pd.concat([final_temp_df,
@@ -98,7 +98,7 @@ with st.form('Play Event', clear_on_submit=False):
         )
         conn.update(worksheet='play_event',
                 data=all_data) 
-        st.session_state.temp_df = []
         st.write('Added to DB!')
         st.cache_data.clear()
+        st.session_state.temp_df = []
         st.rerun()

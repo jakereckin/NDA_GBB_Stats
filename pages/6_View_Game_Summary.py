@@ -9,6 +9,7 @@ import plotly.express as px
 import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from functions import utils as ut
+pd.options.mode.chained_assignment = None
 
 #st.set_page_config(initial_sidebar_state='expanded')
 

@@ -9,6 +9,7 @@ import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
+pd.options.mode.chained_assignment = None
 
 st.set_page_config(initial_sidebar_state='expanded')
 
@@ -16,15 +17,20 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 play_event = conn.read(worksheet='play_event')
 spot = conn.read(worksheet='spots')
 games = conn.read(worksheet='games')
+players = conn.read(worksheet='players')
+players = players[players['YEAR']==2024]
 player_data = (play_event.merge(spot,
                                 left_on=['SHOT_SPOT'],
                                 right_on=['SPOT'])
                          .merge(games,
                                 on=['GAME_ID'])
+                         .merge(players,
+                                left_on=['PLAYER_ID'],
+                                right_on=['NUMBER'])
 )
-player_data['GAME'] = (player_data['OPPONENT']
+player_data['NAME'] = (player_data['FIRST_NAME']
                        + ' '
-                       + player_data['DATE']
+                       + player_data['LAST_NAME']
 )
 player_data['MAKE'] = np.where(player_data['MAKE_MISS']=='Y',
                                1,
@@ -35,10 +41,9 @@ player_data['WAS_ASSIST'] = np.where(player_data['ASSISTED']=='Y',
                                0
 )
 player_data['ATTEMPT'] = 1
-player_data = player_data[['GAME',
-                           'GAME_ID',
-                           'OPPONENT',
-                           'DATE',
+player_data = player_data[['FIRST_NAME',
+                           'LAST_NAME',
+                           'NAME',
                            'SHOT_SPOT',
                            'MAKE',
                            'ATTEMPT',
@@ -46,19 +51,28 @@ player_data = player_data[['GAME',
                            'YSPOT',
                            'WAS_ASSIST'
 ]]
-player_data['U_ID'] = (player_data['OPPONENT']
-                       + ' - '
-                       + player_data['DATE']
+player_data['U_ID'] = (player_data['FIRST_NAME']
+                       + ' '
+                       + player_data['LAST_NAME']
 )
-games = player_data['U_ID'].unique()
-team_selected = st.multiselect('Choose Games', games)
-return_frame = pd.DataFrame(team_selected, columns=['U_ID'])
-return_frame['OPP'] = return_frame['U_ID'].str.split(' - ').str[0]
-return_frame['DATE'] = return_frame['U_ID'].str.split(' - ').str[1]
-opps = return_frame['OPP'].unique().tolist()
-dates = return_frame['DATE'].unique().tolist()
-this_game = player_data[(player_data['OPPONENT'].isin(opps))
-                        & (player_data['DATE'].isin(dates))]
+player_names = player_data['U_ID'].unique()
+players_selected = st.multiselect('Choose Player', 
+                                  player_names)
+return_frame = pd.DataFrame(players_selected, 
+                            columns=['U_ID']
+)
+return_frame['FIRST_NAME'] = (return_frame['U_ID'].str
+                                                  .split(' ')
+                                                  .str[0]
+)
+return_frame['LAST_NAME'] = (return_frame['U_ID'].str
+                                                 .split(' ')
+                                                 .str[1]
+)
+opps = return_frame['FIRST_NAME'].unique().tolist()
+dates = return_frame['LAST_NAME'].unique().tolist()
+this_game = player_data[(player_data['FIRST_NAME'].isin(opps))
+                        & (player_data['LAST_NAME'].isin(dates))]
 
 def ellipse_arc(x_center=0.0,
                  y_center=0.0, 
@@ -79,8 +93,8 @@ def ellipse_arc(x_center=0.0,
         return path
 
 
-if team_selected:
-    totals = (this_game.groupby(by=['GAME', 
+if players_selected:
+    totals = (this_game.groupby(by=['NAME', 
                                     'SHOT_SPOT', 
                                     'XSPOT', 
                                     'YSPOT'], 
@@ -90,7 +104,11 @@ if team_selected:
                          'WAS_ASSIST']]
                        .sum()
     )
-    totals['POINT_VALUE'] = totals['SHOT_SPOT'].str.strip().str[-1].astype('int64')
+    totals['POINT_VALUE'] = (totals['SHOT_SPOT'].str
+                                                .strip()
+                                                .str[-1]
+                                                .astype('int64')
+    )
     totals['MAKE_PERCENT'] = totals['MAKE']/(totals['ATTEMPT'].replace(0, 1))
     totals['ASSIST_PERCENT'] = totals['WAS_ASSIST']/(totals['MAKE'].replace(0, 1))
     totals['POINTS_PER_ATTEMPT'] = (totals['MAKE'] * totals['POINT_VALUE']) / totals['ATTEMPT'].replace(0, 1)
@@ -120,7 +138,7 @@ if team_selected:
         '<i>Assist %: </i>' + str(round(assist_percent[i], 3))
         for i in range(len(freq_by_hex))
     ]
-    str_selected = ','.join(team_selected)
+    str_selected = ','.join(players_selected)
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=xlocs, 

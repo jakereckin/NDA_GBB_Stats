@@ -9,16 +9,17 @@ import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
+pd.options.mode.chained_assignment = None
 
 conn = st.connection("gsheets", type=GSheetsConnection)
-games = conn.read(worksheet='games')
+players = conn.read(worksheet='players')
 save = st.button('Save')
-edited_df = st.data_editor(games, 
+edited_df = st.data_editor(players, 
                            num_rows='dynamic', 
                            key='data_editor')
 if save:
-    conn.update(data=edited_df,
-                worksheet='games'
+    conn.update(worksheet='players',
+                data=edited_df
     )
     st.write('Added to DB!')
     st.cache_data.clear()
