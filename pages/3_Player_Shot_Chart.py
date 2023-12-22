@@ -101,6 +101,7 @@ def ellipse_arc(x_center=0.0,
 
 
 if view_chart:
+    st.write(players_selected)
     totals = (this_game.groupby(by=['NAME', 
                                     'SHOT_SPOT', 
                                     'XSPOT', 
