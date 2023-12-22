@@ -97,8 +97,8 @@ with st.form('Play Event', clear_on_submit=False):
                   .reset_index(drop=True)
         )
         conn.update(worksheet='play_event',
-                data=all_data) 
+                    data=all_data) 
         st.write('Added to DB!')
         st.cache_data.clear()
-        st.session_state.temp_df = []
+       # st.session_state.temp_df = []
         st.rerun()
