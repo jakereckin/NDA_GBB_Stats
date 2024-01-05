@@ -142,7 +142,7 @@ if players_selected:
     assist_percent = totals['ASSIST_PERCENT'].round(3)
     hg_percent = totals['HG_PERCENT'].round(3)
     marker_cmin = 0.0
-    marker_cmax = 1.5
+    marker_cmax = 2
     ticktexts = [str(marker_cmin)+'-', "", 
                  str(marker_cmax)+'+'
     ]
