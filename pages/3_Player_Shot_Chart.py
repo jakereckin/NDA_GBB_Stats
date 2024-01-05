@@ -45,10 +45,9 @@ player_data['HEAVILY_GUARDED'] = np.where(player_data['SHOT_DEFENSE']=='HEAVILY_
                                0
 )
 player_data['ATTEMPT'] = 1
-player_data = player_data[['GAME',
-                           'GAME_ID',
-                           'OPPONENT',
-                           'DATE',
+player_data = player_data[['FIRST_NAME',
+                           'LAST_NAME',
+                           'NAME',
                            'SHOT_SPOT',
                            'MAKE',
                            'ATTEMPT',
@@ -57,9 +56,6 @@ player_data = player_data[['GAME',
                            'WAS_ASSIST',
                            'HEAVILY_GUARDED'
 ]]
-player_data = player_data.sort_values(by='GAME_ID',
-                                      ascending=False
-)
 player_data['U_ID'] = (player_data['FIRST_NAME']
                        + ' '
                        + player_data['LAST_NAME']
@@ -144,7 +140,7 @@ if players_selected:
     assist_percent = totals['ASSIST_PERCENT'].round(3)
     hg_percent = totals['HG_PERCENT'].round(3)
     marker_cmin = 0.0
-    marker_cmax = 2
+    marker_cmax = 1.5
     ticktexts = [str(marker_cmin)+'-', "", 
                  str(marker_cmax)+'+'
     ]
