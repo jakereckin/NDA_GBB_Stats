@@ -40,17 +40,26 @@ player_data['WAS_ASSIST'] = np.where(player_data['ASSISTED']=='Y',
                                1,
                                0
 )
+player_data['HEAVILY_GUARDED'] = np.where(player_data['SHOT_DEFENSE']=='HEAVILY_GUARDED',
+                               1,
+                               0
+)
 player_data['ATTEMPT'] = 1
-player_data = player_data[['FIRST_NAME',
-                           'LAST_NAME',
-                           'NAME',
+player_data = player_data[['GAME',
+                           'GAME_ID',
+                           'OPPONENT',
+                           'DATE',
                            'SHOT_SPOT',
                            'MAKE',
                            'ATTEMPT',
                            'XSPOT',
                            'YSPOT',
-                           'WAS_ASSIST'
+                           'WAS_ASSIST',
+                           'HEAVILY_GUARDED'
 ]]
+player_data = player_data.sort_values(by='GAME_ID',
+                                      ascending=False
+)
 player_data['U_ID'] = (player_data['FIRST_NAME']
                        + ' '
                        + player_data['LAST_NAME']

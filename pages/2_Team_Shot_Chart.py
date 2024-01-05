@@ -37,6 +37,10 @@ player_data['WAS_ASSIST'] = np.where(player_data['ASSISTED']=='Y',
                                1,
                                0
 )
+player_data['HEAVILY_GUARDED'] = np.where(player_data['SHOT_DEFENSE']=='HEAVILY_GUARDED',
+                               1,
+                               0
+)
 player_data['ATTEMPT'] = 1
 player_data = player_data[['GAME',
                            'GAME_ID',
@@ -47,8 +51,12 @@ player_data = player_data[['GAME',
                            'ATTEMPT',
                            'XSPOT',
                            'YSPOT',
-                           'WAS_ASSIST'
+                           'WAS_ASSIST',
+                           'HEAVILY_GUARDED'
 ]]
+player_data = player_data.sort_values(by='GAME_ID',
+                                      ascending=False
+)
 player_data['U_ID'] = (player_data['OPPONENT']
                        + ' - '
                        + player_data['DATE']
@@ -103,7 +111,8 @@ if team_selected:
                                 as_index=False)
                        [['MAKE', 
                          'ATTEMPT', 
-                         'WAS_ASSIST']]
+                         'WAS_ASSIST',
+                         'HEAVILY_GUARDED']]
                        .sum()
     )
     totals['POINT_VALUE'] = (totals['SHOT_SPOT'].str
@@ -115,6 +124,9 @@ if team_selected:
                               / totals['ATTEMPT'].replace(0, 1)
     )
     totals['ASSIST_PERCENT'] = (totals['WAS_ASSIST'] 
+                                / totals['MAKE'].replace(0, 1)
+    )
+    totals['HG_PERCENT'] = (totals['HEAVILY_GUARDED'] 
                                 / totals['MAKE'].replace(0, 1)
     )
     totals['POINTS_PER_ATTEMPT'] = ((totals['MAKE'] * totals['POINT_VALUE']) 
@@ -132,7 +144,8 @@ if team_selected:
                                    'ATTEMPT',
                                    'MAKE_PERCENT',
                                    'POINTS_PER_ATTEMPT',
-                                   'ASSIST_PERCENT']]
+                                   'ASSIST_PERCENT',
+                                   'HG_PERCENT']]
     st.header('Top 5 Spots')
     st.dataframe(totals_sorted.head(5), 
                  use_container_width=True)
@@ -140,13 +153,15 @@ if team_selected:
     accs_by_hex = totals['POINTS_PER_ATTEMPT']
     spot = totals['SHOT_SPOT']
     assist_percent = totals['ASSIST_PERCENT'].round(3)
+    hg_percent = totals['HG_PERCENT'].round(3)
     marker_cmin = 0.0
     marker_cmax = 2
     ticktexts = [str(marker_cmin)+'-', "", str(marker_cmax)+'+']
     hexbin_text = [
         '<i>Points Per Attempt: </i>' + str(round(accs_by_hex[i], 1)) + '<BR>'
         '<i>Attempts: </i>' + str(round(freq_by_hex[i], 2)) + '<BR>'
-        '<i>Assist %: </i>' + str(round(assist_percent[i], 3))
+        '<i>Assist %: </i>' + str(round(assist_percent[i], 3)) + '<BR>'
+        '<i>Heavily Guarded %: </i>' + str(round(hg_percent[i], 4))
         for i in range(len(freq_by_hex))
     ]
     str_selected = ','.join(team_selected)
