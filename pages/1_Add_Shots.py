@@ -34,7 +34,6 @@ half = ['FIRST HALF',
         'OT'
 ]
 all_plays = conn.read(worksheet='play_event')
-st.sidebar.header('Add Shots')
 with st.form('Play Event', 
              clear_on_submit=False):
     game_val = st.radio(label='Game',
