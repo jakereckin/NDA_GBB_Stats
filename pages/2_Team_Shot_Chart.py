@@ -141,7 +141,7 @@ if team_selected:
     spot = totals['SHOT_SPOT']
     assist_percent = totals['ASSIST_PERCENT'].round(3)
     marker_cmin = 0.0
-    marker_cmax = 1.5
+    marker_cmax = 2
     ticktexts = [str(marker_cmin)+'-', "", str(marker_cmax)+'+']
     hexbin_text = [
         '<i>Points Per Attempt: </i>' + str(round(accs_by_hex[i], 1)) + '<BR>'

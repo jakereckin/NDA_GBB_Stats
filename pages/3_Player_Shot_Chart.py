@@ -129,7 +129,7 @@ if players_selected:
     spot = totals['SHOT_SPOT']
     assist_percent = totals['ASSIST_PERCENT'].round(3)
     marker_cmin = 0.0
-    marker_cmax = 1.5
+    marker_cmax = 2
     ticktexts = [str(marker_cmin)+'-', "", 
                  str(marker_cmax)+'+'
     ]
@@ -145,7 +145,7 @@ if players_selected:
                              y=ylocs, 
                              mode='markers',
                              name='markers',
-                             marker=dict(color=totals['MAKE_PERCENT'],
+                             marker=dict(color=totals['POINTS_PER_ATTEMPT'],
                                          size=totals['ATTEMPT'],
                                          sizemode='area', 
                                          sizeref=2. * max(freq_by_hex) / (11. ** 3),
