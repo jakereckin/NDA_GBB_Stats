@@ -145,7 +145,7 @@ if team_selected:
                                    'MAKE_PERCENT',
                                    'POINTS_PER_ATTEMPT',
                                    'ASSIST_PERCENT',
-                                   'HG_PERCENT']]
+                                   'HG_PERCENT']].round(3)
     st.header('Top 5 Spots')
     st.dataframe(totals_sorted.head(5), 
                  use_container_width=True)
