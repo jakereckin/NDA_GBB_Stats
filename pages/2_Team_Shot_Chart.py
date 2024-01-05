@@ -155,7 +155,7 @@ if team_selected:
                              y=ylocs, 
                              mode='markers',
                              name='markers',
-                             marker=dict(color=totals['MAKE_PERCENT'],
+                             marker=dict(color=totals['POINTS_PER_ATTEMPT'],
                                          size=totals['ATTEMPT'],
                                          sizemode='area', 
                                          sizeref=2. * max(freq_by_hex) / (11. ** 3),

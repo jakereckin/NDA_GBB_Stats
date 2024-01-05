@@ -146,13 +146,18 @@ other_stats = ['OFFENSIVE_EFFICENCY',
                  'PPA',
                  'POINTS'
 ]
-season_list = game_summary['SEASON'].unique().tolist()
+season_list = (game_summary['SEASON'].unique()
+                                     .tolist()
+)
 season = st.multiselect(label='Select Season',
                         options=season_list
 )
 if season_list:
     game_summary_season = game_summary[game_summary['SEASON'].isin(season)]
-    games_list = game_summary_season['LABEL'].unique().tolist()
+    game_summary_season = game_summary_season.sort_values(by='DATE')
+    games_list = (game_summary_season['LABEL'].unique()
+                                              .tolist()
+    )
     game = st.multiselect(label='Select Games',
                           options=games_list
     )
