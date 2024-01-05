@@ -154,7 +154,7 @@ season = st.multiselect(label='Select Season',
 )
 if season_list:
     game_summary_season = game_summary[game_summary['SEASON'].isin(season)]
-    game_summary_season = game_summary_season.sort_values(by='DATE')
+    game_summary_season = game_summary_season.sort_values(by='GAME_ID')
     games_list = (game_summary_season['LABEL'].unique()
                                               .tolist()
     )
