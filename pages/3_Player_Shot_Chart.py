@@ -133,7 +133,9 @@ if players_selected:
                                    'HG_PERCENT']].round(3)
     st.header(f'Top 5 Spots for {players_selected}')
     st.dataframe(totals_sorted.head(5), 
-                 use_container_width=True)
+                 use_container_width=True,
+                 hide_index=True
+    )
     freq_by_hex = totals['ATTEMPT']
     accs_by_hex = totals['POINTS_PER_ATTEMPT']
     spot = totals['SHOT_SPOT']
