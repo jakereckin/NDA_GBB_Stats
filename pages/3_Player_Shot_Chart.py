@@ -101,7 +101,8 @@ if players_selected:
                                 as_index=False)
                        [['MAKE', 
                          'ATTEMPT', 
-                         'WAS_ASSIST']]
+                         'WAS_ASSIST',
+                         'HEAVILY_GUARDED']]
                        .sum()
     )
     totals['POINT_VALUE'] = (totals['SHOT_SPOT'].str
@@ -114,6 +115,9 @@ if players_selected:
     )
     totals['ASSIST_PERCENT'] = (totals['WAS_ASSIST']
                                 / totals['MAKE'].replace(0, 1)
+    )
+    totals['HG_PERCENT'] = (totals['HEAVILY_GUARDED'] 
+                                / totals['ATTEMPT'].replace(0, 1)
     )
     totals['POINTS_PER_ATTEMPT'] = ((totals['MAKE']*totals['POINT_VALUE']) 
                                     / totals['ATTEMPT'].replace(0, 1)
@@ -129,7 +133,8 @@ if players_selected:
                                    'ATTEMPT',
                                    'MAKE_PERCENT',
                                    'POINTS_PER_ATTEMPT',
-                                   'ASSIST_PERCENT']]
+                                   'ASSIST_PERCENT',
+                                   'HG_PERCENT']]
     st.header(f'Top 5 Spots for {players_selected}')
     st.dataframe(totals_sorted.head(5), 
                  use_container_width=True)
@@ -137,6 +142,7 @@ if players_selected:
     accs_by_hex = totals['POINTS_PER_ATTEMPT']
     spot = totals['SHOT_SPOT']
     assist_percent = totals['ASSIST_PERCENT'].round(3)
+    hg_percent = totals['HG_PERCENT'].round(3)
     marker_cmin = 0.0
     marker_cmax = 2
     ticktexts = [str(marker_cmin)+'-', "", 
@@ -145,7 +151,8 @@ if players_selected:
     hexbin_text = [
         '<i>Points Per Attempt: </i>' + str(round(accs_by_hex[i], 1)) + '<BR>'
         '<i>Attempts: </i>' + str(round(freq_by_hex[i], 2)) + '<BR>'
-        '<i>Assist %: </i>' + str(round(assist_percent[i], 3))
+        '<i>Assist %: </i>' + str(round(assist_percent[i], 3)) + '<BR>'
+        '<i>Heavily Guarded %: </i>' + str(round(hg_percent[i], 4))
         for i in range(len(freq_by_hex))
     ]
     str_selected = ','.join(players_selected)

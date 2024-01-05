@@ -127,7 +127,7 @@ if team_selected:
                                 / totals['MAKE'].replace(0, 1)
     )
     totals['HG_PERCENT'] = (totals['HEAVILY_GUARDED'] 
-                                / totals['MAKE'].replace(0, 1)
+                                / totals['ATTEMPT'].replace(0, 1)
     )
     totals['POINTS_PER_ATTEMPT'] = ((totals['MAKE'] * totals['POINT_VALUE']) 
                                     / totals['ATTEMPT'].replace(0, 1)
