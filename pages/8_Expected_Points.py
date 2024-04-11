@@ -141,8 +141,9 @@ if game != []:
     actual_ft = game_data['FTM'].sum()
     total_actual = actual_fg+actual_ft
     st.metric(value=total_expected,
-            label='TOTAL EXPECTED')
+            label='TOTAL EXPECTED POINTS')
     st.metric(value=total_actual,
-            label='ACTUAL')
-    st.dataframe(grouped_all_spots, use_container_width=True)
-    st.dataframe(ft_percent_keep)
+            label='ACTUAL POINTS')
+    st.dataframe(tgame_2, use_container_width=True, hide_index=True)
+    st.dataframe(grouped_all_spots, use_container_width=True, hide_index=True)
+    st.dataframe(ft_percent_keep, use_container_width=True, hide_index=True)
