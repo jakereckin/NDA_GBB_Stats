@@ -132,9 +132,11 @@ if game != []:
     )
     tgame_2['EXPECTED_POINTS'] = tgame_2['ATTEMPTS']*tgame_2['EXPECTED_VALUE']
     tgame_2['ACTUAL_POINTS'] = tgame_2['MAKES']*tgame_2['POINT_VALUE']
+    # EXPECTED ====
     expected_fg = tgame_2['EXPECTED_POINTS'].sum()
     expected_ft = (game_data['FTA']*game_data['FT_PERCENT']).sum()
     total_expected = expected_fg+expected_ft
+    # ACTUAL ====
     actual_fg = tgame_2['ACTUAL_POINTS'].sum()
     actual_ft = game_data['FTM'].sum()
     total_actual = actual_fg+actual_ft
