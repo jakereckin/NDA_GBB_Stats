@@ -144,5 +144,5 @@ if game != []:
             label='TOTAL EXPECTED')
     st.metric(value=total_actual,
             label='ACTUAL')
-    st.dataframe(grouped_all_spots)
+    st.dataframe(grouped_all_spots, use_container_width=True)
     st.dataframe(ft_percent_keep)
