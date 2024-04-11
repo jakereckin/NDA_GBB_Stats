@@ -16,6 +16,22 @@ spot = conn.read(worksheet='spots')
 games = conn.read(worksheet='games')
 players = conn.read(worksheet='players')
 players = players[players['YEAR']==2024]
+game_summary_data = conn.read(worksheet='game_summary')
+game_summary = pd.merge(left=game_summary_data,
+                            right=games,
+                            on='GAME_ID'
+)
+game_summary = game_summary[game_summary['SEASON']==2024]
+ft_percent = (game_summary.groupby(by=['PLAYER_ID'], as_index=False)
+                          .agg(FTA=('FTA', np.sum),
+                               FTM=('FTM', np.sum))
+)
+mean_ft_percent = ft_percent['FTM'].sum()/ft_percent['FTA'].sum()
+ft_percent['FT_PERCENT'] = np.where(ft_percent['FTA']==0,
+                                    mean_ft_percent,
+                                    ft_percent['FTM']/ft_percent['FTA'])
+ft_percent_keep = ft_percent[['PLAYER_ID',
+                              'FT_PERCENT']]
 player_data = (play_event.merge(spot,
                                 left_on=['SHOT_SPOT'],
                                 right_on=['SPOT'])
@@ -28,6 +44,10 @@ player_data = (play_event.merge(spot,
 player_data['LABEL'] = (player_data['OPPONENT']
                              + ' - '
                              + player_data['DATE']
+)
+game_summary['LABEL'] = (game_summary['OPPONENT']
+                             + ' - '
+                             + game_summary['DATE']
 )
 games_list = (player_data['LABEL'].unique()
                                               .tolist()
@@ -65,6 +85,9 @@ game = st.selectbox(label='Select Games',
 )
 if game != []:
     t_game = player_data[player_data['LABEL']==game]
+    game_data = game_summary[game_summary['LABEL']==game]
+    game_data = game_data.merge(ft_percent_keep,
+                                on=['PLAYER_ID'])
     grouped = (player_data2.groupby(by=['NAME',
                             'SHOT_SPOT',
                             'SHOT_DEFENSE'],
@@ -109,8 +132,15 @@ if game != []:
     )
     tgame_2['EXPECTED_POINTS'] = tgame_2['ATTEMPTS']*tgame_2['EXPECTED_VALUE']
     tgame_2['ACTUAL_POINTS'] = tgame_2['MAKES']*tgame_2['POINT_VALUE']
-    st.metric(value=tgame_2['EXPECTED_POINTS'].sum(),
+    expected_fg = tgame_2['EXPECTED_POINTS'].sum()
+    expected_ft = (game_data['FTA']*game_data['FT_PERCENT']).sum()
+    total_expected = expected_fg+expected_ft
+    actual_fg = tgame_2['ACTUAL_POINTS'].sum()
+    actual_ft = game_data['FTM'].sum()
+    total_actual = actual_fg+actual_ft
+    st.metric(value=total_expected,
             label='TOTAL EXPECTED')
-    st.metric(value=tgame_2['ACTUAL_POINTS'].sum(),
+    st.metric(value=total_actual,
             label='ACTUAL')
-    st.dataframe(tgame_2)
+    st.dataframe(grouped_all_spots)
+    st.dataframe(ft_percent_keep)
