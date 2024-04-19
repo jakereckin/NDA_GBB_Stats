@@ -103,6 +103,23 @@ def apply_derived(data):
         else:
             return 0
 
+    data['TWO_POINTS_SCORED'] = 2*data['TWO_FGM']
+    data['THREE_POINTS_SCORED'] = 3*data['THREE_FGM']
+    data['TOTAL_POINTS_SCORED'] = (data['TWO_POINTS_SCORED']
+                                   + data['THREE_POINTS_SCORED']
+    )
+    data['2PPA'] = np.where(data['TWO_FGA']>0,
+                            data['TWO_POINTS_SCORED']/data['TWO_FGA'],
+                            0
+    )
+    data['3PPA'] = np.where(data['THREE_FGA']>0,
+                            data['THREE_POINTS_SCORED']/data['THREE_FGA'],
+                            0
+    )
+    data['PPA'] = np.where(data['FGA']>0,
+                            data['TOTAL_POINTS_SCORED']/data['FGA'],
+                            0
+    )
     def get_ppa_three(row):
         total_points = 3 * row['THREE_FGM']
         total_attempts = row['THREE_FGA']
@@ -154,15 +171,15 @@ def apply_derived(data):
     data['EFG%'] = data.apply(effective_fgp, 
                               axis='columns'
     )
-    data['2PPA'] = data.apply(get_ppa_two, 
-                              axis='columns'
-    )
-    data['3PPA'] = data.apply(get_ppa_three, 
-                              axis='columns'
-    )
-    data['PPA'] = data.apply(get_total_ppa, 
-                             axis='columns'
-    )
+    #data['2PPA'] = data.apply(get_ppa_two, 
+    #                          axis='columns'
+    #)
+    ##data['3PPA'] = data.apply(get_ppa_three, 
+    #                          axis='columns'
+    #)
+    #data['PPA'] = data.apply(get_total_ppa, 
+    #                         axis='columns'
+    #)
     return data
 
 game_summary, team_data = get_games(game_summary=game_summary,
