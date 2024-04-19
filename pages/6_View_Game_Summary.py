@@ -232,6 +232,7 @@ if season_list:
                              options=other_stats,
                              horizontal=True
         )
+        st.table(present)
         if data_list:
             fig = px.bar(present, 
                          x=data_list, 
