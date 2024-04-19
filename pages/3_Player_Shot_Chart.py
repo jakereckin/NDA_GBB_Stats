@@ -8,7 +8,6 @@ import os
 import pandas as pd
 import sqlite3 as sql
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
-from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 pd.options.mode.chained_assignment = None
 
@@ -355,6 +354,8 @@ if players_selected:
                                             width=1), 
                                   layer='below'),]
     )
+    fig = ut.load_shot_chart_player(totals,
+                                    players_selected)
     st.header(f'Shot Chart for {players_selected}')
     st.plotly_chart(fig, 
                     use_container_width=True
