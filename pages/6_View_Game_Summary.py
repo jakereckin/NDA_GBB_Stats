@@ -30,14 +30,14 @@ SELECT *
   FROM GAME_SUMMARY 
 """
 my_db = ut.create_db()
-'''
-conn = st.connection("gsheets", 
-                     type=GSheetsConnection
-)
-players = conn.read(worksheet='players')
-games = conn.read(worksheet='games')
-game_summary = conn.read(worksheet='game_summary')
-'''
+
+#conn = st.connection("gsheets", 
+#                     type=GSheetsConnection
+#)
+#players = conn.read(worksheet='players')
+#games = conn.read(worksheet='games')
+#game_summary = conn.read(worksheet='game_summary')
+
 
 with sql.connect(my_db) as nda_db:
     games = pd.read_sql(sql=SELECT_GAMES, 
