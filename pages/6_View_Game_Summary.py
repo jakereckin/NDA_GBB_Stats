@@ -7,6 +7,7 @@ import sys
 import os
 import plotly.express as px
 import pandas as pd
+import sqlite3 as sql
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from functions import utils as ut
 pd.options.mode.chained_assignment = None
@@ -14,15 +15,40 @@ pd.options.mode.chained_assignment = None
 #st.set_page_config(initial_sidebar_state='expanded')
 
 from streamlit_gsheets import GSheetsConnection
-from functions import utils as ut
 
+SELECT_PLAYERS = """
+SELECT *
+  FROM PLAYERS
+"""
+
+SELECT_GAMES = """
+SELECT *
+  FROM GAMES
+"""
+SELECT_GAME_SUMMARY = """
+SELECT *
+  FROM GAME_SUMMARY 
+"""
+my_db = ut.create_db()
+'''
 conn = st.connection("gsheets", 
                      type=GSheetsConnection
 )
 players = conn.read(worksheet='players')
 games = conn.read(worksheet='games')
 game_summary = conn.read(worksheet='game_summary')
+'''
 
+with sql.connect(my_db) as nda_db:
+    games = pd.read_sql(sql=SELECT_GAMES, 
+                        con=nda_db
+    )
+    players = pd.read_sql(sql=SELECT_PLAYERS, 
+                          con=nda_db
+    )
+    game_summary = pd.read_sql(sql=SELECT_GAME_SUMMARY, 
+                               con=nda_db
+    )
 @st.cache_data
 def get_games(game_summary, games):
     game_summary = pd.merge(left=game_summary,
