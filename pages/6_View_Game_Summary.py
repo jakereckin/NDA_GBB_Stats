@@ -122,15 +122,11 @@ def apply_derived(data):
     def get_total_ppa2(two_fgm,
                        three_fgm,
                        fga):
-       # total_points = 2 * two_fgm + 3 * three_fgm
-       ## if fga > 0:
-        #    return total_points / fga
-        ##else:
-         #   return 0
-        
-        return np.where(fga>0,
-                 (2 * two_fgm + 3 * three_fgm)/fga,
-                 0)
+        total_points = 2 * two_fgm + 3 * three_fgm
+        if fga > 0:
+            return total_points / fga
+        else:
+            return 0
 
     def offensive_efficiency(row):
         num = row['FGM'] + row['ASSISTS']
