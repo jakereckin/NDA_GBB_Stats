@@ -40,6 +40,8 @@ with sql.connect(my_db) as nda_db:
     spot = pd.read_sql(sql=SELECT_SPOT, 
                                con=nda_db
     )
+    games['GAME_ID'] = games['GAME_ID'].astype(str)
+    play_event['GAME_ID'] = play_event['GAME_ID'].astype(str)
 
 
 player_data = (play_event.merge(spot,
