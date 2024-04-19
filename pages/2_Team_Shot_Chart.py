@@ -9,16 +9,39 @@ import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
+import sqlite3 as sql
 pd.options.mode.chained_assignment = None
 
 st.set_page_config(initial_sidebar_state='expanded')
 
-conn = st.connection("gsheets", 
-                     type=GSheetsConnection
-)
-play_event = conn.read(worksheet='play_event')
-spot = conn.read(worksheet='spots')
-games = conn.read(worksheet='games')
+SELECT_PLAYS = """
+SELECT *
+  FROM PLAYS
+"""
+
+SELECT_GAMES = """
+SELECT *
+  FROM GAMES
+"""
+SELECT_SPOT = """
+SELECT *
+  FROM SPOTS 
+"""
+my_db = ut.create_db()
+
+
+with sql.connect(my_db) as nda_db:
+    games = pd.read_sql(sql=SELECT_GAMES, 
+                        con=nda_db
+    )
+    play_event = pd.read_sql(sql=SELECT_PLAYS, 
+                          con=nda_db
+    )
+    spot = pd.read_sql(sql=SELECT_SPOT, 
+                               con=nda_db
+    )
+
+
 player_data = (play_event.merge(spot,
                                 left_on=['SHOT_SPOT'],
                                 right_on=['SPOT'])

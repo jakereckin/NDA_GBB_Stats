@@ -11,10 +11,7 @@ import sqlite3 as sql
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from functions import utils as ut
 pd.options.mode.chained_assignment = None
-
 #st.set_page_config(initial_sidebar_state='expanded')
-
-from streamlit_gsheets import GSheetsConnection
 
 SELECT_PLAYERS = """
 SELECT *
@@ -30,13 +27,6 @@ SELECT *
   FROM GAME_SUMMARY 
 """
 my_db = ut.create_db()
-
-#conn = st.connection("gsheets", 
-#                     type=GSheetsConnection
-#)
-#players = conn.read(worksheet='players')
-#games = conn.read(worksheet='games')
-#game_summary = conn.read(worksheet='game_summary')
 
 
 with sql.connect(my_db) as nda_db:
