@@ -163,14 +163,14 @@ def apply_derived(data):
     data['3PPA'] = data.apply(get_ppa_three, 
                               axis='columns'
     )
-    #data['PPA'] = #data.apply(get_total_ppa, 
-                  #           axis='columns'
-    #)
-    data['PPA'] = (np.vectorize(get_total_ppa2)
-                   (data['TWO_FGM'],
-                    data['THREE_FGM'],
-                    data['FGA'])
+    data['PPA'] = data.apply(get_total_ppa, 
+                             axis='columns'
     )
+    #data['PPA'] = (np.vectorize(get_total_ppa2)
+    ##               (data['TWO_FGM'],
+    #                data['THREE_FGM'],
+    #                data['FGA'])
+    #)
     return data
 
 game_summary, team_data = get_games(game_summary=game_summary,
