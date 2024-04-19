@@ -131,36 +131,10 @@ def apply_derived(data):
     data['EFG%'] = np.where(data['FGA']>0,
                             data['EFG_NUM']/data['FGA'],
                             0
-    )
-    def offensive_efficiency(row):
-        num = row['FGM'] + row['ASSISTS']
-        denom = row['FGA'] - row['OFFENSIVE_REBOUNDS'] + row['ASSISTS'] + row['TURNOVER']
-        if denom != 0:
-            return num / denom
-        else:
-            return 0
-
-
-    def effective_fgp(row):
-        num = row['FGM'] + (.5 * row['THREE_FGM'])
-        denom = row['FGA']
-        if denom > 0:
-            return num / denom
-        else:
-            return 0
-        
+    ) 
     data['EFF_POINTS'] = (data['POINTS']
                           * data['OFFENSIVE_EFFICENCY']
     )
-    #data['2PPA'] = data.apply(get_ppa_two, 
-    #                          axis='columns'
-    #)
-    ##data['3PPA'] = data.apply(get_ppa_three, 
-    #                          axis='columns'
-    #)
-    #data['PPA'] = data.apply(get_total_ppa, 
-    #                         axis='columns'
-    #)
     return data
 
 game_summary, team_data = get_games(game_summary=game_summary,
