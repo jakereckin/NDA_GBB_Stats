@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import sys
 import os
 import pandas as pd
+import sqlite3 as sql
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
@@ -13,11 +14,44 @@ pd.options.mode.chained_assignment = None
 
 st.set_page_config(initial_sidebar_state='expanded')
 
-conn = st.connection("gsheets", type=GSheetsConnection)
-play_event = conn.read(worksheet='play_event')
-spot = conn.read(worksheet='spots')
-games = conn.read(worksheet='games')
-players = conn.read(worksheet='players')
+SELECT_PLAYS = """
+SELECT *
+  FROM PLAYS
+"""
+
+SELECT_GAMES = """
+SELECT *
+  FROM GAMES
+"""
+SELECT_SPOT = """
+SELECT *
+  FROM SPOTS 
+"""
+SELECT_PLAYERS = """
+SELECT *
+  FROM PLAYERS
+"""
+my_db = ut.create_db()
+
+
+with sql.connect(my_db) as nda_db:
+    games = pd.read_sql(sql=SELECT_GAMES, 
+                        con=nda_db
+    )
+    play_event = pd.read_sql(sql=SELECT_PLAYS, 
+                          con=nda_db
+    )
+    spot = pd.read_sql(sql=SELECT_SPOT, 
+                               con=nda_db
+    )
+    players = pd.read_sql(sql=SELECT_PLAYERS, 
+                               con=nda_db
+    )
+    games['GAME_ID'] = games['GAME_ID'].astype(str)
+    play_event['GAME_ID'] = play_event['GAME_ID'].astype(str)
+    players['NUMBER'] = players['NUMBER'].astype(str)
+    play_event['PLAYER_ID'] = play_event['PLAYER_ID'].astype(str)
+
 players = players[players['YEAR']==2024]
 player_data = (play_event.merge(spot,
                                 left_on=['SHOT_SPOT'],
