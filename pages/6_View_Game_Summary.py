@@ -118,6 +118,16 @@ def apply_derived(data):
             return total_points / total_attempts
         else:
             return 0
+        
+    def get_total_ppa2(two_fgm,
+                       three_fgm,
+                       fga):
+        total_points = 2 * two_fgm + 3 * three_fgm
+        total_attempts = fga
+        if total_attempts > 0:
+            return total_points / total_attempts
+        else:
+            return 0
 
     def offensive_efficiency(row):
         num = row['FGM'] + row['ASSISTS']
@@ -154,8 +164,13 @@ def apply_derived(data):
     data['3PPA'] = data.apply(get_ppa_three, 
                               axis='columns'
     )
-    data['PPA'] = data.apply(get_total_ppa, 
-                             axis='columns'
+    #data['PPA'] = #data.apply(get_total_ppa, 
+                  #           axis='columns'
+    #)
+    data['PPA'] = (np.vectorize(get_total_ppa2)
+                   (data['TWO_FGM'],
+                    data['THREE_FGM'],
+                    data['FGA'])
     )
     return data
 
@@ -187,8 +202,9 @@ season = st.multiselect(label='Select Season',
                         options=season_list
 )
 if season_list:
-    game_summary_season = game_summary[game_summary['SEASON'].isin(season)]
-    game_summary_season = game_summary_season.sort_values(by='GAME_ID')
+    game_summary_season = (game_summary[game_summary['SEASON'].isin(season)]
+                                       .sort_values(by='GAME_ID')
+    )
     games_list = (game_summary_season['LABEL'].unique()
                                               .tolist()
     )
@@ -199,7 +215,6 @@ if season_list:
         final_data = game_summary_season[game_summary_season['LABEL'].isin(game)]
         team_data = team_data[team_data['LABEL'].isin(game)]
         team_data = apply_derived(team_data)
-        st.table(team_data)
         team_data = (team_data[list_of_stats]
                               .rename(columns={'LABEL': 'Opponent'})
                               .round(2)
