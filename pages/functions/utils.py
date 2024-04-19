@@ -13,6 +13,24 @@ def create_db():
     else:
         return 'NDA_BB.db'
     
+def ellipse_arc(x_center=0.0,
+                 y_center=0.0, 
+                 a=8.5, 
+                 b=8.5, 
+                 start_angle=0.0, 
+                 end_angle=2 * np.pi, 
+                 N=200, 
+                 closed=False):
+        t = np.linspace(start_angle, end_angle, N)
+        x = x_center + a * np.cos(t)
+        y = y_center + b * np.sin(t)
+        path = f'M {x[0]}, {y[0]}'
+        for k in range(1, len(t)):
+            path += f'L{x[k]}, {y[k]}'
+        if closed:
+            path += ' Z'
+        return path
+    
 def load_shot_chart_player(totals,
                     players_selected):
     xlocs = totals['XSPOT']
