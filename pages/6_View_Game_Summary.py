@@ -49,14 +49,15 @@ with sql.connect(my_db) as nda_db:
     game_summary = pd.read_sql(sql=SELECT_GAME_SUMMARY, 
                                con=nda_db
     )
-@st.cache_data
-def get_games(game_summary, games, players):
     game_summary['GAME_ID'] = game_summary['GAME_ID'].astype(str)
     games['GAME_ID'] = games['GAME_ID'].astype(str)
     games['SEASON'] = games['SEASON'].astype(str)
     players['YEAR'] = players['YEAR'].astype(str)
     players['NUMBER'] = players['NUMBER'].astype(str)
     game_summary['PLAYER_ID'] = game_summary['PLAYER_ID'].astype(str)
+
+@st.cache_data
+def get_games(game_summary, games, players):
     game_summary = pd.merge(left=game_summary,
                             right=games,
                             on='GAME_ID'
@@ -119,8 +120,8 @@ def apply_derived(data):
             return 0
 
     def offensive_efficiency(row):
-        num = row['FGM'] + row['ASSITS']
-        denom = row['FGA'] - row['OFFENSIVE_REBOUNDS'] + row['ASSITS'] + row['TURNOVER']
+        num = row['FGM'] + row['ASSISTS']
+        denom = row['FGA'] - row['OFFENSIVE_REBOUNDS'] + row['ASSISTS'] + row['TURNOVER']
         if denom != 0:
             return num / denom
         else:
