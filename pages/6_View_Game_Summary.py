@@ -136,9 +136,6 @@ def apply_derived(data):
         else:
             return 0
 
-    def efficient_offense(row):
-        val = row['POINTS'] * row['OFFENSIVE_EFFICENCY']
-        return val
 
     def effective_fgp(row):
         num = row['FGM'] + (.5 * row['THREE_FGM'])
@@ -151,8 +148,8 @@ def apply_derived(data):
     data['OFFENSIVE_EFFICENCY'] = data.apply(offensive_efficiency, 
                                              axis='columns'
     )
-    data['EFF_POINTS'] = data.apply(efficient_offense, 
-                                    axis='columns'
+    data['EFF_POINTS'] = (data['POINTS']
+                          * data['OFFENSIVE_EFFICENCY']
     )
     data['EFG%'] = data.apply(effective_fgp, 
                               axis='columns'
@@ -166,11 +163,6 @@ def apply_derived(data):
     data['PPA'] = data.apply(get_total_ppa, 
                              axis='columns'
     )
-    #data['PPA'] = (np.vectorize(get_total_ppa2)
-    ##               (data['TWO_FGM'],
-    #                data['THREE_FGM'],
-    #                data['FGA'])
-    #)
     return data
 
 game_summary, team_data = get_games(game_summary=game_summary,
@@ -232,7 +224,7 @@ if season_list:
                              options=other_stats,
                              horizontal=True
         )
-        st.table(present)
+
         if data_list:
             fig = px.bar(present, 
                          x=data_list, 
