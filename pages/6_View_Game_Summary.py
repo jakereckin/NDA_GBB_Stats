@@ -95,18 +95,22 @@ def get_games(game_summary, games, players):
     return game_summary, team_data
 
 def apply_derived(data):
-    def get_ppa_two(row):
-        total_points = 2 * row['TWO_FGM']
-        total_attempts = row['TWO_FGA']
-        if total_attempts > 0:
-            return total_points / total_attempts
-        else:
-            return 0
 
     data['TWO_POINTS_SCORED'] = 2*data['TWO_FGM']
     data['THREE_POINTS_SCORED'] = 3*data['THREE_FGM']
     data['TOTAL_POINTS_SCORED'] = (data['TWO_POINTS_SCORED']
                                    + data['THREE_POINTS_SCORED']
+    )
+    data['OE_NUM'] = (data['FGM']
+                      + data['ASSISTS']
+    )
+    data['OE_DENOM'] = (data['FGA'] 
+                        - data['OFFENSIVE_REBOUNDS'] 
+                        + data['ASSISTS'] 
+                        + data['TURNOVER']
+    )
+    data['EFG_NUM'] = (data['FGM'] 
+                       + (.5*data['THREE_FGM'])
     )
     data['2PPA'] = np.where(data['TWO_FGA']>0,
                             data['TWO_POINTS_SCORED']/data['TWO_FGA'],
@@ -120,31 +124,14 @@ def apply_derived(data):
                             data['TOTAL_POINTS_SCORED']/data['FGA'],
                             0
     )
-    def get_ppa_three(row):
-        total_points = 3 * row['THREE_FGM']
-        total_attempts = row['THREE_FGA']
-        if total_attempts > 0:
-            return total_points / total_attempts
-        else:
-            return 0
-
-    def get_total_ppa(row):
-        total_points = 2 * row['TWO_FGM'] + 3 * row['THREE_FGM']
-        total_attempts = row['FGA']
-        if total_attempts > 0:
-            return total_points / total_attempts
-        else:
-            return 0
-        
-    def get_total_ppa2(two_fgm,
-                       three_fgm,
-                       fga):
-        total_points = 2 * two_fgm + 3 * three_fgm
-        if fga > 0:
-            return total_points / fga
-        else:
-            return 0
-
+    data['OFFENSIVE_EFFICENCY'] = np.where(data['OE_DENOM']!=0,
+                                           data['OE_NUM']/data['OE_DENOM'],
+                                           0
+    )
+    data['EFG%'] = np.where(data['FGA']>0,
+                            data['EFG_NUM']/data['FGA'],
+                            0
+    )
     def offensive_efficiency(row):
         num = row['FGM'] + row['ASSISTS']
         denom = row['FGA'] - row['OFFENSIVE_REBOUNDS'] + row['ASSISTS'] + row['TURNOVER']
@@ -162,14 +149,8 @@ def apply_derived(data):
         else:
             return 0
         
-    data['OFFENSIVE_EFFICENCY'] = data.apply(offensive_efficiency, 
-                                             axis='columns'
-    )
     data['EFF_POINTS'] = (data['POINTS']
                           * data['OFFENSIVE_EFFICENCY']
-    )
-    data['EFG%'] = data.apply(effective_fgp, 
-                              axis='columns'
     )
     #data['2PPA'] = data.apply(get_ppa_two, 
     #                          axis='columns'
