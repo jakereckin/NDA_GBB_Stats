@@ -144,14 +144,14 @@ if players_selected:
                                    'POINTS_PER_ATTEMPT',
                                    'ASSIST_PERCENT',
                                    'HG_PERCENT']].round(3)
-    st.header(f'Top 5 Spots for {players_selected}')
-    st.dataframe(totals_sorted.head(5), 
-                 use_container_width=True,
-                 hide_index=True
-    )
     fig = ut.load_shot_chart_player(totals,
                                     players_selected)
     st.header(f'Shot Chart for {players_selected}')
     st.plotly_chart(fig, 
                     use_container_width=True
+    )
+    st.header(f'Top 5 Spots for {players_selected}')
+    st.dataframe(totals_sorted.head(5), 
+                 use_container_width=True,
+                 hide_index=True
     )
