@@ -50,7 +50,13 @@ with sql.connect(my_db) as nda_db:
                                con=nda_db
     )
 @st.cache_data
-def get_games(game_summary, games):
+def get_games(game_summary, games, players):
+    game_summary['GAME_ID'] = game_summary['GAME_ID'].astype(str)
+    games['GAME_ID'] = games['GAME_ID'].astype(str)
+    games['SEASON'] = games['SEASON'].astype(str)
+    players['YEAR'] = players['YEAR'].astype(str)
+    players['NUMBER'] = players['NUMBER'].astype(str)
+    game_summary['PLAYER_ID'] = game_summary['PLAYER_ID'].astype(str)
     game_summary = pd.merge(left=game_summary,
                             right=games,
                             on='GAME_ID'
@@ -153,7 +159,8 @@ def apply_derived(data):
     return data
 
 game_summary, team_data = get_games(game_summary=game_summary,
-                                    games=games
+                                    games=games,
+                                    players=players
 )
 list_of_stats = ['LABEL',
                  'OFFENSIVE_EFFICENCY',
