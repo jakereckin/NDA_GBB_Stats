@@ -199,6 +199,7 @@ if season_list:
         final_data = game_summary_season[game_summary_season['LABEL'].isin(game)]
         team_data = team_data[team_data['LABEL'].isin(game)]
         team_data = apply_derived(team_data)
+        st.table(team_data)
         team_data = (team_data[list_of_stats]
                               .rename(columns={'LABEL': 'Opponent'})
                               .round(2)
