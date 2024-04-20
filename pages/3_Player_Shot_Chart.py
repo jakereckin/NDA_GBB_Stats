@@ -11,42 +11,49 @@ from functions import utils as ut
 from streamlit_gsheets import GSheetsConnection
 pd.options.mode.chained_assignment = None
 
+@st.cache_data
+def load_data():
+     conn = st.connection("gsheets", 
+                         type=GSheetsConnection)
+     play_event = conn.read(worksheet='play_event')
+     spot = conn.read(worksheet='spots')
+     games = conn.read(worksheet='games')
+     players = conn.read(worksheet='players')
+     players = players[players['YEAR']==2024]
+     return play_event, spot, games, players
 
-conn = st.connection("gsheets", 
-                     type=GSheetsConnection)
-play_event = conn.read(worksheet='play_event')
-spot = conn.read(worksheet='spots')
-games = conn.read(worksheet='games')
-players = conn.read(worksheet='players')
-
-players = players[players['YEAR']==2024]
-player_data = (play_event.merge(spot,
-                                left_on=['SHOT_SPOT'],
-                                right_on=['SPOT'])
-                         .merge(games,
-                                on=['GAME_ID'])
-                         .merge(players,
-                                left_on=['PLAYER_ID'],
-                                right_on=['NUMBER'])
-)
-player_data['NAME'] = (player_data['FIRST_NAME']
-                       + ' '
-                       + player_data['LAST_NAME']
-)
-player_data['MAKE'] = np.where(player_data['MAKE_MISS']=='Y',
-                               1,
-                               0
-)
-player_data['WAS_ASSIST'] = np.where(player_data['ASSISTED']=='Y',
-                               1,
-                               0
-)
-player_data['HEAVILY_GUARDED'] = np.where(player_data['SHOT_DEFENSE']=='HEAVILY_GUARDED',
-                               1,
-                               0
-)
-player_data['ATTEMPT'] = 1
-player_data = player_data[['FIRST_NAME',
+@st.cache_data
+def get_player_data(play_event,
+                    spot,
+                    games,
+                    players):
+     player_data = (play_event.merge(spot,
+                                   left_on=['SHOT_SPOT'],
+                                   right_on=['SPOT'])
+                              .merge(games,
+                                   on=['GAME_ID'])
+                              .merge(players,
+                                   left_on=['PLAYER_ID'],
+                                   right_on=['NUMBER'])
+     )
+     player_data['NAME'] = (player_data['FIRST_NAME']
+                         + ' '
+                         + player_data['LAST_NAME']
+     )
+     player_data['MAKE'] = np.where(player_data['MAKE_MISS']=='Y',
+                                   1,
+                                   0
+     )
+     player_data['WAS_ASSIST'] = np.where(player_data['ASSISTED']=='Y',
+                                   1,
+                                   0
+     )
+     player_data['HEAVILY_GUARDED'] = np.where(player_data['SHOT_DEFENSE']=='HEAVILY_GUARDED',
+                                   1,
+                                   0
+     )
+     player_data['ATTEMPT'] = 1
+     player_data = player_data[['FIRST_NAME',
                            'LAST_NAME',
                            'NAME',
                            'SHOT_SPOT',
@@ -56,62 +63,84 @@ player_data = player_data[['FIRST_NAME',
                            'YSPOT',
                            'WAS_ASSIST',
                            'HEAVILY_GUARDED'
-]]
-player_data['U_ID'] = (player_data['FIRST_NAME']
-                       + ' '
-                       + player_data['LAST_NAME']
+     ]]
+     player_data['U_ID'] = (player_data['FIRST_NAME']
+                         + ' '
+                         + player_data['LAST_NAME']
+     )
+     return player_data
+
+def format_visual_data(this_game):
+     totals = (this_game.groupby(by=['NAME', 
+                                    'SHOT_SPOT', 
+                                    'XSPOT', 
+                                    'YSPOT'], 
+                                as_index=False)
+                         [['MAKE', 
+                              'ATTEMPT', 
+                              'WAS_ASSIST',
+                              'HEAVILY_GUARDED']]
+                         .sum()
+     )
+     totals['POINT_VALUE'] = (totals['SHOT_SPOT'].str
+                                                  .strip()
+                                                  .str[-1]
+                                                  .astype('int64')
+     )
+     totals['MAKE_PERCENT'] = (totals['MAKE']
+                                   / totals['ATTEMPT'].replace(0, 1)
+     )
+     totals['ASSIST_PERCENT'] = (totals['WAS_ASSIST']
+                                   / totals['MAKE'].replace(0, 1)
+     )
+     totals['HG_PERCENT'] = (totals['HEAVILY_GUARDED'] 
+                                   / totals['ATTEMPT'].replace(0, 1)
+     )
+     totals['POINTS_PER_ATTEMPT'] = ((totals['MAKE']*totals['POINT_VALUE']) 
+                                        / totals['ATTEMPT'].replace(0, 1)
+     )
+     totals_sorted = totals.sort_values(by=['POINTS_PER_ATTEMPT', 
+                                             'ATTEMPT'], 
+                                        ascending=False)
+     totals_sorted = totals_sorted[totals_sorted['ATTEMPT'] > 1]
+     totals_sorted = totals_sorted[['SHOT_SPOT',
+                                        'MAKE',
+                                        'ATTEMPT',
+                                        'MAKE_PERCENT',
+                                        'POINTS_PER_ATTEMPT',
+                                        'ASSIST_PERCENT',
+                                        'HG_PERCENT']].round(3)
+     return totals, totals_sorted
+
+@st.cache_data
+def filter_player_data(players_selected,
+                       player_data):
+     first_name = players_selected.split(' ')[0]
+     last_name = players_selected.split(' ')[1]
+     this_game = player_data[(player_data['FIRST_NAME']==first_name)
+                         & (player_data['LAST_NAME']==last_name)
+     ]
+     return this_game
+
+play_event, spot, games, players = load_data()
+player_data = get_player_data(play_event=play_event,
+                              spot=spot,
+                              games=games,
+                              players=players
 )
+
+
 player_names = player_data['U_ID'].unique()
 players_selected = st.radio(label='Choose Player', 
                             options=player_names,
                             horizontal=True
 )
-first_name = players_selected.split(' ')[0]
-last_name = players_selected.split(' ')[1]
-this_game = player_data[(player_data['FIRST_NAME']==first_name)
-                        & (player_data['LAST_NAME']==last_name)
-]
 
+this_game = filter_player_data(player_data=players_selected,
+                               player_data=player_data
+)
 if players_selected:
-    totals = (this_game.groupby(by=['NAME', 
-                                    'SHOT_SPOT', 
-                                    'XSPOT', 
-                                    'YSPOT'], 
-                                as_index=False)
-                       [['MAKE', 
-                         'ATTEMPT', 
-                         'WAS_ASSIST',
-                         'HEAVILY_GUARDED']]
-                       .sum()
-    )
-    totals['POINT_VALUE'] = (totals['SHOT_SPOT'].str
-                                                .strip()
-                                                .str[-1]
-                                                .astype('int64')
-    )
-    totals['MAKE_PERCENT'] = (totals['MAKE']
-                              / totals['ATTEMPT'].replace(0, 1)
-    )
-    totals['ASSIST_PERCENT'] = (totals['WAS_ASSIST']
-                                / totals['MAKE'].replace(0, 1)
-    )
-    totals['HG_PERCENT'] = (totals['HEAVILY_GUARDED'] 
-                                / totals['ATTEMPT'].replace(0, 1)
-    )
-    totals['POINTS_PER_ATTEMPT'] = ((totals['MAKE']*totals['POINT_VALUE']) 
-                                    / totals['ATTEMPT'].replace(0, 1)
-    )
-    totals_sorted = totals.sort_values(by=['POINTS_PER_ATTEMPT', 
-                                           'ATTEMPT'], 
-                                       ascending=False)
-    totals_sorted = totals_sorted[totals_sorted['ATTEMPT'] > 1]
-    totals_sorted = totals_sorted[['SHOT_SPOT',
-                                   'MAKE',
-                                   'ATTEMPT',
-                                   'MAKE_PERCENT',
-                                   'POINTS_PER_ATTEMPT',
-                                   'ASSIST_PERCENT',
-                                   'HG_PERCENT']].round(3)
+    totals, totals_sorted = format_visual_data(this_game=this_game)
     fig = ut.load_shot_chart_player(totals,
                                     players_selected)
     st.header(f'Shot Chart for {players_selected}')

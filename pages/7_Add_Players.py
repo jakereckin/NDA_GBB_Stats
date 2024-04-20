@@ -12,11 +12,14 @@ from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 pd.options.mode.chained_assignment = None
 
-conn = st.connection("gsheets", type=GSheetsConnection)
-players = conn.read(worksheet='players')
+@st.cache_data
+def load_data():
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    players = conn.read(worksheet='players')
+    players = players.sort_values(by=['YEAR', 'NUMBER'])
+    return conn, players
 
-
-players = players.sort_values(by=['YEAR', 'NUMBER'])
+conn, players = load_data()
 save = st.button('Save')
 edited_df = st.data_editor(players, 
                            num_rows='dynamic', 
