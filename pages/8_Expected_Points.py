@@ -20,7 +20,7 @@ def load_data():
     game_summary_data = conn.read(worksheet='game_summary')
     return play_event, spot, games, players, game_summary_data
 
-@st.chace_data
+@st.cache_data
 def get_ft_values(game_summary_data,
                   games):
     game_summary = pd.merge(left=game_summary_data,
