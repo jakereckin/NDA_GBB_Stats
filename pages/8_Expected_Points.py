@@ -187,5 +187,3 @@ if game != []:
     st.metric(value=total_actual,
             label='ACTUAL POINTS')
     st.dataframe(this_game, use_container_width=True, hide_index=True)
-    st.dataframe(grouped_all_spots, use_container_width=True, hide_index=True)
-    st.dataframe(ft_percent_keep, use_container_width=True, hide_index=True)
