@@ -1,50 +1,19 @@
-from matplotlib.patches import Circle, Rectangle, Arc
-import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
-import plotly.graph_objects as go
 import sys
 import os
 import plotly.express as px
 import pandas as pd
-import sqlite3 as sql
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
-from functions import utils as ut
+from streamlit_gsheets import GSheetsConnection
 pd.options.mode.chained_assignment = None
-#st.set_page_config(initial_sidebar_state='expanded')
 
-SELECT_PLAYERS = """
-SELECT *
-  FROM PLAYERS
-"""
-
-SELECT_GAMES = """
-SELECT *
-  FROM GAMES
-"""
-SELECT_GAME_SUMMARY = """
-SELECT *
-  FROM GAME_SUMMARY 
-"""
-my_db = ut.create_db()
-
-
-with sql.connect(my_db) as nda_db:
-    games = pd.read_sql(sql=SELECT_GAMES, 
-                        con=nda_db
-    )
-    players = pd.read_sql(sql=SELECT_PLAYERS, 
-                          con=nda_db
-    )
-    game_summary = pd.read_sql(sql=SELECT_GAME_SUMMARY, 
-                               con=nda_db
-    )
-    game_summary['GAME_ID'] = game_summary['GAME_ID'].astype(str)
-    games['GAME_ID'] = games['GAME_ID'].astype(str)
-    games['SEASON'] = games['SEASON'].astype(str)
-    players['YEAR'] = players['YEAR'].astype(str)
-    players['NUMBER'] = players['NUMBER'].astype(str)
-    game_summary['PLAYER_ID'] = game_summary['PLAYER_ID'].astype(str)
+conn = st.connection("gsheets", 
+                     type=GSheetsConnection
+)
+players = conn.read(worksheet='players')
+games = conn.read(worksheet='games')
+game_summary = conn.read(worksheet='game_summary')
 
 @st.cache_data
 def get_games(game_summary, games, players):
