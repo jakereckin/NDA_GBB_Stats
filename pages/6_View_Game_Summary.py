@@ -8,12 +8,34 @@ sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from streamlit_gsheets import GSheetsConnection
 pd.options.mode.chained_assignment = None
 
-conn = st.connection("gsheets", 
-                     type=GSheetsConnection
-)
-players = conn.read(worksheet='players')
-games = conn.read(worksheet='games')
-game_summary = conn.read(worksheet='game_summary')
+
+list_of_stats = ['LABEL',
+                 'OFFENSIVE_EFFICENCY',
+                 'EFF_POINTS',
+                 'EFG%',
+                 '2PPA',
+                 '3PPA',
+                 'PPA',
+                 'POINTS'
+]
+other_stats = ['OFFENSIVE_EFFICENCY',
+                 'EFF_POINTS',
+                 'EFG%',
+                 '2PPA',
+                 '3PPA',
+                 'PPA',
+                 'POINTS'
+]
+
+@st.cache_data
+def load_data():
+    conn = st.connection("gsheets", 
+                        type=GSheetsConnection
+    )
+    players = conn.read(worksheet='players')
+    games = conn.read(worksheet='games')
+    game_summary = conn.read(worksheet='game_summary')
+    return players, games, game_summary
 
 @st.cache_data
 def get_games(game_summary, games, players):
@@ -96,27 +118,11 @@ def apply_derived(data):
     )
     return data
 
+players, games, game_summary = load_data()
 game_summary, team_data = get_games(game_summary=game_summary,
                                     games=games,
                                     players=players
 )
-list_of_stats = ['LABEL',
-                 'OFFENSIVE_EFFICENCY',
-                 'EFF_POINTS',
-                 'EFG%',
-                 '2PPA',
-                 '3PPA',
-                 'PPA',
-                 'POINTS'
-]
-other_stats = ['OFFENSIVE_EFFICENCY',
-                 'EFF_POINTS',
-                 'EFG%',
-                 '2PPA',
-                 '3PPA',
-                 'PPA',
-                 'POINTS'
-]
 season_list = (game_summary['SEASON'].unique()
                                      .tolist()
 )

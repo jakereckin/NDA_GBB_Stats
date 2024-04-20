@@ -104,12 +104,12 @@ def format_visual_data(this_game):
                                         ascending=False)
      totals_sorted = totals_sorted[totals_sorted['ATTEMPT'] > 1]
      totals_sorted = totals_sorted[['SHOT_SPOT',
-                                        'MAKE',
-                                        'ATTEMPT',
-                                        'MAKE_PERCENT',
-                                        'POINTS_PER_ATTEMPT',
-                                        'ASSIST_PERCENT',
-                                        'HG_PERCENT']].round(3)
+                                    'MAKE',
+                                    'ATTEMPT',
+                                    'MAKE_PERCENT',
+                                    'POINTS_PER_ATTEMPT',
+                                    'ASSIST_PERCENT',
+                                    'HG_PERCENT']].round(3)
      return totals, totals_sorted
 
 @st.cache_data
