@@ -11,29 +11,74 @@ pd.options.mode.chained_assignment = None
 from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 
-conn = st.connection("gsheets", 
-                     type=GSheetsConnection
-)
-players = conn.read(worksheet='players')
-games = conn.read(worksheet='games')
-players = players[players['YEAR'].astype('str')=='2024']
-spots = conn.read(worksheet='spots')
-game = (games[games['SEASON'].astype('str')=='2024']
-             .reset_index(drop=True)
-)
-game['LABEL'] = (game['OPPONENT']
-                 + ' - '
-                 + game['DATE']
-)
-players['LABEL'] = (players['NUMBER'].astype('str')
-                    + ' - '
-                    + players['FIRST_NAME']
-)
+
 half = ['FIRST HALF',
         'SECOND_HALF',
         'OT'
 ]
-all_plays = conn.read(worksheet='play_event')
+
+@st.cache_data
+def load_data():
+    conn = st.connection("gsheets", 
+                        type=GSheetsConnection
+    )
+    players = conn.read(worksheet='players')
+    games = conn.read(worksheet='games')
+    players = players[players['YEAR'].astype('str')=='2024']
+    spots = conn.read(worksheet='spots')
+    game = (games[games['SEASON'].astype('str')=='2024']
+                .reset_index(drop=True)
+    )
+    all_plays = conn.read(worksheet='play_event')
+    game['LABEL'] = (game['OPPONENT']
+                 + ' - '
+                 + game['DATE']
+    )
+    players['LABEL'] = (players['NUMBER'].astype('str')
+                        + ' - '
+                        + players['FIRST_NAME']
+    )
+    return conn, players, games, spots, game, all_plays
+
+def get_values_needed(game_val,
+                      game):
+    game_val_opp = game_val.split(' - ')[0]
+    game_val_date = game_val.split(' - ')[1]
+    game_val_this = game[(game['OPPONENT']==game_val_opp)
+                             & (game['DATE']==game_val_date)]
+    player_number = player_val.split(' - ')[0]
+    game_val_final = game_val_this['GAME_ID'].values[0]
+    return player_number, game_val_final
+
+def create_df(game_val_final, 
+              player_number, 
+              half_val,
+              spot_val,
+              shot_defense,
+              assisted,
+              make_miss):
+    this_data = [game_val_final, 
+                 player_number, 
+                 half_val,
+                 spot_val,
+                 shot_defense,
+                 assisted,
+                 make_miss
+    ]
+    my_df = pd.DataFrame(data=[this_data],
+                         columns=['GAME_ID', 
+                                  'PLAYER_ID', 
+                                  'HALF',
+                                  'SHOT_SPOT', 
+                                  'SHOT_DEFENSE',
+                                  'ASSISTED',
+                                  'MAKE_MISS']
+    )
+    return my_df
+
+conn, players, games, spots, game, all_plays = load_data()
+
+
 with st.form('Play Event', 
              clear_on_submit=False):
     game_val = st.radio(label='Game',
@@ -72,28 +117,18 @@ with st.form('Play Event',
     final_add = st.form_submit_button('Final Submit')
     if add:
         time.sleep(.5)
-        game_val_opp = game_val.split(' - ')[0]
-        game_val_date = game_val.split(' - ')[1]
-        game_val_this = game[(game['OPPONENT']==game_val_opp)
-                             & (game['DATE']==game_val_date)]
-        player_number = player_val.split(' - ')[0]
-        game_val_final = game_val_this['GAME_ID'].values[0]
+        player_number, game_val_final = get_values_needed(game_val=game_val,
+                                                          game=game
+        )
         st.text('Submitted!')
-        this_data = [game_val_final, 
-                     player_number, 
-                     half_val,
-                     spot_val,
-                     shot_defense,
-                     assisted,
-                     make_miss]
-        my_df = pd.DataFrame(data=[this_data],
-                             columns=['GAME_ID', 
-                                      'PLAYER_ID', 
-                                      'HALF',
-                                      'SHOT_SPOT', 
-                                      'SHOT_DEFENSE',
-                                      'ASSISTED',
-                                      'MAKE_MISS'])
+        my_df = create_df(game_val_final=game_val_final, 
+                          player_number=player_number, 
+                          half_val=half_val,
+                          spot_val=spot_val,
+                          shot_defense=shot_defense,
+                          assisted=assisted,
+                          make_miss=make_miss
+        )
         st.session_state.temp_df.append(my_df)
     if final_add:
         final_temp_df = pd.concat(st.session_state.temp_df,
@@ -107,5 +142,6 @@ with st.form('Play Event',
                     data=all_data
         )
         st.write('Added to DB!')
+        time.sleep(.5)
         st.cache_data.clear()
         st.session_state.temp_df = []
