@@ -136,7 +136,7 @@ players_selected = st.radio(label='Choose Player',
                             horizontal=True
 )
 
-this_game = filter_player_data(player_data=players_selected,
+this_game = filter_player_data(players_selected=players_selected,
                                player_data=player_data
 )
 if players_selected:
