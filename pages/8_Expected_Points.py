@@ -9,7 +9,7 @@ from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 pd.options.mode.chained_assignment = None
 
-@st.cache_data
+
 def load_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
     play_event = conn.read(worksheet='play_event')

@@ -17,7 +17,7 @@ half = ['FIRST HALF',
         'OT'
 ]
 
-@st.cache_data
+
 def load_data():
     conn = st.connection("gsheets", 
                         type=GSheetsConnection
