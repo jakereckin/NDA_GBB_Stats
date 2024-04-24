@@ -21,9 +21,10 @@ def load_data():
     games = conn.read(worksheet='games')
     players = players[players['YEAR'].astype('str')=='2024']
     spots = conn.read(worksheet='spots')
-    game = (games[games['SEASON'].astype('str')=='2024']
+    game = (games[games['SEASON'].astype('str').str.replace('4.0', '4')=='2024']
                 .reset_index(drop=True)
     )
+    print(games['SEASON'].astype('str').str.replace('4.0', '4'))
     all_plays = conn.read(worksheet='play_event')
     game['LABEL'] = (game['OPPONENT']
                  + ' - '
