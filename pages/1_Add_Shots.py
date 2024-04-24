@@ -12,11 +12,6 @@ from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 
 
-half = ['FIRST HALF',
-        'SECOND_HALF',
-        'OT'
-]
-
 
 def load_data():
     conn = st.connection("gsheets", 
@@ -52,26 +47,20 @@ def get_values_needed(game_val,
 
 def create_df(game_val_final, 
               player_number, 
-              half_val,
               spot_val,
               shot_defense,
-              assisted,
               make_miss):
     this_data = [game_val_final, 
                  player_number, 
-                 half_val,
                  spot_val,
                  shot_defense,
-                 assisted,
                  make_miss
     ]
     my_df = pd.DataFrame(data=[this_data],
                          columns=['GAME_ID', 
                                   'PLAYER_ID', 
-                                  'HALF',
                                   'SHOT_SPOT', 
                                   'SHOT_DEFENSE',
-                                  'ASSISTED',
                                   'MAKE_MISS']
     )
     return my_df
@@ -89,10 +78,6 @@ with st.form('Play Event',
                           options=players['LABEL'],
                           horizontal=True
     )
-    half_val = st.radio(label='Half',
-                        options=half,
-                        horizontal=True
-    )
     spot_val = st.radio(label='Shot Spot',
                         options=spots['SPOT'],
                         horizontal=True
@@ -101,11 +86,6 @@ with st.form('Play Event',
                          options=['Y', 
                                   'N'],
                          horizontal=True
-    )
-    assisted = st.radio(label='Assited?',
-                       options=['Y', 
-                                'N'],
-                       horizontal=True
     )
     shot_defense = st.radio(label='Shot Defense',
                             options=['OPEN', 
@@ -123,10 +103,8 @@ with st.form('Play Event',
         st.text('Submitted!')
         my_df = create_df(game_val_final=game_val_final, 
                           player_number=player_number, 
-                          half_val=half_val,
                           spot_val=spot_val,
                           shot_defense=shot_defense,
-                          assisted=assisted,
                           make_miss=make_miss
         )
         st.session_state.temp_df.append(my_df)

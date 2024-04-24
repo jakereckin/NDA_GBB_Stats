@@ -37,10 +37,6 @@ def get_game_data(play_event, spot, games):
                                    1,
                                    0
      )
-     team_data['WAS_ASSIST'] = np.where(team_data['ASSISTED']=='Y',
-                                   1,
-                                   0
-     )
      team_data['HEAVILY_GUARDED'] = np.where(team_data['SHOT_DEFENSE']=='HEAVILY_GUARDED',
                                    1,
                                    0
@@ -59,7 +55,6 @@ def filter_team_data(team_data):
                               'ATTEMPT',
                               'XSPOT',
                               'YSPOT',
-                              'WAS_ASSIST',
                               'HEAVILY_GUARDED'
      ]]
      team_data_filtered = team_data_filtered.sort_values(by='GAME_ID',
@@ -101,7 +96,6 @@ def format_selected_games(this_game):
                                    as_index=False)
                          [['MAKE', 
                               'ATTEMPT', 
-                              'WAS_ASSIST',
                               'HEAVILY_GUARDED']]
                          .sum()
      )
@@ -113,9 +107,6 @@ def format_selected_games(this_game):
      totals['MAKE_PERCENT'] = (totals['MAKE']
                               / totals['ATTEMPT'].replace(0, 1)
      )
-     totals['ASSIST_PERCENT'] = (totals['WAS_ASSIST'] 
-                                / totals['MAKE'].replace(0, 1)
-    )
      totals['HG_PERCENT'] = (totals['HEAVILY_GUARDED'] 
                                 / totals['ATTEMPT'].replace(0, 1)
      )
@@ -132,7 +123,6 @@ def format_selected_games(this_game):
                                    'ATTEMPT',
                                    'MAKE_PERCENT',
                                    'POINTS_PER_ATTEMPT',
-                                   'ASSIST_PERCENT',
                                    'HG_PERCENT']].round(3)
      return totals, totals_sorted
 
@@ -156,9 +146,9 @@ if games_selected:
     totals, totals_sorted = format_selected_games(this_game=this_game)
     fig = ut.load_shot_chart_team(totals,
                                   team_selected=games_selected)
-    st.header('Shot Chart')
+    st.markdown("<h1 style='text-align: center; color: black;'>Shot Chart</h1>", unsafe_allow_html=True)
     st.plotly_chart(fig, use_container_width=True)
-    st.header('Top 5 Spots')
+    st.markdown("<h1 style='text-align: center; color: black;'>Top 5 Spots</h1>", unsafe_allow_html=True)
     st.dataframe(totals_sorted.head(5), 
                  use_container_width=True,
                  hide_index=True

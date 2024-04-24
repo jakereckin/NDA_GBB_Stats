@@ -44,10 +44,6 @@ def get_player_data(play_event,
                                    1,
                                    0
      )
-     player_data['WAS_ASSIST'] = np.where(player_data['ASSISTED']=='Y',
-                                   1,
-                                   0
-     )
      player_data['HEAVILY_GUARDED'] = np.where(player_data['SHOT_DEFENSE']=='HEAVILY_GUARDED',
                                    1,
                                    0
@@ -61,7 +57,6 @@ def get_player_data(play_event,
                            'ATTEMPT',
                            'XSPOT',
                            'YSPOT',
-                           'WAS_ASSIST',
                            'HEAVILY_GUARDED'
      ]]
      player_data['U_ID'] = (player_data['FIRST_NAME']
@@ -78,7 +73,6 @@ def format_visual_data(this_game):
                                 as_index=False)
                          [['MAKE', 
                               'ATTEMPT', 
-                              'WAS_ASSIST',
                               'HEAVILY_GUARDED']]
                          .sum()
      )
@@ -89,9 +83,6 @@ def format_visual_data(this_game):
      )
      totals['MAKE_PERCENT'] = (totals['MAKE']
                                    / totals['ATTEMPT'].replace(0, 1)
-     )
-     totals['ASSIST_PERCENT'] = (totals['WAS_ASSIST']
-                                   / totals['MAKE'].replace(0, 1)
      )
      totals['HG_PERCENT'] = (totals['HEAVILY_GUARDED'] 
                                    / totals['ATTEMPT'].replace(0, 1)
@@ -108,7 +99,6 @@ def format_visual_data(this_game):
                                     'ATTEMPT',
                                     'MAKE_PERCENT',
                                     'POINTS_PER_ATTEMPT',
-                                    'ASSIST_PERCENT',
                                     'HG_PERCENT']].round(3)
      return totals, totals_sorted
 
@@ -143,11 +133,13 @@ if players_selected:
     totals, totals_sorted = format_visual_data(this_game=this_game)
     fig = ut.load_shot_chart_player(totals,
                                     players_selected)
-    st.header(f'Shot Chart for {players_selected}')
+    st.markdown(f"<h1 style='text-align: center; color: black;'>Shot Chart for {players_selected}</h1>", 
+                unsafe_allow_html=True)
     st.plotly_chart(fig, 
                     use_container_width=True
     )
-    st.header(f'Top 5 Spots for {players_selected}')
+    st.markdown(f"<h1 style='text-align: center; color: black;'>Top 5 Spots for {players_selected}</h1>", 
+                unsafe_allow_html=True)
     st.dataframe(totals_sorted.head(5), 
                  use_container_width=True,
                  hide_index=True

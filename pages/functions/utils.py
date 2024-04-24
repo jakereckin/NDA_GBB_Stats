@@ -38,7 +38,6 @@ def load_shot_chart_team(totals,
     freq_by_hex = totals['ATTEMPT']
     accs_by_hex = totals['POINTS_PER_ATTEMPT']
     spot = totals['SHOT_SPOT']
-    assist_percent = totals['ASSIST_PERCENT'].round(3)
     hg_percent = totals['HG_PERCENT'].round(3)
     marker_cmin = 0.0
     marker_cmax = 2
@@ -46,7 +45,6 @@ def load_shot_chart_team(totals,
     hexbin_text = [
         '<i>Points Per Attempt: </i>' + str(round(accs_by_hex[i], 1)) + '<BR>'
         '<i>Attempts: </i>' + str(round(freq_by_hex[i], 2)) + '<BR>'
-        '<i>Assist %: </i>' + str(round(assist_percent[i], 3)) + '<BR>'
         '<i>Heavily Guarded %: </i>' + str(round(hg_percent[i], 4))
         for i in range(len(freq_by_hex))
     ]
@@ -227,7 +225,6 @@ def load_shot_chart_player(totals,
     freq_by_hex = totals['ATTEMPT']
     accs_by_hex = totals['POINTS_PER_ATTEMPT']
     spot = totals['SHOT_SPOT']
-    assist_percent = totals['ASSIST_PERCENT'].round(3)
     hg_percent = totals['HG_PERCENT'].round(3)
     marker_cmin = 0.0
     marker_cmax = 2
@@ -237,7 +234,6 @@ def load_shot_chart_player(totals,
     hexbin_text = [
         '<i>Points Per Attempt: </i>' + str(round(accs_by_hex[i], 1)) + '<BR>'
         '<i>Attempts: </i>' + str(round(freq_by_hex[i], 2)) + '<BR>'
-        '<i>Assist %: </i>' + str(round(assist_percent[i], 3)) + '<BR>'
         '<i>Heavily Guarded %: </i>' + str(round(hg_percent[i], 4))
         for i in range(len(freq_by_hex))
     ]
