@@ -69,10 +69,6 @@ def format_data(spot,
                                 1,
                                 0
     )
-    player_data['WAS_ASSIST'] = np.where(player_data['ASSISTED']=='Y',
-                                1,
-                                0
-    )
     player_data['HEAVILY_GUARDED'] = np.where(player_data['SHOT_DEFENSE']=='HEAVILY_GUARDED',
                                 1,
                                 0
