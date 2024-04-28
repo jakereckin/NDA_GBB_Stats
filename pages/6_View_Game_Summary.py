@@ -27,7 +27,7 @@ other_stats = ['OFFENSIVE_EFFICENCY',
                  'POINTS'
 ]
 
-
+@st.cache_resource
 def load_data():
     conn = st.connection("gsheets", 
                         type=GSheetsConnection
