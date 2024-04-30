@@ -40,7 +40,7 @@ def load_data():
                                                '', 
                                                regex=False)
     )
-    players['SEASON'] = (players['SEASON'].astype('str')
+    players['YEAR'] = (players['YEAR'].astype('str')
                                           .str
                                           .replace('.0',
                                                    '',
