@@ -11,8 +11,7 @@ pd.options.mode.chained_assignment = None
 from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 
-
-
+@st.cache_resource
 def load_data():
     conn = st.connection("gsheets", 
                         type=GSheetsConnection
@@ -66,61 +65,63 @@ def create_df(game_val_final,
     )
     return my_df
 
-conn, players, games, spots, game, all_plays = load_data()
+password = st.text_input(label='Password',
+                         type='password')
+if password == st.secrets['page_password']['PAGE_PASSWORD']:
+    conn, players, games, spots, game, all_plays = load_data()
 
-
-with st.form('Play Event', 
-             clear_on_submit=False):
-    game_val = st.radio(label='Game',
-                        options=reversed(game['LABEL']),
-                        horizontal=True
-    )
-    player_val = st.radio(label='Player',
-                          options=players['LABEL'],
-                          horizontal=True
-    )
-    spot_val = st.radio(label='Shot Spot',
-                        options=spots['SPOT'],
-                        horizontal=True
-    )
-    make_miss = st.radio(label='Make/Miss',
-                         options=['Y', 
-                                  'N'],
-                         horizontal=True
-    )
-    shot_defense = st.radio(label='Shot Defense',
-                            options=['OPEN', 
-                                     'GUARDED', 
-                                     'HEAVILY_GUARDED'],
+    with st.form('Play Event', 
+                clear_on_submit=False):
+        game_val = st.radio(label='Game',
+                            options=reversed(game['LABEL']),
                             horizontal=True
-    )
-    add = st.form_submit_button("Add Play")
-    final_add = st.form_submit_button('Final Submit')
-    if add:
-        time.sleep(.5)
-        player_number, game_val_final = get_values_needed(game_val=game_val,
-                                                          game=game
         )
-        st.text('Submitted!')
-        my_df = create_df(game_val_final=game_val_final, 
-                          player_number=player_number, 
-                          spot_val=spot_val,
-                          shot_defense=shot_defense,
-                          make_miss=make_miss
+        player_val = st.radio(label='Player',
+                            options=players['LABEL'],
+                            horizontal=True
         )
-        st.session_state.temp_df.append(my_df)
-    if final_add:
-        final_temp_df = pd.concat(st.session_state.temp_df,
-                                  axis=0
+        spot_val = st.radio(label='Shot Spot',
+                            options=spots['SPOT'],
+                            horizontal=True
         )
-        all_data = (pd.concat([final_temp_df,
-                               all_plays])
-                      .reset_index(drop=True)
+        make_miss = st.radio(label='Make/Miss',
+                            options=['Y', 
+                                    'N'],
+                            horizontal=True
         )
-        conn.update(worksheet='play_event',
-                    data=all_data
+        shot_defense = st.radio(label='Shot Defense',
+                                options=['OPEN', 
+                                        'GUARDED', 
+                                        'HEAVILY_GUARDED'],
+                                horizontal=True
         )
-        st.write('Added to DB!')
-        time.sleep(.5)
-        st.cache_data.clear()
-        st.session_state.temp_df = []
+        add = st.form_submit_button("Add Play")
+        final_add = st.form_submit_button('Final Submit')
+        if add:
+            time.sleep(.5)
+            player_number, game_val_final = get_values_needed(game_val=game_val,
+                                                            game=game
+            )
+            st.text('Submitted!')
+            my_df = create_df(game_val_final=game_val_final, 
+                            player_number=player_number, 
+                            spot_val=spot_val,
+                            shot_defense=shot_defense,
+                            make_miss=make_miss
+            )
+            st.session_state.temp_df.append(my_df)
+        if final_add:
+            final_temp_df = pd.concat(st.session_state.temp_df,
+                                    axis=0
+            )
+            all_data = (pd.concat([final_temp_df,
+                                all_plays])
+                        .reset_index(drop=True)
+            )
+            conn.update(worksheet='play_event',
+                        data=all_data
+            )
+            st.write('Added to DB!')
+            time.sleep(.5)
+            st.cache_data.clear()
+            st.session_state.temp_df = []
