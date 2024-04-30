@@ -42,8 +42,6 @@ def load_data():
     )
     return conn, players, games, spots, all_plays
 
-
-@st.cache_data
 def get_season_data(games,
                     players,
                     season):
@@ -55,7 +53,6 @@ def get_season_data(games,
     )
     return games_season, players_season
 
-@st.cache_data
 def get_selected_game(games_season,
                       game_select):
     game_val_opp = game_select.split(' - ')[0]
