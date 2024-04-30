@@ -30,6 +30,7 @@ def load_data():
                                                    '',
                                                    regex=False)
     )
+    games = games.dropna(subset=['SEASON'])
     game_summary_data = conn.read(worksheet='game_summary')
     return conn, players, games, game_summary_data
 
