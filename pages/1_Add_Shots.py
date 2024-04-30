@@ -113,10 +113,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             st.dataframe(game)
             with st.form('Play Event', 
                         clear_on_submit=False):
-                game_val = st.radio(label='Game',
-                                    options=reversed(game['LABEL']),
-                                    horizontal=True
-                )
+                game_val = game['LABEL'].values[0]
                 player_val = st.radio(label='Player',
                                     options=players['LABEL'],
                                     horizontal=True
