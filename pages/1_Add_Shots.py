@@ -18,22 +18,51 @@ def load_data():
     )
     players = conn.read(worksheet='players')
     games = conn.read(worksheet='games')
-    players = players[players['YEAR'].astype('str')=='2024']
-    spots = conn.read(worksheet='spots')
-    game = (games[games['SEASON'].astype('str').str.replace('4.0', '4')=='2024']
-                .reset_index(drop=True)
+    players['YEAR'] = (players['YEAR'].astype('str')
+                                      .str
+                                      .replace('.0',
+                                               '',
+                                               regex=False)
     )
-    print(games['SEASON'].astype('str').str.replace('4.0', '4'))
+    spots = conn.read(worksheet='spots')
+    games['SEASON'] = (games['SEASON'].astype('str')
+                                      .str
+                                      .replace('.0', 
+                                               '', 
+                                               regex=False)
+    )
     all_plays = conn.read(worksheet='play_event')
-    game['LABEL'] = (game['OPPONENT']
+    games['LABEL'] = (games['OPPONENT']
                  + ' - '
-                 + game['DATE']
+                 + games['DATE']
     )
     players['LABEL'] = (players['NUMBER'].astype('str')
                         + ' - '
                         + players['FIRST_NAME']
     )
-    return conn, players, games, spots, game, all_plays
+    return conn, players, games, spots, all_plays
+
+
+@st.cache_data
+def get_season_data(games,
+                    players,
+                    season):
+    games_season = games[games['SEASON']==season]
+    players_season = players[players['YEAR']==season]
+    games_season['LABEL'] = (games_season['OPPONENT']
+                            + ' - '
+                            + games_season['DATE']
+    )
+    return games_season, players_season
+
+@st.cache_data
+def get_selected_game(games_season,
+                      game_select):
+    game_val_opp = game_select.split(' - ')[0]
+    game_val_date = game_select.split(' - ')[1]
+    this_game = games_season[(games_season['OPPONENT']==game_val_opp)
+                                & (games_season['DATE']==game_val_date)]
+    return this_game
 
 def get_values_needed(game_val,
                       game):
@@ -68,8 +97,20 @@ def create_df(game_val_final,
 password = st.text_input(label='Password',
                          type='password')
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
-    conn, players, games, spots, game, all_plays = load_data()
-
+    conn, players, games, spots, all_plays = load_data()
+    season = st.selectbox(label='Select Season',
+                        options=games['SEASON'].unique().tolist()
+    )
+    games_season, players_season = get_season_data(games=games,
+                                                players=players,
+                                                season=season
+    )
+    game_select = st.selectbox(label='Select Game',
+                            options=games_season['LABEL'].unique().tolist()
+    )
+    game = get_selected_game(games_season=games_season,
+                                game_select=game_select
+    )
     with st.form('Play Event', 
                 clear_on_submit=False):
         game_val = st.radio(label='Game',
