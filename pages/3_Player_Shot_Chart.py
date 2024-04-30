@@ -19,6 +19,7 @@ def load_data():
      spot = conn.read(worksheet='spots')
      games = conn.read(worksheet='games')
      players = conn.read(worksheet='players')
+     spot = spot[spot['SPOT']!='FREE_THROW']
      players = players[players['YEAR']==2024]
      return play_event, spot, games, players
 

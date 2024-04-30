@@ -42,6 +42,8 @@ def load_data():
     )
     return conn, players, games, spots, all_plays
 
+
+@st.cache_data
 def get_season_data(games,
                     players,
                     season):
@@ -53,6 +55,7 @@ def get_season_data(games,
     )
     return games_season, players_season
 
+@st.cache_data
 def get_selected_game(games_season,
                       game_select):
     game_val_opp = game_select.split(' - ')[0]
@@ -103,7 +106,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                                                 season=season
     )
     game_select = st.selectbox(label='Select Game',
-                            options=games_season['LABEL'].unique().tolist()
+                               options=games_season['LABEL'].unique().tolist()
     )
     game = get_selected_game(games_season=games_season,
                                 game_select=game_select
@@ -112,7 +115,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                 clear_on_submit=False):
         game_val = game['LABEL'].values[0]
         player_val = st.radio(label='Player',
-                            options=players['LABEL'],
+                            options=players_season['LABEL'],
                             horizontal=True
         )
         spot_val = st.radio(label='Shot Spot',
