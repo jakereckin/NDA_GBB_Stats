@@ -96,70 +96,73 @@ password = st.text_input(label='Password',
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
     conn, players, games, spots, all_plays = load_data()
     season = st.selectbox(label='Select Season',
-                        options=games['SEASON'].unique().tolist()
+                          options=games['SEASON'].unique().tolist()
     )
-    games_season, players_season = get_season_data(games=games,
-                                                players=players,
-                                                season=season
-    )
-    game_select = st.selectbox(label='Select Game',
-                            options=games_season['LABEL'].unique().tolist()
-    )
-    game = get_selected_game(games_season=games_season,
-                                game_select=game_select
-    )
-    with st.form('Play Event', 
-                clear_on_submit=False):
-        game_val = st.radio(label='Game',
-                            options=reversed(game['LABEL']),
-                            horizontal=True
+    if season:
+        games_season, players_season = get_season_data(games=games,
+                                                    players=players,
+                                                    season=season
         )
-        player_val = st.radio(label='Player',
-                            options=players['LABEL'],
-                            horizontal=True
+        game_select = st.selectbox(label='Select Game',
+                                options=games_season['LABEL'].unique().tolist()
         )
-        spot_val = st.radio(label='Shot Spot',
-                            options=spots['SPOT'],
-                            horizontal=True
-        )
-        make_miss = st.radio(label='Make/Miss',
-                            options=['Y', 
-                                    'N'],
-                            horizontal=True
-        )
-        shot_defense = st.radio(label='Shot Defense',
-                                options=['OPEN', 
-                                        'GUARDED', 
-                                        'HEAVILY_GUARDED'],
-                                horizontal=True
-        )
-        add = st.form_submit_button("Add Play")
-        final_add = st.form_submit_button('Final Submit')
-        if add:
-            time.sleep(.5)
-            player_number, game_val_final = get_values_needed(game_val=game_val,
-                                                            game=game
+        if game_select:
+            game = get_selected_game(games_season=games_season,
+                                        game_select=game_select
             )
-            st.text('Submitted!')
-            my_df = create_df(game_val_final=game_val_final, 
-                            player_number=player_number, 
-                            spot_val=spot_val,
-                            shot_defense=shot_defense,
-                            make_miss=make_miss
-            )
-            st.session_state.temp_df.append(my_df)
-        if final_add:
-            final_temp_df = pd.concat(st.session_state.temp_df,
-                                    axis=0
-            )
-            all_data = (pd.concat([final_temp_df,
-                                all_plays])
-                        .reset_index(drop=True)
-            )
-            conn.update(worksheet='play_event',
-                        data=all_data
-            )
-            st.write('Added to DB!')
-            time.sleep(.5)
-            st.cache_data.clear()
-            st.session_state.temp_df = []
+            st.dataframe(game)
+            with st.form('Play Event', 
+                        clear_on_submit=False):
+                game_val = st.radio(label='Game',
+                                    options=reversed(game['LABEL']),
+                                    horizontal=True
+                )
+                player_val = st.radio(label='Player',
+                                    options=players['LABEL'],
+                                    horizontal=True
+                )
+                spot_val = st.radio(label='Shot Spot',
+                                    options=spots['SPOT'],
+                                    horizontal=True
+                )
+                make_miss = st.radio(label='Make/Miss',
+                                    options=['Y', 
+                                            'N'],
+                                    horizontal=True
+                )
+                shot_defense = st.radio(label='Shot Defense',
+                                        options=['OPEN', 
+                                                'GUARDED', 
+                                                'HEAVILY_GUARDED'],
+                                        horizontal=True
+                )
+                add = st.form_submit_button("Add Play")
+                final_add = st.form_submit_button('Final Submit')
+                if add:
+                    time.sleep(.5)
+                    player_number, game_val_final = get_values_needed(game_val=game_val,
+                                                                    game=game
+                    )
+                    st.text('Submitted!')
+                    my_df = create_df(game_val_final=game_val_final, 
+                                    player_number=player_number, 
+                                    spot_val=spot_val,
+                                    shot_defense=shot_defense,
+                                    make_miss=make_miss
+                    )
+                    st.session_state.temp_df.append(my_df)
+                if final_add:
+                    final_temp_df = pd.concat(st.session_state.temp_df,
+                                            axis=0
+                    )
+                    all_data = (pd.concat([final_temp_df,
+                                        all_plays])
+                                .reset_index(drop=True)
+                    )
+                    conn.update(worksheet='play_event',
+                                data=all_data
+                    )
+                    st.write('Added to DB!')
+                    time.sleep(.5)
+                    st.cache_data.clear()
+                    st.session_state.temp_df = []
