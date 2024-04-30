@@ -18,6 +18,18 @@ def load_data():
     )
     players = conn.read(worksheet='players')
     games = conn.read(worksheet='games')
+    games['SEASON'] = (games['SEASON'].astype('str')
+                                      .str
+                                      .replace('.0', 
+                                               '', 
+                                               regex=False)
+    )
+    players['SEASON'] = (players['SEASON'].astype('str')
+                                          .str
+                                          .replace('.0',
+                                                   '',
+                                                   regex=False)
+    )
     game_summary_data = conn.read(worksheet='game_summary')
     return conn, players, games, game_summary_data
 

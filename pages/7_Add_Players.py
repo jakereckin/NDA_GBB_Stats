@@ -16,6 +16,12 @@ pd.options.mode.chained_assignment = None
 def load_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
     players = conn.read(worksheet='players')
+    players['YEAR'] = (players['YEAR'].astype('str')
+                                      .str
+                                      .replace('.0',
+                                               '',
+                                               regex=False)
+    )
     players = players.sort_values(by=['YEAR', 'NUMBER'])
     return conn, players
 
