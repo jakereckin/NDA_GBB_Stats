@@ -19,7 +19,7 @@ def load_data():
 
 password = st.text_input(label='Password',
                          type='password')
-if password == st.secrets['connections.gsheets']['PAGE_PASSWORD']:
+if password == st.secrets['page_password']['PAGE_PASSWORD']:
     conn, games = load_data()
     save = st.button('Save')
     edited_df = st.data_editor(games, 
