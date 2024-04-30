@@ -15,7 +15,7 @@ def load_data():
                          type=GSheetsConnection
     )
     games = conn.read(worksheet='games')
-    games['SEASON'] = games['SEASON'].astype('str')
+    games['SEASON'] = games['SEASON'].round(0).astype(object)
     return conn, games
 
 password = st.text_input(label='Password',
