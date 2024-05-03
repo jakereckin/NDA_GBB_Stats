@@ -18,7 +18,7 @@ def load_frames():
      )
      play_event = conn.read(worksheet='play_event')
      spot = conn.read(worksheet='spots')
-     spot = spot[spot['SPOT']!='FREE_THROW']
+     spot = spot[spot['SPOT']!='FREE_THROW1']
      games = conn.read(worksheet='games')
      return play_event, spot, games
 
