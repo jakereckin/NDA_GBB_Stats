@@ -24,7 +24,8 @@ def load_data():
 @st.cache_data
 def format_data(spot,
                 games,
-                players):
+                players,
+                game_summary_data):
     '''
     Format data to count makes and misses.
     '''
@@ -36,6 +37,15 @@ def format_data(spot,
                              .merge(players,
                                     left_on=['PLAYER_ID'],
                                     right_on=['NUMBER'])
+    )
+    game_summary = pd.merge(left=game_summary_data,
+                            right=games,
+                            on='GAME_ID'
+    )
+    game_summary = game_summary[game_summary['SEASON']==2024]
+    game_summary['LABEL'] = (game_summary['OPPONENT']
+                                + ' - '
+                                + game_summary['DATE']
     )
     player_data['LABEL'] = (player_data['OPPONENT']
                             + ' - '
@@ -56,7 +66,7 @@ def format_data(spot,
                                 'ATTEMPT',
                                 'SHOT_DEFENSE'
     ]]
-    return player_data, player_data2
+    return player_data, player_data2, game_summary
 
 #-------------------------------------------------------------------------------
 def get_games_data(player_data,
@@ -137,9 +147,10 @@ def get_team_data(t_game,
     return this_game
 
 play_event, spot, games, players, game_summary_data = load_data()
-player_data, player_data2 = format_data(spot=spot,
+player_data, player_data2, game_summary_cleaned = format_data(spot=spot,
                                         games=games,
-                                        players=players
+                                        players=players,
+                                        game_summary_data=game_summary_data
 )
 
 games_list = (player_data['LABEL'].unique()
@@ -150,7 +161,7 @@ game = st.selectbox(label='Select Games',
 )
 if game != []:
     t_game, game_data = get_games_data(player_data=player_data,
-                                       game_summary=game_summary_data,
+                                       game_summary=game_summary_cleaned,
                                        game=game
     )
     grouped_all_spots = get_grouped_all_spots(player_data2=player_data2,
