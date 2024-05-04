@@ -11,7 +11,6 @@ from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
 pd.options.mode.chained_assignment = None
 
-@st.cache_resource()
 def load_data():
     conn = st.connection("gsheets", 
                         type=GSheetsConnection
