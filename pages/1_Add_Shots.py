@@ -151,7 +151,6 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                             make_miss=make_miss
             )
             st.session_state.temp_df.append(my_df)
-            st.dataframe(pd.concat(st.session_state.temp_df))
         if final_add:
             final_temp_df = pd.concat(st.session_state.temp_df,
                                     axis=0
