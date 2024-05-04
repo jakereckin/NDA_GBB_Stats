@@ -140,7 +140,10 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             player_number, game_val_final = get_values_needed(game_val=game_val,
                                                             game=game
             )
-            st.text('Submitted!')
+            test_make = np.where(make_miss=='Y',
+                                 'Make',
+                                 'Miss')
+            st.text(f'Submitted {test_make} by {player_number} from {spot_val} with defense {shot_defense}')
             my_df = create_df(game_val_final=game_val_final, 
                             player_number=player_number, 
                             spot_val=spot_val,
@@ -148,6 +151,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                             make_miss=make_miss
             )
             st.session_state.temp_df.append(my_df)
+            st.dataframe(my_df)
         if final_add:
             final_temp_df = pd.concat(st.session_state.temp_df,
                                     axis=0
