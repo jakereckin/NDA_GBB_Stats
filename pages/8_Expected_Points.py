@@ -172,12 +172,10 @@ if game != []:
     )
     # EXPECTED ====
     expected_fg = this_game['EXPECTED_POINTS'].sum()
- #   expected_ft = (game_data['FTA']*game_data['FT_PERCENT']).sum()
-    total_expected = expected_fg#+expected_ft
+    total_expected = expected_fg
     # ACTUAL ====
     actual_fg = this_game['ACTUAL_POINTS'].sum()
-   # actual_ft = game_data['FTM'].sum()
-    total_actual = actual_fg#+actual_ft
+    total_actual = actual_fg
     st.metric(value=np.round(total_expected, 2),
               label='TOTAL EXPECTED POINTS'
     )
