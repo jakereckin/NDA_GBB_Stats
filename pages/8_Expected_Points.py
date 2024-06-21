@@ -49,8 +49,7 @@ def format_data(spot, games, players, game_summary_data):
     player_data = (play_event.merge(spot,
                                     left_on=['SHOT_SPOT'],
                                     right_on=['SPOT'])
-                             .merge(games,
-                                    on=['GAME_ID'])
+                             .merge(games, on=['GAME_ID'])
                              .merge(players,
                                     left_on=['PLAYER_ID'],
                                     right_on=['NUMBER'])
@@ -73,6 +72,8 @@ def format_data(spot, games, players, game_summary_data):
     player_data['MAKE'] = np.where(player_data['MAKE_MISS']=='Y', 1, 0)
 
     player_data['ATTEMPT'] = 1
+    player_data['DATE_DTTM'] = pd.to_datetime(player_data['DATE'])
+    player_data = player_data.sort_values(by='DATE_DTTM').reset_index(drop=True)
     player_data2 = player_data[['NAME',
                                 'SHOT_SPOT',
                                 'MAKE',
@@ -88,6 +89,8 @@ def get_games_data(player_data, game_summary, game):
     '''
     t_game = player_data[player_data['LABEL']==game]
     game_data = game_summary[game_summary['LABEL']==game]
+    game_data['DATE_DTTM'] = pd.to_datetime(game_data['DATE'])
+    game_data = game_data.sort_values(by='DATE_DTTM')
     return t_game, game_data
 
 #-------------------------------------------------------------------------------

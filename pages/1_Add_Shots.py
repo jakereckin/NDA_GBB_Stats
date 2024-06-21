@@ -149,6 +149,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             player_number, game_val_final = get_values_needed(game_val=game_val,
                                                             game=game
             )
+            player_number = int(player_number)
             test_make = np.where(make_miss=='Y', 'Make', 'Miss')
             st.text(f'Submitted {test_make} by {player_number} from {spot_val} with defense {shot_defense} for {game_val_final}')
             my_df = create_df(game_val_final=game_val_final, 
@@ -159,7 +160,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             )
             all_data_game = all_plays[all_plays['GAME_ID']==game_val_final]
             if len(all_data_game)==0:
-                my_df['PLAY_NUM'] = 1
+                my_df['PLAY_NUM'] = 0
             else:
                 current_play = len(all_data_game)
                 my_df['PLAY_NUM'] = current_play
