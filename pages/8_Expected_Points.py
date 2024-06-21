@@ -34,7 +34,7 @@ def get_my_db(client):
     return plays, spots, games, players, game_summary
 
 #-----------------------------------------------------------------------------
-@st.cache_data
+
 def load_data():
     client = get_client()
     play_event, spot, games, players, game_summary = get_my_db(client=client)
@@ -42,7 +42,6 @@ def load_data():
     return play_event, spot, games, players, game_summary
 
 #-------------------------------------------------------------------------------
-@st.cache_data
 def format_data(spot, games, players, game_summary_data):
     '''
     Format data to count makes and misses.
