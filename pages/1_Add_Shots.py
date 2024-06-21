@@ -8,45 +8,59 @@ import os
 import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 pd.options.mode.chained_assignment = None
-from streamlit_gsheets import GSheetsConnection
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 from functions import utils as ut
 
+@st.cache_resource
+def get_client():
+    uri =  f"mongodb+srv://nda-gbb-admin:{st.secrets['mongo_gbb']['MONGBO_GBB_PASSWORD']}@nda-gbb.1lq4irv.mongodb.net/"
+    # Create a new client and connect to the server
+    client = MongoClient(uri, server_api=ServerApi('1'))
+    return client
+
+def get_my_db(client):
+    my_db = client['NDA_GBB']
+    plays_db = my_db['PLAYS']
+    spots_db = my_db['SPOTS']
+    games_db = my_db['GAMES']
+    players_db = my_db['PLAYERS']
+    plays = pd.DataFrame(list(plays_db.find())).drop(columns=['_id'])
+    spots = pd.DataFrame(list(spots_db.find())).drop(columns=['_id'])
+    games = pd.DataFrame(list(games_db.find())).drop(columns=['_id'])
+    players = pd.DataFrame(list(players_db.find())).drop(columns=['_id'])
+    players = players[players['YEAR']==2024]
+    return plays, spots, games, players, plays_db
+
 def load_data():
-    conn = st.connection("gsheets", 
-                        type=GSheetsConnection
-    )
-    players = conn.read(worksheet='players')
-    games = conn.read(worksheet='games')
+    client = get_client()
+    all_plays, spots, games, players, plays_db = get_my_db(client=client)
     players['YEAR'] = (players['YEAR'].astype('str')
                                       .str
                                       .replace('.0',
                                                '',
                                                regex=False)
     )
-    spots = conn.read(worksheet='spots')
     games['SEASON'] = (games['SEASON'].astype('str')
                                       .str
                                       .replace('.0', 
                                                '', 
                                                regex=False)
     )
-    all_plays = conn.read(worksheet='play_event')
-    games['LABEL'] = (games['OPPONENT']
-                 + ' - '
-                 + games['DATE']
-    )
+    games['LABEL'] = games['OPPONENT'] + ' - ' + games['DATE']
+
     players['LABEL'] = (players['NUMBER'].astype('str')
                         + ' - '
                         + players['FIRST_NAME']
     )
-    return conn, players, games, spots, all_plays
+    return plays_db, players, games, spots, all_plays
 
 
 @st.cache_data
-def get_season_data(games,
-                    players,
-                    season):
+def get_season_data(games, players, season):
     games_season = games[games['SEASON']==season]
+    games_season['DATE_DTTM'] = pd.to_datetime(games_season['DATE'])
+    games_season = games_season.sort_values(by='DATE_DTTM')
     players_season = players[players['YEAR']==season]
     games_season['LABEL'] = (games_season['OPPONENT']
                             + ' - '
@@ -55,28 +69,26 @@ def get_season_data(games,
     return games_season, players_season
 
 @st.cache_data
-def get_selected_game(games_season,
-                      game_select):
+def get_selected_game(games_season, game_select):
     game_val_opp = game_select.split(' - ')[0]
     game_val_date = game_select.split(' - ')[1]
     this_game = games_season[(games_season['OPPONENT']==game_val_opp)
-                                & (games_season['DATE']==game_val_date)]
+                             & (games_season['DATE']==game_val_date)]
     return this_game
 
-def get_values_needed(game_val,
-                      game):
+def get_values_needed(game_val, game):
     game_val_opp = game_val.split(' - ')[0]
     game_val_date = game_val.split(' - ')[1]
     game_val_this = game[(game['OPPONENT']==game_val_opp)
-                             & (game['DATE']==game_val_date)]
+                         & (game['DATE']==game_val_date)]
     player_number = player_val.split(' - ')[0]
     game_val_final = game_val_this['GAME_ID'].values[0]
     return player_number, game_val_final
 
 def create_df(game_val_final, 
               player_number, 
-              spot_val,
-              shot_defense,
+              spot_val, 
+              shot_defense, 
               make_miss):
     this_data = [game_val_final, 
                  player_number, 
@@ -93,25 +105,25 @@ def create_df(game_val_final,
     )
     return my_df
 
-password = st.text_input(label='Password',
-                         type='password')
+password = st.text_input(label='Password', type='password')
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
-    conn, players, games, spots, all_plays = load_data()
-    season = st.selectbox(label='Select Season',
-                        options=games['SEASON'].unique().tolist()
-    )
+    plays_db, players, games, spots, all_plays = load_data()
+
+    season_list = games['SEASON'].unique().tolist()
+
+    season = st.selectbox(label='Select Season', options=season_list)
+
     games_season, players_season = get_season_data(games=games,
                                                 players=players,
                                                 season=season
     )
-    game_select = st.selectbox(label='Select Game',
-                               options=games_season['LABEL'].unique().tolist()
-    )
+
+    game_list = games_season['LABEL'].unique().tolist()
+    game_select = st.selectbox(label='Select Game', options=game_list)
     game = get_selected_game(games_season=games_season,
                                 game_select=game_select
     )
-    with st.form('Play Event', 
-                clear_on_submit=False):
+    with st.form('Play Event', clear_on_submit=False):
         game_val = game['LABEL'].values[0]
         player_val = st.radio(label='Player',
                             options=players_season['LABEL'],
@@ -122,8 +134,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                             horizontal=True
         )
         make_miss = st.radio(label='Make/Miss',
-                            options=['Y', 
-                                    'N'],
+                            options=['Y', 'N'],
                             horizontal=True
         )
         shot_defense = st.radio(label='Shot Defense',
@@ -132,36 +143,35 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                                         'HEAVILY_GUARDED'],
                                 horizontal=True
         )
-        add = st.form_submit_button("Add Play")
-        final_add = st.form_submit_button('Final Submit')
+        add = st.form_submit_button('Add Play')
         if add:
             time.sleep(.5)
             player_number, game_val_final = get_values_needed(game_val=game_val,
                                                             game=game
             )
-            test_make = np.where(make_miss=='Y',
-                                 'Make',
-                                 'Miss')
-            st.text(f'Submitted {test_make} by {player_number} from {spot_val} with defense {shot_defense}')
+            test_make = np.where(make_miss=='Y', 'Make', 'Miss')
+            st.text(f'Submitted {test_make} by {player_number} from {spot_val} with defense {shot_defense} for {game_val_final}')
             my_df = create_df(game_val_final=game_val_final, 
                             player_number=player_number, 
                             spot_val=spot_val,
                             shot_defense=shot_defense,
                             make_miss=make_miss
             )
-            st.session_state.temp_df.append(my_df)
-        if final_add:
-            final_temp_df = pd.concat(st.session_state.temp_df,
-                                    axis=0
-            )
-            all_data = (pd.concat([final_temp_df,
-                                all_plays])
-                        .reset_index(drop=True)
-            )
-            conn.update(worksheet='play_event',
-                        data=all_data
-            )
-            st.write('Added to DB!')
-            time.sleep(.5)
-            st.cache_data.clear()
-            st.session_state.temp_df = []
+            all_data_game = all_plays[all_plays['GAME_ID']==game_val_final]
+            if len(all_data_game)==0:
+                my_df['PLAY_NUM'] = 1
+            else:
+                current_play = len(all_data_game)
+                my_df['PLAY_NUM'] = current_play
+            
+            current_game = pd.concat([all_data_game, my_df])
+            current_play_dict = my_df.to_dict('records')
+            plays_db.insert_many(current_play_dict, bypass_document_validation=True)
+            st.write(f'Added to DB, {len(current_game)} shots in DB for game {game_val_final}')
+            #conn.update(worksheet='play_event',
+            #            data=all_data
+            #)
+            #st.write('Added to DB!')
+            #time.sleep(.5)
+            #st.cache_data.clear()
+            #st.session_state.temp_df = []

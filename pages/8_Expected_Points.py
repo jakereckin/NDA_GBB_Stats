@@ -5,27 +5,45 @@ import sys
 import os
 import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
-from streamlit_gsheets import GSheetsConnection
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 from functions import utils as ut
 pd.options.mode.chained_assignment = None
 
-#-------------------------------------------------------------------------------
-def load_data():
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    play_event = conn.read(worksheet='play_event')
-    spot = conn.read(worksheet='spots')
-    games = conn.read(worksheet='games')
-    players = conn.read(worksheet='players')
+
+@st.cache_resource
+def get_client():
+    uri =  f"mongodb+srv://nda-gbb-admin:{st.secrets['mongo_gbb']['MONGBO_GBB_PASSWORD']}@nda-gbb.1lq4irv.mongodb.net/"
+    # Create a new client and connect to the server
+    client = MongoClient(uri, server_api=ServerApi('1'))
+    return client
+
+def get_my_db(client):
+    my_db = client['NDA_GBB']
+    plays_db = my_db['PLAYS']
+    spots_db = my_db['SPOTS']
+    games_db = my_db['GAMES']
+    players_db = my_db['PLAYERS']
+    game_summary_db = my_db['GAME_SUMMARY']
+    plays = pd.DataFrame(list(plays_db.find())).drop(columns=['_id'])
+    spots = pd.DataFrame(list(spots_db.find())).drop(columns=['_id'])
+    games = pd.DataFrame(list(games_db.find())).drop(columns=['_id'])
+    players = pd.DataFrame(list(players_db.find())).drop(columns=['_id'])
     players = players[players['YEAR']==2024]
-    game_summary_data = conn.read(worksheet='game_summary')
-    return play_event, spot, games, players, game_summary_data
+    game_summary = pd.DataFrame(list(game_summary_db.find())).drop(columns=['_id'])
+    return plays, spots, games, players, game_summary
+
+#-----------------------------------------------------------------------------
+@st.cache_data
+def load_data():
+    client = get_client()
+    play_event, spot, games, players, game_summary = get_my_db(client=client)
+
+    return play_event, spot, games, players, game_summary
 
 #-------------------------------------------------------------------------------
 @st.cache_data
-def format_data(spot,
-                games,
-                players,
-                game_summary_data):
+def format_data(spot, games, players, game_summary_data):
     '''
     Format data to count makes and misses.
     '''
@@ -38,10 +56,8 @@ def format_data(spot,
                                     left_on=['PLAYER_ID'],
                                     right_on=['NUMBER'])
     )
-    game_summary = pd.merge(left=game_summary_data,
-                            right=games,
-                            on='GAME_ID'
-    )
+    game_summary = pd.merge(left=game_summary_data, right=games, on='GAME_ID')
+
     game_summary = game_summary[game_summary['SEASON']==2024]
     game_summary['LABEL'] = (game_summary['OPPONENT']
                                 + ' - '
@@ -55,10 +71,8 @@ def format_data(spot,
                            + ' '
                            + player_data['LAST_NAME']
     )
-    player_data['MAKE'] = np.where(player_data['MAKE_MISS']=='Y',
-                                   1,
-                                   0
-    )
+    player_data['MAKE'] = np.where(player_data['MAKE_MISS']=='Y', 1, 0)
+
     player_data['ATTEMPT'] = 1
     player_data2 = player_data[['NAME',
                                 'SHOT_SPOT',
@@ -69,9 +83,7 @@ def format_data(spot,
     return player_data, player_data2, game_summary
 
 #-------------------------------------------------------------------------------
-def get_games_data(player_data,
-                   game_summary,
-                   game):
+def get_games_data(player_data, game_summary, game):
     '''
     Get game data for selected game
     '''
@@ -80,11 +92,8 @@ def get_games_data(player_data,
     return t_game, game_data
 
 #-------------------------------------------------------------------------------
-def get_grouped_all_spots(player_data2,
-                          spot):
-    grouped = (player_data2.groupby(by=['NAME',
-                                        'SHOT_SPOT',
-                                        'SHOT_DEFENSE'],
+def get_grouped_all_spots(player_data2, spot):
+    grouped = (player_data2.groupby(by=['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE'],
                                     as_index=False)
                            .agg(ATTEMPTS=('ATTEMPT', np.sum),
                                 MAKES=('MAKE', np.sum))
@@ -111,7 +120,7 @@ def get_grouped_all_spots(player_data2,
     )
     # Expected value = point value * percent make (accounting for defense)
     grouped_all_spots['EXPECTED_VALUE'] = (grouped_all_spots['POINT_VALUE']
-                                           *grouped_all_spots['MAKE_PERCENT']
+                                           * grouped_all_spots['MAKE_PERCENT']
     )
     grouped_all_spots = grouped_all_spots.drop(columns=['SPOT',
                                                         'XSPOT',
@@ -122,27 +131,22 @@ def get_grouped_all_spots(player_data2,
     return grouped_all_spots
 
 #-------------------------------------------------------------------------------
-def get_team_data(t_game,
-                  grouped_all_spots):
+def get_team_data(t_game, grouped_all_spots):
     '''
     Get expected points, but on team level instead of individual
     '''
-    this_game = (t_game.groupby(by=['NAME',
-                                    'SHOT_SPOT',
-                                    'SHOT_DEFENSE'],
+    this_game = (t_game.groupby(by=['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE'],
                                 as_index=False)
                        .agg(ATTEMPTS=('ATTEMPT', np.sum),
                             MAKES=('MAKE', np.sum))
                        .merge(grouped_all_spots,
-                              on=['NAME',
-                                  'SHOT_SPOT',
-                                  'SHOT_DEFENSE'])
+                              on=['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE'])
     )
     this_game['EXPECTED_POINTS'] = (this_game['ATTEMPTS']
-                                    *this_game['EXPECTED_VALUE']
+                                    * this_game['EXPECTED_VALUE']
     )
     this_game['ACTUAL_POINTS'] = (this_game['MAKES']
-                                  *this_game['POINT_VALUE']
+                                  * this_game['POINT_VALUE']
     )
     return this_game
 
@@ -153,12 +157,9 @@ player_data, player_data2, game_summary_cleaned = format_data(spot=spot,
                                         game_summary_data=game_summary_data
 )
 
-games_list = (player_data['LABEL'].unique()
-                                  .tolist()
-)
-game = st.selectbox(label='Select Games',
-                      options=games_list
-)
+games_list = player_data['LABEL'].unique().tolist()
+
+game = st.selectbox(label='Select Game', options=games_list)
 if game != []:
     t_game, game_data = get_games_data(player_data=player_data,
                                        game_summary=game_summary_cleaned,
@@ -179,9 +180,7 @@ if game != []:
     st.metric(value=np.round(total_expected, 2),
               label='TOTAL EXPECTED POINTS'
     )
-    st.metric(value=total_actual,
-              label='ACTUAL POINTS'
-    )
+    st.metric(value=total_actual, label='ACTUAL POINTS')
     st.dataframe(this_game, 
                  use_container_width=True, 
                  hide_index=True

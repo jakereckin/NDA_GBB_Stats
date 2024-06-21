@@ -65,16 +65,13 @@ def load_data():
 
 @st.cache_data
 def get_games(game_summary, games, players):
-    game_summary = pd.merge(left=game_summary,
-                            right=games,
-                            on='GAME_ID'
-    )
+
+    game_summary = pd.merge(left=game_summary, right=games, on='GAME_ID')
+
     game_summary = pd.merge(game_summary,
                             players,
-                            left_on=['PLAYER_ID',
-                                     'SEASON'],
-                            right_on=['NUMBER',
-                                      'YEAR']
+                            left_on=['PLAYER_ID', 'SEASON'],
+                            right_on=['NUMBER', 'YEAR']
     )
     game_summary['LABEL'] = (game_summary['OPPONENT']
                              + ' - '
@@ -95,8 +92,7 @@ def get_games(game_summary, games, players):
                               + (game_summary['FTM'])
     )
     team_data = (game_summary.copy()
-                             .groupby(by='LABEL', 
-                                      as_index=False)
+                             .groupby(by='LABEL', as_index=False)
                              .sum()
     )
     return game_summary, team_data
@@ -137,9 +133,11 @@ def apply_derived(data):
                             0
     ) 
     data['EFF_POINTS'] = data['POINTS'] * data['OFFENSIVE_EFFICENCY']
+
     return data
 
 players, games, game_summary = load_data()
+
 game_summary, team_data = get_games(game_summary=game_summary,
                                     games=games,
                                     players=players
@@ -149,12 +147,14 @@ season_list = game_summary['SEASON'].unique().tolist()
 season = st.multiselect(label='Select Season', options=season_list)
 
 if season_list:
+
     game_summary_season = (game_summary[game_summary['SEASON'].isin(season)]
                                        .sort_values(by='GAME_ID')
     )
     games_list = game_summary_season['LABEL'].unique().tolist()
 
     game = st.multiselect(label='Select Games', options=games_list)
+
     if game != []:
         final_data = game_summary_season[game_summary_season['LABEL'].isin(game)]
         team_data = team_data[team_data['LABEL'].isin(game)]
@@ -166,11 +166,10 @@ if season_list:
         present = final_data.groupby(by='NAME', as_index=False).sum()
 
         present = apply_derived(present).round(2)
+
         st.text('Team Level Data')
-        st.dataframe(team_data, 
-                     use_container_width=True, 
-                     hide_index=True
-        )
+        st.dataframe(team_data, use_container_width=True, hide_index=True)
+
         data_list = st.radio(label='Select Stat',
                              options=other_stats,
                              horizontal=True

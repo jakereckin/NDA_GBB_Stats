@@ -7,16 +7,32 @@ import numpy as np
 import os
 import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
-from streamlit_gsheets import GSheetsConnection
 from functions import utils as ut
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 pd.options.mode.chained_assignment = None
 
+
+@st.cache_resource
+def get_client():
+    uri =  f"mongodb+srv://nda-gbb-admin:{st.secrets['mongo_gbb']['MONGBO_GBB_PASSWORD']}@nda-gbb.1lq4irv.mongodb.net/"
+    # Create a new client and connect to the server
+    client = MongoClient(uri, server_api=ServerApi('1'))
+    return client
+
+def get_my_db(client):
+    my_db = client['NDA_GBB']
+    games_db = my_db['GAMES']
+    players_db = my_db['PLAYERS']
+    game_summary_db = my_db['GAME_SUMMARY']
+    games = pd.DataFrame(list(games_db.find())).drop(columns=['_id'])
+    players = pd.DataFrame(list(players_db.find())).drop(columns=['_id'])
+    game_summary = pd.DataFrame(list(game_summary_db.find())).drop(columns=['_id'])
+    return games, players, game_summary, game_summary_db
+
 def load_data():
-    conn = st.connection("gsheets", 
-                        type=GSheetsConnection
-    )
-    players = conn.read(worksheet='players')
-    games = conn.read(worksheet='games')
+    client = get_client()
+    games, players, game_summary, game_summary_db = get_my_db(client=client)
     games['SEASON'] = (games['SEASON'].astype('str')
                                       .str
                                       .replace('.0', 
@@ -30,45 +46,47 @@ def load_data():
                                                    regex=False)
     )
     games = games.dropna(subset=['SEASON'])
-    game_summary_data = conn.read(worksheet='game_summary')
-    return conn, players, games, game_summary_data
+    return players, games, game_summary, game_summary_db
 
 @st.cache_data
-def get_season_data(games,
-                    players,
-                    season):
+def get_season_data(games, players, season):
+
     games_season = games[games['SEASON']==season]
     players_season = players[players['YEAR']==season]
+
     games_season['LABEL'] = (games_season['OPPONENT']
                             + ' - '
                             + games_season['DATE']
     )
+
     return games_season, players_season
 
 @st.cache_data
-def get_selected_game(games_season,
-                      game_select):
+def get_selected_game(games_season, game_select):
     game_val_opp = game_select.split(' - ')[0]
     game_val_date = game_select.split(' - ')[1]
     this_game = games_season[(games_season['OPPONENT']==game_val_opp)
                                 & (games_season['DATE']==game_val_date)]
     return this_game
 
-password = st.text_input(label='Password',
-                         type='password')
-if password == st.secrets['page_password']['PAGE_PASSWORD']:
-    conn, players, games, game_summary_data = load_data()
+password = st.text_input(label='Password', type='password')
 
-    season = st.selectbox(label='Select Season',
-                        options=games['SEASON'].unique().tolist()
-    )
+if password == st.secrets['page_password']['PAGE_PASSWORD']:
+
+    players, games, game_summary_data, game_summary_db = load_data()
+
+    my_season_options = games['SEASON'].unique().tolist()
+
+    season = st.selectbox(label='Select Season', options=my_season_options)
+
     games_season, players_season = get_season_data(games=games,
                                                 players=players,
                                                 season=season
     )
-    game_select = st.selectbox(label='Select Game',
-                            options=games_season['LABEL'].unique().tolist()
-    )
+
+    my_game_options = games_season['LABEL'].unique().tolist()
+    game_select = st.selectbox(label='Select Game', options=my_game_options)
+    
     this_game = get_selected_game(games_season=games_season,
                                 game_select=game_select
     )
@@ -83,23 +101,34 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
         update_frame['PLAYER_ID'] = player_values
         update_frame['GAME_ID'] = this_game['GAME_ID'].values[0]
 
+    update_frame = update_frame.reset_index(drop=True)
+    save = st.button('Save')
+    update = st.button('Update')
     edited_df = st.data_editor(update_frame, 
-                            num_rows='dynamic', 
-                            key='data_editor'
+                               num_rows='dynamic', 
+                               key='game_summary_editor',
+                               hide_index=True,
+                               use_container_width=True
     )
     data = edited_df.copy()
-    save = st.button('Save')
     if save:
         data = data.fillna(0)
-        all_data = (pd.concat([game_summary_data,
-                            data])
-                    .drop_duplicates(subset=['PLAYER_ID',
-                                            'GAME_ID'],
-                                    keep='last')
-                    .reset_index(drop=True)
+        game_summary_ids = pd.DataFrame(list(game_summary_db.find()))
+        game_summary_ids_list = game_summary_ids['_id'].unique().tolist()
+        data['_id'] = (data['PLAYER_ID'].astype(str).str.replace('.0', '', regex=False)
+                       + '_' 
+                       + data['GAME_ID'].astype(str).str.replace('.0', '', regex=False)
         )
-        conn.update(worksheet='game_summary',
-                    data=all_data)          
+        new_data = data[~data['_id'].isin(game_summary_ids_list)]
+        if len(new_data) > 0:
+            data_list = new_data.to_dict('records')
+            game_summary_db.insert_many(data_list, 
+                                        bypass_document_validation=True
+            )
+        update_data = data[data['_id'].isin(game_summary_ids_list)]
+        data_list = update_data.to_dict('records')
+        for doc in data_list:
+            game_summary_db.update_one({'_id': doc['_id']}, {"$set": doc}, upsert=True)    
         st.write('Added to DB!')
-        st.cache_data.clear()
+        time.sleep(2)
         st.rerun()
