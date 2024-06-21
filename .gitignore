@@ -4,3 +4,5 @@ NDA_DB - game_summary.csv
 *.csv
 ipynb/Build_DB.ipynb
 ipynb/Build_DB.ipynb
+ipynb/Build_DB.ipynb
+*.csv
