@@ -6,6 +6,8 @@ import plotly.express as px
 import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from streamlit_gsheets import GSheetsConnection
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 pd.options.mode.chained_assignment = None
 
 
@@ -28,12 +30,26 @@ other_stats = ['OFFENSIVE_EFFICENCY',
 ]
 
 @st.cache_resource
+def get_client():
+    uri =  f"mongodb+srv://nda-gbb-admin:{st.secrets['mongo_gbb']['MONGBO_GBB_PASSWORD']}@nda-gbb.1lq4irv.mongodb.net/"
+    # Create a new client and connect to the server
+    client = MongoClient(uri, server_api=ServerApi('1'))
+    return client
+
+def get_my_db(client):
+    my_db = client['NDA_GBB']
+    games_db = my_db['GAMES']
+    players_db = my_db['PLAYERS']
+    game_summary_db = my_db['GAME_SUMMARY']
+    games = pd.DataFrame(list(games_db.find())).drop(columns=['_id'])
+    players = pd.DataFrame(list(players_db.find())).drop(columns=['_id'])
+    game_summary = pd.DataFrame(list(game_summary_db.find())).drop(columns=['_id'])
+    return games, players, game_summary
+
+@st.cache_resource
 def load_data():
-    conn = st.connection("gsheets", 
-                        type=GSheetsConnection
-    )
-    players = conn.read(worksheet='players')
-    games = conn.read(worksheet='games')
+    client = get_client()
+    games, players, game_summary = get_my_db(client)
     games['SEASON'] = (games['SEASON'].astype('str')
                                       .str
                                       .replace('.0', 
@@ -46,7 +62,6 @@ def load_data():
                                                    '',
                                                    regex=False)
     )
-    game_summary = conn.read(worksheet='game_summary')
     return players, games, game_summary
 
 @st.cache_data
@@ -89,22 +104,19 @@ def get_games(game_summary, games, players):
 
 def apply_derived(data):
 
-    data['TWO_POINTS_SCORED'] = 2*data['TWO_FGM']
-    data['THREE_POINTS_SCORED'] = 3*data['THREE_FGM']
+    data['TWO_POINTS_SCORED'] = 2 * data['TWO_FGM']
+    data['THREE_POINTS_SCORED'] = 3 * data['THREE_FGM']
     data['TOTAL_POINTS_SCORED'] = (data['TWO_POINTS_SCORED']
                                    + data['THREE_POINTS_SCORED']
     )
-    data['OE_NUM'] = (data['FGM']
-                      + data['ASSISTS']
-    )
+    data['OE_NUM'] = data['FGM'] + data['ASSISTS']
     data['OE_DENOM'] = (data['FGA'] 
                         - data['OFFENSIVE_REBOUNDS'] 
                         + data['ASSISTS'] 
                         + data['TURNOVER']
     )
-    data['EFG_NUM'] = (data['FGM'] 
-                       + (.5*data['THREE_FGM'])
-    )
+    data['EFG_NUM'] = data['FGM'] + (.5*data['THREE_FGM'])
+
     data['2PPA'] = np.where(data['TWO_FGA']>0,
                             data['TWO_POINTS_SCORED']/data['TWO_FGA'],
                             0
@@ -125,9 +137,7 @@ def apply_derived(data):
                             data['EFG_NUM']/data['FGA'],
                             0
     ) 
-    data['EFF_POINTS'] = (data['POINTS']
-                          * data['OFFENSIVE_EFFICENCY']
-    )
+    data['EFF_POINTS'] = data['POINTS'] * data['OFFENSIVE_EFFICENCY']
     return data
 
 players, games, game_summary = load_data()
@@ -135,22 +145,17 @@ game_summary, team_data = get_games(game_summary=game_summary,
                                     games=games,
                                     players=players
 )
-season_list = (game_summary['SEASON'].unique()
-                                     .tolist()
-)
-season = st.multiselect(label='Select Season',
-                        options=season_list
-)
+season_list = game_summary['SEASON'].unique().tolist()
+
+season = st.multiselect(label='Select Season', options=season_list)
+
 if season_list:
     game_summary_season = (game_summary[game_summary['SEASON'].isin(season)]
                                        .sort_values(by='GAME_ID')
     )
-    games_list = (game_summary_season['LABEL'].unique()
-                                              .tolist()
-    )
-    game = st.multiselect(label='Select Games',
-                          options=games_list
-    )
+    games_list = game_summary_season['LABEL'].unique().tolist()
+
+    game = st.multiselect(label='Select Games', options=games_list)
     if game != []:
         final_data = game_summary_season[game_summary_season['LABEL'].isin(game)]
         team_data = team_data[team_data['LABEL'].isin(game)]
@@ -159,10 +164,8 @@ if season_list:
                               .rename(columns={'LABEL': 'Opponent'})
                               .round(2)
         )
-        present = (final_data.groupby(by='NAME', 
-                                      as_index=False)
-                             .sum()
-        )
+        present = final_data.groupby(by='NAME', as_index=False).sum()
+
         present = apply_derived(present).round(2)
         st.text('Team Level Data')
         st.dataframe(team_data, 
@@ -181,6 +184,4 @@ if season_list:
                          orientation='h',
                          text=data_list
             )
-            st.plotly_chart(fig, 
-                            use_container_width=True
-            )
+            st.plotly_chart(fig, use_container_width=True)

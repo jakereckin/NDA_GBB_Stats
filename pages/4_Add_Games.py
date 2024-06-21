@@ -36,8 +36,7 @@ def load_data():
     )
     return games_db, games
 
-password = st.text_input(label='Password',
-                         type='password')
+password = st.text_input(label='Password',type='password')
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
     games_db, games = load_data()
     save = st.button('Save')
