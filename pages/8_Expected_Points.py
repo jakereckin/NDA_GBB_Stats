@@ -46,10 +46,10 @@ def load_data():
     client = get_client()
     play_event, spot, games, players, game_summary = get_my_db(client=client)
     play_event = play_event.to_pandas()
-    spot = spot.to_pandas()
-    games = games.to_pandas()
-    players = players.to_pandas()
-    game_summary = game_summary.to_pandas()
+    #spot = spot.to_pandas()
+    #games = games.to_pandas()
+    #players = players.to_pandas()
+    #game_summary = game_summary.to_pandas()
     return play_event, spot, games, players, game_summary
 
 
@@ -59,16 +59,45 @@ def format_data(spot, games, players, game_summary_data):
     Format data to count makes and misses.
     '''
     player_data = (
-        play_event.merge(spot, left_on=['SHOT_SPOT'], right_on=['SPOT'])
-                  .merge(games, on=['GAME_ID'])
-                  .merge(players, left_on=['PLAYER_ID'], right_on=['NUMBER'])
+        play_event.join(spot, left_on=['SHOT_SPOT'], right_on=['SPOT'])
+                  .join(games, on=['GAME_ID'])
+                  .join(players, left_on=['PLAYER_ID'], right_on=['NUMBER'])
     )
-    game_summary = pd.merge(left=game_summary_data, right=games, on='GAME_ID')
+    game_summary = game_summary_data.join(games, on='GAME_ID')
 
-    game_summary = game_summary[game_summary['SEASON'] == 2024]
-    game_summary['LABEL'] = (
-        game_summary['OPPONENT'] + ' - ' + game_summary['DATE']
+    #game_summary = game_summary[game_summary['SEASON'] == 2024]
+    game_summary = game_summary.filter(pl.col('SEASON') == 2024)
+    game_summary = (
+        game_summary.with_columns(
+            (pl.col('OPPONENT') + ' - ' + pl.col('DATE'))
+            .alias('LABEL')
+        )
     )
+    #game_summary['LABEL'] = (
+    #    game_summary['OPPONENT'] + ' - ' + game_summary['DATE']
+    #)
+    player_data = (
+        player_data.with_columns(
+            (pl.col('OPPONENT') + ' - ' + pl.col('DATE'))
+            .alias('LABEL'),
+            (pl.col('FIRST_NAME') + ' ' + pl.col('LAST_NAME'))
+            .alias('NAME'),
+            pl.when(pl.col('MAKE_MISS') == 'Y')
+              .then(1)
+              .otherwise(0)
+              .alias('MAKE'),
+            pl.lit(1).alias('ATTEMPT'),
+            pl.col('DATE').str.to_datetime().alias('DATE_DTTM')
+
+        )
+    )
+    player_data = player_data.sort(by='DATE_DTTM')
+    player_data2 = player_data.select(['NAME',
+                                'SHOT_SPOT',
+                                'MAKE',
+                                'ATTEMPT',
+                                'SHOT_DEFENSE'])
+    '''
     player_data['LABEL'] = (
         player_data['OPPONENT'] + ' - ' + player_data['DATE']
     )
@@ -88,6 +117,10 @@ def format_data(spot, games, players, game_summary_data):
                                 'ATTEMPT',
                                 'SHOT_DEFENSE'
     ]]
+    '''
+    player_data = player_data.to_pandas()
+    player_data2 = player_data2.to_pandas()
+    game_summary = game_summary.to_pandas()
     return player_data, player_data2, game_summary
 
 
