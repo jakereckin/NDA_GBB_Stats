@@ -4,6 +4,7 @@ import streamlit as st
 import sys
 import os
 import pandas as pd
+import polars as pl
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -29,13 +30,13 @@ def get_my_db(client):
     games_db = my_db['GAMES']
     players_db = my_db['PLAYERS']
     game_summary_db = my_db['GAME_SUMMARY']
-    plays = pd.DataFrame(list(plays_db.find())).drop(columns=['_id'])
-    spots = pd.DataFrame(list(spots_db.find())).drop(columns=['_id'])
-    games = pd.DataFrame(list(games_db.find())).drop(columns=['_id'])
-    players = pd.DataFrame(list(players_db.find())).drop(columns=['_id'])
-    players = players[players['YEAR'] == 2024]
+    plays = pl.DataFrame(list(plays_db.find())).drop(['_id'])
+    spots = pl.DataFrame(list(spots_db.find())).drop(['_id'])
+    games = pl.DataFrame(list(games_db.find())).drop(['_id'])
+    players = pl.DataFrame(list(players_db.find())).drop(['_id'])
+    players = players.filter(pl.col('YEAR') == 2024)
     game_summary = (
-        pd.DataFrame(list(game_summary_db.find())).drop(columns=['_id'])
+        pl.DataFrame(list(game_summary_db.find())).drop(['_id'])
     )
     return plays, spots, games, players, game_summary
 
@@ -44,7 +45,11 @@ def get_my_db(client):
 def load_data():
     client = get_client()
     play_event, spot, games, players, game_summary = get_my_db(client=client)
-
+    play_event = play_event.to_pandas()
+    spot = spot.to_pandas()
+    games = games.to_pandas()
+    players = players.to_pandas()
+    game_summary = game_summary.to_pandas()
     return play_event, spot, games, players, game_summary
 
 
