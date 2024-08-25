@@ -45,27 +45,21 @@ def get_my_db(client):
 def load_data():
     client = get_client()
     play_event, spot, games, players, game_summary = get_my_db(client=client)
-    play_event = play_event.to_pandas()
-    #spot = spot.to_pandas()
-    #games = games.to_pandas()
-    #players = players.to_pandas()
-    #game_summary = game_summary.to_pandas()
     return play_event, spot, games, players, game_summary
 
 
 #-----------------------------------------------------------------------------
-def format_data(spot, games, players, game_summary_data):
+def format_data(spot, games, players, game_summary_data, play_event):
     '''
     Format data to count makes and misses.
     '''
     player_data = (
-        play_event.join(spot, left_on=['SHOT_SPOT'], right_on=['SPOT'])
+        play_event.join(other=spot, left_on='SHOT_SPOT', right_on='SPOT')
                   .join(games, on=['GAME_ID'])
                   .join(players, left_on=['PLAYER_ID'], right_on=['NUMBER'])
     )
     game_summary = game_summary_data.join(games, on='GAME_ID')
 
-    #game_summary = game_summary[game_summary['SEASON'] == 2024]
     game_summary = game_summary.filter(pl.col('SEASON') == 2024)
     game_summary = (
         game_summary.with_columns(
@@ -73,9 +67,6 @@ def format_data(spot, games, players, game_summary_data):
             .alias('LABEL')
         )
     )
-    #game_summary['LABEL'] = (
-    #    game_summary['OPPONENT'] + ' - ' + game_summary['DATE']
-    #)
     player_data = (
         player_data.with_columns(
             (pl.col('OPPONENT') + ' - ' + pl.col('DATE'))
@@ -87,40 +78,17 @@ def format_data(spot, games, players, game_summary_data):
               .otherwise(0)
               .alias('MAKE'),
             pl.lit(1).alias('ATTEMPT'),
-            pl.col('DATE').str.to_datetime().alias('DATE_DTTM')
+            pl.col('DATE').str.to_datetime(strict=False, format='%m/%d/%Y').alias('DATE_DTTM')
 
         )
     )
     player_data = player_data.sort(by='DATE_DTTM')
-    player_data2 = player_data.select(['NAME',
-                                'SHOT_SPOT',
-                                'MAKE',
-                                'ATTEMPT',
-                                'SHOT_DEFENSE'])
-    '''
-    player_data['LABEL'] = (
-        player_data['OPPONENT'] + ' - ' + player_data['DATE']
+    player_data2 = player_data.select(
+        ['NAME', 'SHOT_SPOT', 'MAKE', 'ATTEMPT', 'SHOT_DEFENSE']
     )
-    player_data['NAME'] = (
-        player_data['FIRST_NAME'] + ' ' + player_data['LAST_NAME']
-    )
-    player_data['MAKE'] = np.where(player_data['MAKE_MISS'] == 'Y', 1, 0)
-
-    player_data['ATTEMPT'] = 1
-    player_data['DATE_DTTM'] = pd.to_datetime(player_data['DATE'])
-    player_data = (
-        player_data.sort_values(by='DATE_DTTM').reset_index(drop=True)
-    )
-    player_data2 = player_data[['NAME',
-                                'SHOT_SPOT',
-                                'MAKE',
-                                'ATTEMPT',
-                                'SHOT_DEFENSE'
-    ]]
-    '''
-    player_data = player_data.to_pandas()
-    player_data2 = player_data2.to_pandas()
-    game_summary = game_summary.to_pandas()
+    #player_data = player_data.to_pandas()
+    #player_data2 = player_data2.to_pandas()
+    #game_summary = game_summary.to_pandas()
     return player_data, player_data2, game_summary
 
 
@@ -129,47 +97,62 @@ def get_games_data(player_data, game_summary, game):
     '''
     Get game data for selected game
     '''
-    t_game = player_data[player_data['LABEL'] == game]
-    game_data = game_summary[game_summary['LABEL'] == game]
-    game_data['DATE_DTTM'] = pd.to_datetime(game_data['DATE'])
-    game_data = game_data.sort_values(by='DATE_DTTM')
+    t_game = player_data.filter(pl.col('LABEL') == game)
+    game_data = (
+        game_summary.filter(pl.col('LABEL') == game)
+                    .with_columns(
+                        pl.col('DATE')
+                          .str
+                          .to_datetime(strict=False, format='%m/%d/%Y')
+                          .alias('DATE_DTTM')
+                    )
+                    .sort(by='DATE')
+    )
     return t_game, game_data
 
 
 #-------------------------------------------------------------------------------
 def get_grouped_all_spots(player_data2, spot):
-    grouped = (player_data2.groupby(by=['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE'],
-                                    as_index=False)
-                           .agg(ATTEMPTS=('ATTEMPT', np.sum),
-                                MAKES=('MAKE', np.sum))
+    #spot = spot.to_pandas()
+    grouped = (
+        player_data2.group_by(['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE'])
+                    .agg([pl.col('ATTEMPT').sum().alias('ATTEMPTS'),
+                          pl.col('MAKE').sum().alias('MAKES')])
     )
     # Basically counting for divison by 0
     # If denom (attempts) is 0, return 0, else get percent
-    grouped['MAKE_PERCENT'] = np.where(grouped['ATTEMPTS']>0,
-                                       grouped['MAKES']/grouped['ATTEMPTS'],
-                                       0
+    grouped = (
+        grouped.with_columns(
+            (pl.when(pl.col('ATTEMPTS') > 0)
+               .then(pl.col('MAKES') / pl.col('ATTEMPTS'))
+               .otherwise(0))
+            .alias('MAKE_PERCENT')
+        )
     )
-    all_spots = spot.copy()
+    all_spots = spot.clone()
+    all_spots = (
+        all_spots.with_columns(
+            (pl.col('SPOT').str.slice(-1,1).cast(int).alias('POINT_VALUE'))
+        )
+    )
     # Spot name final character is point value.. easy fix is putting this into DB
     # TODO: add to DB instead of here.
-    all_spots['POINT_VALUE'] = (
-        all_spots['SPOT'].str.strip().str[-1].astype('int64')
+    #all_spots['POINT_VALUE'] = (
+   #     all_spots['SPOT'].str.strip().str[-1].astype('int64')
+   # )
+    grouped_all_spots = all_spots.join(  
+        grouped, left_on=['SPOT'], right_on=['SHOT_SPOT'], how='left'
     )
-    grouped_all_spots = pd.merge(all_spots,
-                                 grouped,
-                                 left_on=['SPOT'],
-                                 right_on=['SHOT_SPOT'],
-                                 how='left'
+    grouped_all_spots = (
+        grouped_all_spots.with_columns(
+            (pl.col('POINT_VALUE') * pl.col('MAKE_PERCENT'))
+            .alias('EXPECTED_VALUE')
+        )
     )
     # Expected value = point value * percent make (accounting for defense)
-    grouped_all_spots['EXPECTED_VALUE'] = (
-        grouped_all_spots['POINT_VALUE'] * grouped_all_spots['MAKE_PERCENT']
-    )
-    grouped_all_spots = grouped_all_spots.drop(columns=['SPOT',
-                                                        'XSPOT',
-                                                        'YSPOT',
-                                                        'MAKES',
-                                                        'ATTEMPTS']
+    grouped_all_spots = (
+        grouped_all_spots.drop(['XSPOT', 'YSPOT', 'MAKES', 'ATTEMPTS'])
+                         .rename({'SPOT': 'SHOT_SPOT'})
     )
     return grouped_all_spots
 
@@ -179,6 +162,8 @@ def get_team_data(t_game, grouped_all_spots):
     '''
     Get expected points, but on team level instead of individual
     '''
+    t_game = t_game.to_pandas()
+    grouped_all_spots = grouped_all_spots.to_pandas()
     this_game = (t_game.groupby(by=['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE'],
                                 as_index=False)
                        .agg(ATTEMPTS=('ATTEMPT', np.sum),
@@ -195,14 +180,35 @@ def get_team_data(t_game, grouped_all_spots):
     return this_game
 
 
-play_event, spot, games, players, gs_data = load_data()
-player_data, player_data2, game_summary_cleaned = format_data(
-    spot=spot, games=games, players=players, game_summary_data=gs_data
-)
+#-------------------------------------------------------------------------------
+@st.cache_data
+def get_data():
+    play_event, spot, games, players, gs_data = load_data()
+    player_data, player_data2, game_summary_cleaned = format_data(
+        spot=spot, 
+        games=games, 
+        players=players, 
+        game_summary_data=gs_data, 
+        play_event=play_event
+    )
+    games_list = player_data['LABEL'].unique()
+    return (player_data, 
+            player_data2, 
+            game_summary_cleaned, 
+            games_list, 
+            spot, 
+            play_event)
 
-games_list = player_data['LABEL'].unique().tolist()
 
-game = st.selectbox(label='Select Game', options=games_list)
+
+#-------------------------------------------------------------------------------
+(player_data,
+ player_data2, 
+ game_summary_cleaned, 
+ games_list, 
+ spot, 
+ play_event) = get_data()
+game = st.radio(label='Select Game', options=games_list, horizontal=True)
 
 if game != []:
     t_game, game_data = get_games_data(
