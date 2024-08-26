@@ -86,9 +86,6 @@ def format_data(spot, games, players, game_summary_data, play_event):
     player_data2 = player_data.select(
         ['NAME', 'SHOT_SPOT', 'MAKE', 'ATTEMPT', 'SHOT_DEFENSE']
     )
-    #player_data = player_data.to_pandas()
-    #player_data2 = player_data2.to_pandas()
-    #game_summary = game_summary.to_pandas()
     return player_data, player_data2, game_summary
 
 
