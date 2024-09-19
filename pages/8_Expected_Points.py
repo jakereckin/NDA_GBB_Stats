@@ -13,7 +13,6 @@ pd.options.mode.chained_assignment = None
 
 
 st.cache_data.clear()
-st.cache_resource.clear()
 
 # ----------------------------------------------------------------------------
 @st.cache_resource
