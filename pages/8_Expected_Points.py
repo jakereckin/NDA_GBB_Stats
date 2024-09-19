@@ -180,7 +180,7 @@ def get_team_data(t_game, grouped_all_spots):
 
 
 #-------------------------------------------------------------------------------
-@st.cache_data
+@st.cache_data(allow_output_mutation=True)
 def get_data():
     play_event, spot, games, players, gs_data = load_data()
     player_data, player_data2, game_summary_cleaned = format_data(

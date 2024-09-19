@@ -36,7 +36,7 @@ def get_my_db(client):
 
 
 # ----------------------------------------------------------------------------
-@st.cache_data
+@st.cache_data(allow_output_mutation=True)
 def load_frames():
      client = get_client()
      play_event, spot, games = get_my_db(client)
@@ -45,7 +45,7 @@ def load_frames():
 
 
 # ----------------------------------------------------------------------------
-@st.cache_data
+@st.cache_data(allow_output_mutation=True)
 def get_game_data(play_event, spot, games):
      team_data = (
           play_event.merge(spot, left_on='SHOT_SPOT', right_on='SPOT')
@@ -63,7 +63,7 @@ def get_game_data(play_event, spot, games):
 
 
 # ----------------------------------------------------------------------------
-@st.cache_data
+@st.cache_data(allow_output_mutation=True)
 def filter_team_data(team_data):
      team_data_filtered = team_data[['GAME',
                               'GAME_ID',
