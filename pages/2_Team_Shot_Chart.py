@@ -12,6 +12,7 @@ from pymongo.server_api import ServerApi
 from functions import utils as ut
 pd.options.mode.chained_assignment = None
 
+st.cache_data.clear()
 
 # ----------------------------------------------------------------------------
 @st.cache_resource

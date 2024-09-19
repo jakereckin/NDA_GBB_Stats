@@ -12,6 +12,7 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 pd.options.mode.chained_assignment = None
 
+st.cache_data.clear()
 
 # ----------------------------------------------------------------------------
 @st.cache_resource
