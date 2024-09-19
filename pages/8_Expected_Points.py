@@ -30,7 +30,7 @@ def get_my_db(client):
     games_db = my_db['GAMES']
     players_db = my_db['PLAYERS']
     game_summary_db = my_db['GAME_SUMMARY']
-    plays = pl.DataFrame(list(plays_db.find())).drop(['_id'])
+    plays = pl.DataFrame(list(plays_db.find()),  infer_schema_length=None).drop(['_id'])
     spots = pl.DataFrame(list(spots_db.find())).drop(['_id'])
     games = pl.DataFrame(list(games_db.find())).drop(['_id'])
     players = pl.DataFrame(list(players_db.find())).drop(['_id'])
