@@ -58,7 +58,7 @@ def load_data():
 
 
 # ----------------------------------------------------------------------------
-@st.cache_data(allow_output_mutation=True)
+@st.cache_data
 def get_season_data(games, players, season):
     games_season = games[games['SEASON'] == season]
     games_season['DATE_DTTM'] = pd.to_datetime(games_season['DATE'])
@@ -71,7 +71,7 @@ def get_season_data(games, players, season):
 
 
 # ----------------------------------------------------------------------------
-@st.cache_data(allow_output_mutation=True)
+@st.cache_data
 def get_selected_game(games_season, game_select):
     game_val_opp = game_select.split(' - ')[0]
     game_val_date = game_select.split(' - ')[1]

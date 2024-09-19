@@ -12,8 +12,6 @@ from functions import utils as ut
 pd.options.mode.chained_assignment = None
 
 
-st.cache_data.clear()
-
 # ----------------------------------------------------------------------------
 @st.cache_resource
 def get_client():
@@ -180,7 +178,7 @@ def get_team_data(t_game, grouped_all_spots):
 
 
 #-------------------------------------------------------------------------------
-@st.cache_data(allow_output_mutation=True)
+@st.cache_data
 def get_data():
     play_event, spot, games, players, gs_data = load_data()
     player_data, player_data2, game_summary_cleaned = format_data(
