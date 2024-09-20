@@ -140,16 +140,29 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     )
     with st.form('Play Event', clear_on_submit=False):
         game_val = game['LABEL'].values[0]
-        player_val = st.radio(
+        players_season = players_season.sort_values(by='NUMBER')
+        spots['VALUE'] = spots['SPOT'].str.strip().str[-1].astype('int64')
+        spots = spots.sort_values(by=['VALUE', 'SPOT'])
+        col1, col2 = st.columns(2)
+        with col1:
+            player_val = st.radio(
             label='Player', options=players_season['LABEL'], horizontal=True
         )
-        spot_val = st.radio(
+            
+        with col2:
+            spot_val = st.radio(
             label='Shot Spot', options=spots['SPOT'], horizontal=True
         )
-        make_miss = st.radio(
+            
+        col1, col2 = st.columns(2)
+
+        with col1:
+            make_miss = st.radio(
             label='Make/Miss', options=['Y', 'N'], horizontal=True
         )
-        shot_defense = st.radio(label='Shot Defense',
+            
+        with col2:
+            shot_defense = st.radio(label='Shot Defense',
                                 options=['OPEN',
                                          'GUARDED', 
                                         'HEAVILY_GUARDED'],
