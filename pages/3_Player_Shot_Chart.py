@@ -35,6 +35,7 @@ def get_my_db(client):
     spots = pd.DataFrame(list(spots_db.find())).drop(columns=['_id'])
     games = pd.DataFrame(list(games_db.find())).drop(columns=['_id'])
     players = pd.DataFrame(list(players_db.find())).drop(columns=['_id'])
+    players = players[players['FIRST_NAME'] != 'OPPONENT']
     return plays, spots, games, players
 
 
