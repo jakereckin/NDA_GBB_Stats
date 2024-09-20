@@ -128,8 +128,10 @@ def get_grouped_all_spots(player_data2, spot):
     grouped_all_spots['EXPECTED_VALUE'] = (
         grouped_all_spots['POINT_VALUE'] * grouped_all_spots['MAKE_PERCENT']
     )
-    grouped_all_spots['EXPECTED_VALUE'] = (
-        grouped_all_spots.fillna(grouped_all_spots['OPP_EXPECTED'])
+    grouped_all_spots['EXPECTED_VALUE'] = np.where(
+        grouped_all_spots['NAME'] == 'OPPONENT TEAM',
+        grouped_all_spots['OPP_EXPECTED'],
+        grouped_all_spots['EXPECTED_VALUE']
     )
     grouped_all_spots = grouped_all_spots.drop(columns=['SPOT',
                                                         'XSPOT',
@@ -184,11 +186,9 @@ if game != []:
     # ========== EXPECTED TRITONS ==========
     tritons = this_game[this_game['NAME'] != 'OPPONENT TEAM']
     expected_fg = tritons['EXPECTED_POINTS'].sum()
-    total_expected = expected_fg
     
     # ========== ACTUAL TRITONS ==========
     actual_fg = tritons['ACTUAL_POINTS'].sum()
-    total_actual = actual_fg
 
     # ========== EXPECTED OPP ==========
     opp = this_game[this_game['NAME'] == 'OPPONENT TEAM']
@@ -197,15 +197,29 @@ if game != []:
     # ========== ACTUAL OPP ==========
     actual_fg_opp = opp['ACTUAL_POINTS'].sum()
 
-    st.metric(
-        value=np.round(total_expected, 2), label='TOTAL TRITON EXPECTED POINTS'
-    )
-    st.metric(value=total_actual, label='ACTUAL TRITON POINTS')
+    tritons_delta = round(actual_fg - expected_fg, 2)
+    opp_delta = float(round(actual_fg_opp - expected_fg_opp, 2))
 
-    st.metric(
-        value=np.round(expected_fg_opp, 2), label='TOTAL OPPONENT EXPECTED POINTS'
-    )
-    st.metric(value=actual_fg_opp, label='ACTUAL OPPONENT POINTS')
+
+    triton_expected, triton_actual = st.columns(2)
+
+    with triton_expected:
+        st.metric(
+            value=np.round(expected_fg, 2), label='TRITON EXPECTED POINTS'
+        )
+
+    with triton_actual:
+        st.metric(value=actual_fg, label='ACTUAL TRITON POINTS', delta=tritons_delta, )
+
+    opp_expected, opp_actual = st.columns(2)
+
+    with opp_expected:
+        st.metric(
+            value=np.round(expected_fg_opp, 2), label='OPPONENT EXPECTED POINTS'
+        )
+
+    with opp_actual:
+        st.metric(value=actual_fg_opp, label='ACTUAL OPPONENT POINTS', delta=opp_delta, delta_color='inverse')
 
     st.dataframe(
         this_game, use_container_width=True, hide_index=True
