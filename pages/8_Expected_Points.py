@@ -222,5 +222,5 @@ if game != []:
         st.metric(value=actual_fg_opp, label='ACTUAL OPPONENT POINTS', delta=opp_delta, delta_color='inverse')
 
     st.dataframe(
-        this_game, use_container_width=True, hide_index=True
+        this_game[['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE', 'EXPECTED_POINTS', 'ACTUAL_POINTS']], use_container_width=True, hide_index=True
     )
