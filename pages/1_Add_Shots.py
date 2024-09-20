@@ -118,18 +118,23 @@ def create_df(game_val_final,
 # ----------------------------------------------------------------------------
 password = st.text_input(label='Password', type='password')
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
+
+    col1, col2 = st.columns(2)
     plays_db, players, games, spots, all_plays = load_data()
 
     season_list = games['SEASON'].unique().tolist()
 
-    season = st.selectbox(label='Select Season', options=season_list)
+    with col1:
+        season = st.selectbox(label='Select Season', options=season_list)
 
     games_season, players_season = get_season_data(
         games=games, players=players, season=season
     )
 
     game_list = games_season['LABEL'].unique().tolist()
-    game_select = st.selectbox(label='Select Game', options=game_list)
+
+    with col2:
+        game_select = st.selectbox(label='Select Game', options=game_list)
     game = get_selected_game(
         games_season=games_season, game_select=game_select
     )
