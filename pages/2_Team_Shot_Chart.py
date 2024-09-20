@@ -33,6 +33,7 @@ def get_my_db(client):
     plays = pd.DataFrame(list(plays_db.find())).drop(columns=['_id'])
     spots = pd.DataFrame(list(spots_db.find())).drop(columns=['_id'])
     games = pd.DataFrame(list(games_db.find())).drop(columns=['_id'])
+    plays = plays[plays['PLAYER_ID'] != 0]
     return plays, spots, games
 
 
