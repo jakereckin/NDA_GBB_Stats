@@ -128,6 +128,9 @@ def get_grouped_all_spots(player_data2, spot):
     grouped_all_spots['EXPECTED_VALUE'] = (
         grouped_all_spots['POINT_VALUE'] * grouped_all_spots['MAKE_PERCENT']
     )
+    grouped_all_spots['EXPECTED_VALUE'] = (
+        grouped_all_spots.fillna(grouped_all_spots['OPP_EXPECTED'])
+    )
     grouped_all_spots = grouped_all_spots.drop(columns=['SPOT',
                                                         'XSPOT',
                                                         'YSPOT',
@@ -178,18 +181,32 @@ if game != []:
         t_game=t_game, grouped_all_spots=grouped_all_spots
     )
 
-    # ========== EXPECTED ==========
-    expected_fg = this_game['EXPECTED_POINTS'].sum()
+    # ========== EXPECTED TRITONS ==========
+    tritons = this_game[this_game['NAME'] != 'OPPONENT TEAM']
+    expected_fg = tritons['EXPECTED_POINTS'].sum()
     total_expected = expected_fg
     
-    # ========== ACTUAL ==========
-    actual_fg = this_game['ACTUAL_POINTS'].sum()
+    # ========== ACTUAL TRITONS ==========
+    actual_fg = tritons['ACTUAL_POINTS'].sum()
     total_actual = actual_fg
 
+    # ========== EXPECTED OPP ==========
+    opp = this_game[this_game['NAME'] == 'OPPONENT TEAM']
+    expected_fg_opp = opp['EXPECTED_POINTS'].sum()
+
+    # ========== ACTUAL OPP ==========
+    actual_fg_opp = opp['ACTUAL_POINTS'].sum()
+
     st.metric(
-        value=np.round(total_expected, 2), label='TOTAL EXPECTED POINTS'
+        value=np.round(total_expected, 2), label='TOTAL TRITON EXPECTED POINTS'
     )
-    st.metric(value=total_actual, label='ACTUAL POINTS')
+    st.metric(value=total_actual, label='ACTUAL TRITON POINTS')
+
+    st.metric(
+        value=np.round(expected_fg_opp, 2), label='TOTAL OPPONENT EXPECTED POINTS'
+    )
+    st.metric(value=actual_fg_opp, label='ACTUAL OPPONENT POINTS')
+
     st.dataframe(
         this_game, use_container_width=True, hide_index=True
     )
