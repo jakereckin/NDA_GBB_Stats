@@ -205,7 +205,7 @@ if game != []:
 
     with triton_expected:
         st.metric(
-            value=np.round(expected_fg, 2), label='TRITON EXPECTED POINTS'
+            value=np.round(expected_fg, 2), label='EXPECTED TRITON POINTS'
         )
 
     with triton_actual:
@@ -215,7 +215,7 @@ if game != []:
 
     with opp_expected:
         st.metric(
-            value=np.round(expected_fg_opp, 2), label='OPPONENT EXPECTED POINTS'
+            value=np.round(expected_fg_opp, 2), label='EXPECTED OPPONENT POINTS'
         )
 
     with opp_actual:
