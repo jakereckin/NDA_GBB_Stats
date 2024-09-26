@@ -147,7 +147,19 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
         with col1:
             player_val = st.radio(
             label='Player', options=players_season['LABEL'], horizontal=True
-        )
+            )
+            st.html(
+            '''
+                <div class="divider-vertical-line"></div>
+                <style>
+                    .divider-vertical-line {
+                        border-left: 2px solid rgba(49, 51, 63, 0.2);
+                        height: 320px;
+                        margin: auto;
+                    }
+                </style>
+            '''
+            )
             
         with col2:
             spot_val = st.radio(
