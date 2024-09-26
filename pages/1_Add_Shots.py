@@ -153,7 +153,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             spot_val = st.radio(
             label='Shot Spot', options=spots['SPOT'], horizontal=True
         )
-            
+        st.divider()
         col1, col2 = st.columns(2)
 
         with col1:
