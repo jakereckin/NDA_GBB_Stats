@@ -113,7 +113,7 @@ def create_df(
 # ----------------------------------------------------------------------------
 password = st.text_input(label='Password', type='password')
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
-    image = Image.open('SHOT_CHART.jpg')
+    image = Image.open('img/NDA_LOGO')
     st.image(image)
     _shot_defenses = ['OPEN', 'GUARDED', 'HEAVILY_GUARDED']
     col1, col2 = st.columns(2)
