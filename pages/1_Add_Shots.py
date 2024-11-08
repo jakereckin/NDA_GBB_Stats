@@ -11,7 +11,11 @@ pd.options.mode.chained_assignment = None
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from functions import utils as ut
+from PIL import Image
 
+
+image = Image.open('SHOT_CHART.jpg')
+st.image(image)
 
 
 # ----------------------------------------------------------------------------
@@ -75,8 +79,9 @@ def get_season_data(games, players, season):
 def get_selected_game(games_season, game_select):
     game_val_opp = game_select.split(' - ')[0]
     game_val_date = game_select.split(' - ')[1]
-    this_game = games_season[(games_season['OPPONENT'] == game_val_opp)
-                             & (games_season['DATE'] == game_val_date)
+    this_game = games_season[
+        (games_season['OPPONENT'] == game_val_opp)
+        & (games_season['DATE'] == game_val_date)
     ]
     return this_game
 
@@ -94,23 +99,17 @@ def get_values_needed(game_val, game):
 
 
 # ----------------------------------------------------------------------------
-def create_df(game_val_final, 
-              player_number, 
-              spot_val, 
-              shot_defense, 
-              make_miss):
-    this_data = [game_val_final, 
-                 player_number, 
-                 spot_val,
-                 shot_defense,
-                 make_miss
+def create_df(
+        game_val_final, player_number, spot_val, shot_defense, make_miss
+    ):
+    this_data = [
+        game_val_final, player_number, spot_val, shot_defense, make_miss
+    ]
+    col_names = [
+        'GAME_ID', 'PLAYER_ID', 'SHOT_SPOT', 'SHOT_DEFENSE', 'MAKE_MISS'
     ]
     my_df = pd.DataFrame(data=[this_data],
-                         columns=['GAME_ID', 
-                                  'PLAYER_ID', 
-                                  'SHOT_SPOT', 
-                                  'SHOT_DEFENSE',
-                                  'MAKE_MISS']
+                         columns=col_names
     )
     return my_df
 
@@ -119,6 +118,7 @@ def create_df(game_val_final,
 password = st.text_input(label='Password', type='password')
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
 
+    _shot_defenses = ['OPEN', 'GUARDED', 'HEAVILY_GUARDED']
     col1, col2 = st.columns(2)
     plays_db, players, games, spots, all_plays = load_data()
 
@@ -160,13 +160,10 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             make_miss = st.radio(
             label='Make/Miss', options=['Y', 'N'], horizontal=True
         )
-            
+        
         with col2:
-            shot_defense = st.radio(label='Shot Defense',
-                                options=['OPEN',
-                                         'GUARDED', 
-                                        'HEAVILY_GUARDED'],
-                                horizontal=True
+            shot_defense = st.radio(
+                label='Shot Defense', options=_shot_defenses, horizontal=True
         )
         add = st.form_submit_button('Add Play')
         if add:
@@ -179,11 +176,10 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             st.text(
                 f'Submitted {test_make} by {player_number} from {spot_val} with defense {shot_defense} for {game_val_final}'
             )
-            my_df = create_df(game_val_final=game_val_final, 
-                              player_number=player_number, 
-                              spot_val=spot_val,
-                              shot_defense=shot_defense,
-                              make_miss=make_miss
+            my_df = create_df(
+                game_val_final=game_val_final, player_number=player_number,
+                spot_val=spot_val, shot_defense=shot_defense,
+                make_miss=make_miss
             )
             all_data_game = all_plays[all_plays['GAME_ID'] == game_val_final]
             if len(all_data_game) == 0:
