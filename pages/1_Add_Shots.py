@@ -14,10 +14,6 @@ from functions import utils as ut
 from PIL import Image
 
 
-image = Image.open('SHOT_CHART.jpg')
-st.image(image)
-
-
 # ----------------------------------------------------------------------------
 @st.cache_resource
 def get_client():
@@ -117,7 +113,8 @@ def create_df(
 # ----------------------------------------------------------------------------
 password = st.text_input(label='Password', type='password')
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
-
+    image = Image.open('SHOT_CHART.jpg')
+    st.image(image)
     _shot_defenses = ['OPEN', 'GUARDED', 'HEAVILY_GUARDED']
     col1, col2 = st.columns(2)
     plays_db, players, games, spots, all_plays = load_data()
