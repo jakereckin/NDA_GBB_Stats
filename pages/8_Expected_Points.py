@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 import sys
@@ -7,7 +6,6 @@ import pandas as pd
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
-from functions import utils as ut
 pd.options.mode.chained_assignment = None
 
 st.cache_data.clear()
@@ -50,20 +48,20 @@ def load_data():
 
 
 #-----------------------------------------------------------------------------
-def format_data(spot, games, players, game_summary_data):
+def format_data(spot, games, players, game_summary_data, selected_season):
     '''
     Format data to count makes and misses.
     '''
+    games = games[games['SEASON'] == selected_season]
     player_data = (
-        play_event.merge(right=spot, left_on=['SHOT_SPOT'], right_on=['SPOT'])
-                  .merge(right=games, on=['GAME_ID'])
+        play_event.merge(right=spot, left_on='SHOT_SPOT', right_on='SPOT')
+                  .merge(right=games, on='GAME_ID')
                   .merge(right=players, 
-                         left_on=['PLAYER_ID'], 
-                         right_on=['NUMBER'])
+                         left_on='PLAYER_ID', 
+                         right_on='NUMBER')
     )
     game_summary = pd.merge(left=game_summary_data, right=games, on='GAME_ID')
 
-    game_summary = game_summary[game_summary['SEASON'] == 2024]
     game_summary['LABEL'] = (
         game_summary['OPPONENT'] + ' - ' + game_summary['DATE']
     )
@@ -156,74 +154,85 @@ def get_team_data(t_game, grouped_all_spots):
 
 
 play_event, spot, games, players, gs_data = load_data()
-player_data, player_data2, game_summary_cleaned = format_data(
-    spot=spot, games=games, players=players, game_summary_data=gs_data
-)
-
-games_list = player_data['LABEL'].unique().tolist()
-
-game = st.selectbox(label='Select Game', options=games_list)
-
-if game != []:
-    t_game, game_data = get_games_data(
-        player_data=player_data, game_summary=game_summary_cleaned, game=game
-    )
-    grouped_all_spots = get_grouped_all_spots(
-        player_data2=player_data2, spot=spot
-    )
-    this_game = get_team_data(
-        t_game=t_game, grouped_all_spots=grouped_all_spots
+print(games)
+season_list = games['SEASON'].unique().tolist()
+season = st.radio(label='Select Season', options=season_list, horizontal=True)
+if season:
+    player_data, player_data2, game_summary_cleaned = format_data(
+        spot=spot, games=games, players=players, game_summary_data=gs_data,
+        selected_season=season
     )
 
-    # ========== EXPECTED TRITONS ==========
-    tritons = this_game[this_game['NAME'] != 'OPPONENT TEAM']
-    expected_fg = tritons['EXPECTED_POINTS'].sum()
-    
-    # ========== ACTUAL TRITONS ==========
-    actual_fg = tritons['ACTUAL_POINTS'].sum()
 
-    # ========== EXPECTED OPP ==========
-    opp = this_game[this_game['NAME'] == 'OPPONENT TEAM']
-    expected_fg_opp = opp['EXPECTED_POINTS'].sum()
+    games_list = player_data['LABEL'].unique().tolist()
 
-    # ========== ACTUAL OPP ==========
-    actual_fg_opp = opp['ACTUAL_POINTS'].sum()
+    game = st.selectbox(label='Select Game', options=games_list)
 
-    tritons_delta = round(number=actual_fg-expected_fg, ndigits=2)
-    opp_delta = float(round(number=actual_fg_opp-expected_fg_opp, ndigits=2))
-
-
-    triton_expected, triton_actual = st.columns(spec=2)
-
-    with triton_expected:
-        st.metric(
-            value=np.round(a=expected_fg, decimals=2),
-            label='EXPECTED TRITON POINTS'
+    if game != []:
+        t_game, game_data = get_games_data(
+            player_data=player_data, game_summary=game_summary_cleaned,
+            game=game
+        )
+        grouped_all_spots = get_grouped_all_spots(
+            player_data2=player_data2, spot=spot
+        )
+        this_game = get_team_data(
+            t_game=t_game, grouped_all_spots=grouped_all_spots
         )
 
-    with triton_actual:
-        st.metric(
-            value=actual_fg, label='ACTUAL TRITON POINTS', delta=tritons_delta
+        # ========== EXPECTED TRITONS ==========
+        tritons = this_game[this_game['NAME'] != 'OPPONENT TEAM']
+        expected_fg = tritons['EXPECTED_POINTS'].sum()
+        
+        # ========== ACTUAL TRITONS ==========
+        actual_fg = tritons['ACTUAL_POINTS'].sum()
+
+        # ========== EXPECTED OPP ==========
+        opp = this_game[this_game['NAME'] == 'OPPONENT TEAM']
+        expected_fg_opp = opp['EXPECTED_POINTS'].sum()
+
+        # ========== ACTUAL OPP ==========
+        actual_fg_opp = opp['ACTUAL_POINTS'].sum()
+
+        tritons_delta = round(number=actual_fg-expected_fg, ndigits=2)
+        opp_delta = float(
+            round(number=actual_fg_opp-expected_fg_opp, ndigits=2)
         )
 
-    opp_expected, opp_actual = st.columns(spec=2)
 
-    with opp_expected:
-        st.metric(
-            value=np.round(a=expected_fg_opp, decimals=2),
-            label='EXPECTED OPPONENT POINTS'
+        triton_expected, triton_actual = st.columns(spec=2)
+
+        with triton_expected:
+            st.metric(
+                value=np.round(a=expected_fg, decimals=2),
+                label='EXPECTED TRITON POINTS'
+            )
+
+        with triton_actual:
+            st.metric(
+                value=actual_fg, label='ACTUAL TRITON POINTS',
+                delta=tritons_delta
+            )
+
+        opp_expected, opp_actual = st.columns(spec=2)
+
+        with opp_expected:
+            st.metric(
+                value=np.round(a=expected_fg_opp, decimals=2),
+                label='EXPECTED OPPONENT POINTS'
+            )
+
+        with opp_actual:
+            st.metric(
+                value=actual_fg_opp, label='ACTUAL OPPONENT POINTS',
+                delta=opp_delta, delta_color='inverse'
+            )
+
+        _show_columns = [
+            'NAME', 'SHOT_SPOT', 'SHOT_DEFENSE', 'EXPECTED_POINTS',
+            'ACTUAL_POINTS'
+        ]
+        st.dataframe(
+            data=this_game[_show_columns], use_container_width=True,
+            hide_index=True
         )
-
-    with opp_actual:
-        st.metric(
-            value=actual_fg_opp, label='ACTUAL OPPONENT POINTS',
-            delta=opp_delta, delta_color='inverse'
-        )
-
-    _show_columns = [
-        'NAME', 'SHOT_SPOT', 'SHOT_DEFENSE', 'EXPECTED_POINTS', 'ACTUAL_POINTS'
-    ]
-    st.dataframe(
-        data=this_game[_show_columns], use_container_width=True,
-        hide_index=True
-    )

@@ -1,16 +1,12 @@
 import streamlit as st
-import datetime as dt
 import sys
 import time
 import sys
-import numpy as np
 import os
 import pandas as pd
-import sqlite3 as sql
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
-from functions import utils as ut
 pd.options.mode.chained_assignment = None
 
 
@@ -73,12 +69,10 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                             .drop(columns=['exists'])
             )
             my_df['_id'] = (
-                my_df['FIRST_NAME'].astype(dtype=str).str.replace(pat='.0', 
-                                                                  repl='', 
+                my_df['FIRST_NAME'].astype(dtype=str).str.replace(pat='.0',
+                                                                  repl='',
                                                                   regex=False)
-                + '_'
-                + my_df['LAST_NAME'] 
-                + '_'
+                + '_' + my_df['LAST_NAME'] + '_'
                 + my_df['YEAR'].astype(dtype=str)
             )
             data_list = my_df.to_dict(orient='records')
@@ -97,12 +91,10 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
         else:
             delete_player = selected_rows.copy().drop(columns=['SELECT'])
             delete_player['_id'] = (
-                delete_player['FIRST_NAME'].astype(dtype=str).str.replace(pat='.0', 
-                                                                          repl='', 
+                delete_player['FIRST_NAME'].astype(dtype=str).str.replace(pat='.0',
+                                                                          repl='',
                                                                           regex=False)
-                + '_'
-                + delete_player['LAST_NAME'] 
-                + '_'
+                + '_' + delete_player['LAST_NAME'] + '_'
                 + delete_player['YEAR'].astype(dtype=str)
             )
             data_list = delete_player.to_dict(orient='records')[0]
