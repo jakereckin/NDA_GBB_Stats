@@ -65,15 +65,14 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                 how='outer', indicator='exists'
             )
             my_df = (
-                check_spot[check_spot['exists']=='right_only']
+                check_spot[check_spot['exists'] == 'right_only']
                 .drop(columns=['exists'])
             )
             my_df['_id'] = (
                 my_df['GAME_ID'].astype(dtype=str).str.replace(pat='.0', 
                                                                repl='', 
                                                                regex=False)
-                + '_' 
-                + my_df['OPPONENT']
+                + '_' + my_df['OPPONENT']
             )
             data_list = my_df.to_dict(orient='records')
             games_db.insert_many(
