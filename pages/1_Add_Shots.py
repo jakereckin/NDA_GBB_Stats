@@ -124,7 +124,9 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     season_list = games['SEASON'].unique().tolist()
 
     with col1:
-        season = st.selectbox(label='Select Season', options=season_list)
+        season = st.radio(
+            label='Select Season', options=season_list, horizontal=True
+        )
 
     games_season, players_season = get_season_data(
         games=games, players=players, season=season
