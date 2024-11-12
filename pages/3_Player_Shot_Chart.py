@@ -20,7 +20,7 @@ def get_client():
     pwd = st.secrets['mongo_gbb']['MONGBO_GBB_PASSWORD']
     uri =  f"mongodb+srv://nda-gbb-admin:{pwd}@nda-gbb.1lq4irv.mongodb.net/"
     # Create a new client and connect to the server
-    client = MongoClient(uri, server_api=ServerApi('1'))
+    client = MongoClient(host=uri, server_api=ServerApi(version='1'))
     return client
 
 
@@ -31,10 +31,10 @@ def get_my_db(client):
     spots_db = my_db['SPOTS']
     games_db = my_db['GAMES']
     players_db = my_db['PLAYERS']
-    plays = pd.DataFrame(list(plays_db.find())).drop(columns=['_id'])
-    spots = pd.DataFrame(list(spots_db.find())).drop(columns=['_id'])
-    games = pd.DataFrame(list(games_db.find())).drop(columns=['_id'])
-    players = pd.DataFrame(list(players_db.find())).drop(columns=['_id'])
+    plays = pd.DataFrame(data=list(plays_db.find())).drop(columns=['_id'])
+    spots = pd.DataFrame(data=list(spots_db.find())).drop(columns=['_id'])
+    games = pd.DataFrame(data=list(games_db.find())).drop(columns=['_id'])
+    players = pd.DataFrame(data=list(players_db.find())).drop(columns=['_id'])
     players = players[players['FIRST_NAME'] != 'OPPONENT']
     return plays, spots, games, players
 
@@ -54,11 +54,9 @@ def load_data():
 def get_player_data(play_event, spot, games, players):
 
      player_data = (
-          play_event.merge(spot, left_on=['SHOT_SPOT'], right_on=['SPOT'])
-                    .merge(games, on=['GAME_ID'])
-                    .merge(players, 
-                           left_on=['PLAYER_ID'], 
-                           right_on=['NUMBER'])
+          play_event.merge(spot, left_on='SHOT_SPOT', right_on='SPOT')
+                    .merge(games, on='GAME_ID')
+                    .merge(players, left_on='PLAYER_ID', right_on='NUMBER')
      )
      player_data['NAME'] = (
           player_data['FIRST_NAME']  + ' ' + player_data['LAST_NAME']
@@ -66,18 +64,12 @@ def get_player_data(play_event, spot, games, players):
      player_data['MAKE'] = np.where(player_data['MAKE_MISS'] == 'Y', 1, 0)
 
      player_data['HEAVILY_GUARDED'] = np.where(
-          player_data['SHOT_DEFENSE']=='HEAVILY_GUARDED', 1, 0
+          player_data['SHOT_DEFENSE'] == 'HEAVILY_GUARDED', 1, 0
      )
      player_data['ATTEMPT'] = 1
-     player_data = player_data[['FIRST_NAME',
-                           'LAST_NAME',
-                           'NAME',
-                           'SHOT_SPOT',
-                           'MAKE',
-                           'ATTEMPT',
-                           'XSPOT',
-                           'YSPOT',
-                           'HEAVILY_GUARDED'
+     player_data = player_data[[
+          'FIRST_NAME', 'LAST_NAME', 'NAME', 'SHOT_SPOT', 'MAKE', 'ATTEMPT',
+          'XSPOT', 'YSPOT', 'HEAVILY_GUARDED'
      ]]
      player_data['U_ID'] = (
           player_data['FIRST_NAME'] + ' ' + player_data['LAST_NAME']
@@ -86,13 +78,10 @@ def get_player_data(play_event, spot, games, players):
 
 # ----------------------------------------------------------------------------
 def format_visual_data(this_game):
-     totals = (this_game.groupby(by=['NAME', 
-                                    'SHOT_SPOT', 
-                                    'XSPOT', 
-                                    'YSPOT'], 
-                                as_index=False)
-                         [['MAKE', 'ATTEMPT', 'HEAVILY_GUARDED']]
-                         .sum()
+     totals = (
+          this_game.groupby(by=['NAME', 'SHOT_SPOT', 'XSPOT', 'YSPOT'], 
+                            as_index=False)
+                   [['MAKE', 'ATTEMPT', 'HEAVILY_GUARDED']].sum()
      )
      totals['POINT_VALUE'] = (
           totals['SHOT_SPOT'].str.strip().str[-1].astype('int64')
@@ -103,19 +92,18 @@ def format_visual_data(this_game):
      totals['HG_PERCENT'] = (
           totals['HEAVILY_GUARDED'] / totals['ATTEMPT'].replace(0, 1)
      )
-     totals['POINTS_PER_ATTEMPT'] = ((totals['MAKE']*totals['POINT_VALUE'])
-                                     / totals['ATTEMPT'].replace(0, 1)
+     totals['POINTS_PER_ATTEMPT'] = (
+          (totals['MAKE']*totals['POINT_VALUE'])
+          / totals['ATTEMPT'].replace(0, 1)
      )
      totals_sorted = totals.sort_values(
           by=['POINTS_PER_ATTEMPT', 'ATTEMPT'], ascending=False
      )
      totals_sorted = totals_sorted[totals_sorted['ATTEMPT'] > 1]
-     totals_sorted = totals_sorted[['SHOT_SPOT',
-                                    'MAKE',
-                                    'ATTEMPT',
-                                    'MAKE_PERCENT',
-                                    'POINTS_PER_ATTEMPT',
-                                    'HG_PERCENT']].round(3)
+     totals_sorted = totals_sorted[[
+          'SHOT_SPOT', 'MAKE', 'ATTEMPT', 'MAKE_PERCENT',
+          'POINTS_PER_ATTEMPT', 'HG_PERCENT'
+     ]].round(3)
      return totals, totals_sorted
 
 
@@ -146,17 +134,21 @@ this_game = filter_player_data(
 )
 if players_selected:
     totals, totals_sorted = format_visual_data(this_game=this_game)
-    fig = ut.load_shot_chart_player(totals, players_selected)
-    st.markdown(f"<h1 style='text-align: center; color: black;'>Shot Chart for {players_selected}</h1>", 
-                unsafe_allow_html=True
+    fig = ut.load_shot_chart_player(
+         totals=totals, players_selected=players_selected
+     )
+    st.markdown(
+         body=f"<h1 style='text-align: center; color: black;'>Shot Chart for {players_selected}</h1>", 
+         unsafe_allow_html=True
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(figure_or_data=fig, use_container_width=True)
 
-    st.markdown(f"<h1 style='text-align: center; color: black;'>Top 5 Spots for {players_selected}</h1>", 
-                unsafe_allow_html=True
+    st.markdown(
+         body=f"<h1 style='text-align: center; color: black;'>Top 5 Spots for {players_selected}</h1>", 
+         unsafe_allow_html=True
     )
 
     st.dataframe(
-         totals_sorted.head(5), use_container_width=True, hide_index=True
+         data=totals_sorted.head(5), use_container_width=True, hide_index=True
     )

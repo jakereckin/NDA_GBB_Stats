@@ -10,22 +10,13 @@ from pymongo.server_api import ServerApi
 pd.options.mode.chained_assignment = None
 
 
-list_of_stats = ['LABEL',
-                 'OFFENSIVE_EFFICENCY',
-                 'EFF_POINTS',
-                 'EFG%',
-                 '2PPA',
-                 '3PPA',
-                 'PPA',
-                 'POINTS'
+list_of_stats = [
+    'LABEL', 'OFFENSIVE_EFFICENCY', 'EFF_POINTS', 'EFG%', '2PPA', '3PPA',
+    'PPA', 'POINTS'
 ]
-other_stats = ['OFFENSIVE_EFFICENCY',
-                 'EFF_POINTS',
-                 'EFG%',
-                 '2PPA',
-                 '3PPA',
-                 'PPA',
-                 'POINTS'
+other_stats = [
+    'OFFENSIVE_EFFICENCY', 'EFF_POINTS', 'EFG%', '2PPA', '3PPA', 'PPA',
+    'POINTS'
 ]
 
 # ----------------------------------------------------------------------------
@@ -34,7 +25,7 @@ def get_client():
     pwd = st.secrets['mongo_gbb']['MONGBO_GBB_PASSWORD']
     uri =  f"mongodb+srv://nda-gbb-admin:{pwd}@nda-gbb.1lq4irv.mongodb.net/"
     # Create a new client and connect to the server
-    client = MongoClient(uri, server_api=ServerApi('1'))
+    client = MongoClient(host=uri, server_api=ServerApi(version='1'))
     return client
 
 
@@ -44,10 +35,10 @@ def get_my_db(client):
     games_db = my_db['GAMES']
     players_db = my_db['PLAYERS']
     game_summary_db = my_db['GAME_SUMMARY']
-    games = pd.DataFrame(list(games_db.find())).drop(columns=['_id'])
-    players = pd.DataFrame(list(players_db.find())).drop(columns=['_id'])
+    games = pd.DataFrame(data=list(games_db.find())).drop(columns=['_id'])
+    players = pd.DataFrame(data=list(players_db.find())).drop(columns=['_id'])
     game_summary = (
-        pd.DataFrame(list(game_summary_db.find())).drop(columns=['_id'])
+        pd.DataFrame(data=list(game_summary_db.find())).drop(columns=['_id'])
     )
     return games, players, game_summary
 
@@ -58,10 +49,14 @@ def load_data():
     client = get_client()
     games, players, game_summary = get_my_db(client)
     games['SEASON'] = (
-        games['SEASON'].astype('str').str.replace('.0', '', regex=False)
+        games['SEASON'].astype(dtype='str').str.replace(pat='.0', 
+                                                        repl='', 
+                                                        regex=False)
     )
     players['YEAR'] = (
-        players['YEAR'].astype('str').str.replace('.0', '', regex=False)
+        players['YEAR'].astype(dtype='str').str.replace(pat='.0', 
+                                                        repl='', 
+                                                        regex=False)
     )
     return players, games, game_summary
 
@@ -72,10 +67,9 @@ def get_games(game_summary, games, players):
 
     game_summary = pd.merge(left=game_summary, right=games, on='GAME_ID')
 
-    game_summary = pd.merge(game_summary,
-                            players,
-                            left_on=['PLAYER_ID', 'SEASON'],
-                            right_on=['NUMBER', 'YEAR']
+    game_summary = pd.merge(
+        left=game_summary, right=players, left_on=['PLAYER_ID', 'SEASON'],
+        right_on=['NUMBER', 'YEAR']
     )
     game_summary['LABEL'] = (
         game_summary['OPPONENT'] + ' - ' + game_summary['DATE']
@@ -89,9 +83,9 @@ def get_games(game_summary, games, players):
     game_summary['FGM'] = (
         game_summary['TWO_FGM'] + game_summary['THREE_FGM']
     )
-    game_summary['POINTS'] = ((2*game_summary['TWO_FGM'])
-                              + (3*game_summary['THREE_FGM'])
-                              + (game_summary['FTM'])
+    game_summary['POINTS'] = (
+        (2*game_summary['TWO_FGM']) + (3*game_summary['THREE_FGM'])
+        + (game_summary['FTM'])
     )
     team_data = (
         game_summary.copy().groupby(by='LABEL', as_index=False).sum()
@@ -108,32 +102,28 @@ def apply_derived(data):
         data['TWO_POINTS_SCORED'] + data['THREE_POINTS_SCORED']
     )
     data['OE_NUM'] = data['FGM'] + data['ASSISTS']
-    data['OE_DENOM'] = (data['FGA'] 
-                        - data['OFFENSIVE_REBOUNDS'] 
-                        + data['ASSISTS'] 
-                        + data['TURNOVER']
+    data['OE_DENOM'] = (
+        data['FGA'] - data['OFFENSIVE_REBOUNDS'] + data['ASSISTS'] 
+        + data['TURNOVER']
     )
     data['EFG_NUM'] = data['FGM'] + (.5*data['THREE_FGM'])
 
-    data['2PPA'] = np.where(data['TWO_FGA']>0,
-                            data['TWO_POINTS_SCORED']/data['TWO_FGA'],
-                            0
+    data['2PPA'] = np.where(
+        data['TWO_FGA'] > 0, data['TWO_POINTS_SCORED'] / data['TWO_FGA'], 0
     )
-    data['3PPA'] = np.where(data['THREE_FGA']>0,
-                            data['THREE_POINTS_SCORED']/data['THREE_FGA'],
-                            0
+    data['3PPA'] = np.where(
+        data['THREE_FGA'] > 0, 
+        data['THREE_POINTS_SCORED'] / data['THREE_FGA'], 
+        0
     )
-    data['PPA'] = np.where(data['FGA']>0,
-                            data['TOTAL_POINTS_SCORED']/data['FGA'],
-                            0
+    data['PPA'] = np.where(
+        data['FGA'] > 0, data['TOTAL_POINTS_SCORED'] / data['FGA'], 0
     )
-    data['OFFENSIVE_EFFICENCY'] = np.where(data['OE_DENOM']!=0,
-                                           data['OE_NUM']/data['OE_DENOM'],
-                                           0
+    data['OFFENSIVE_EFFICENCY'] = np.where(
+        data['OE_DENOM'] != 0, data['OE_NUM'] / data['OE_DENOM'], 0
     )
-    data['EFG%'] = np.where(data['FGA']>0,
-                            data['EFG_NUM']/data['FGA'],
-                            0
+    data['EFG%'] = np.where(
+        data['FGA'] > 0, data['EFG_NUM'] / data['FGA'], 0
     ) 
     data['EFF_POINTS'] = data['POINTS'] * data['OFFENSIVE_EFFICENCY']
 
@@ -153,7 +143,7 @@ season = st.multiselect(label='Select Season', options=season_list)
 if season_list:
 
     game_summary_season = (
-        game_summary[game_summary['SEASON'].isin(season)]
+        game_summary[game_summary['SEASON'].isin(values=season)]
                     .sort_values(by='GAME_ID')
     )
     games_list = game_summary_season['LABEL'].unique().tolist()
@@ -162,20 +152,22 @@ if season_list:
 
     if game != []:
         final_data = game_summary_season[
-            game_summary_season['LABEL'].isin(game)
+            game_summary_season['LABEL'].isin(values=game)
         ]
-        team_data = team_data[team_data['LABEL'].isin(game)]
-        team_data = apply_derived(team_data)
-        team_data = (team_data[list_of_stats]
-                              .rename(columns={'LABEL': 'Opponent'})
-                              .round(2)
+        team_data = team_data[team_data['LABEL'].isin(values=game)]
+        team_data = apply_derived(data=team_data)
+        team_data = (
+            team_data[list_of_stats]
+                     .rename(columns={'LABEL': 'Opponent'}).round(decimals=2)
         )
         present = final_data.groupby(by='NAME', as_index=False).sum()
 
-        present = apply_derived(present).round(2)
+        present = apply_derived(data=present).round(decimals=2)
 
-        st.text('Team Level Data')
-        st.dataframe(team_data, use_container_width=True, hide_index=True)
+        st.text(body='Team Level Data')
+        st.dataframe(
+            data=team_data, use_container_width=True, hide_index=True
+        )
 
         data = st.radio(
             label='Select Stat', options=other_stats, horizontal=True
@@ -183,6 +175,7 @@ if season_list:
 
         if data:
             fig = px.bar(
-                present, x=data, y='NAME', orientation='h', text=data
+                data_frame=present, x=data, y='NAME', orientation='h',
+                text=data
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(figure_or_data=fig, use_container_width=True)

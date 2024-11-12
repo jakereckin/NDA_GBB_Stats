@@ -30,10 +30,10 @@ def get_my_db(client):
     spots_db = my_db['SPOTS']
     games_db = my_db['GAMES']
     players_db = my_db['PLAYERS']
-    plays = pd.DataFrame(list(plays_db.find())).drop(columns=['_id'])
-    spots = pd.DataFrame(list(spots_db.find())).drop(columns=['_id'])
-    games = pd.DataFrame(list(games_db.find())).drop(columns=['_id'])
-    players = pd.DataFrame(list(players_db.find())).drop(columns=['_id'])
+    plays = pd.DataFrame(data=list(plays_db.find())).drop(columns=['_id'])
+    spots = pd.DataFrame(data=list(spots_db.find())).drop(columns=['_id'])
+    games = pd.DataFrame(data=list(games_db.find())).drop(columns=['_id'])
+    players = pd.DataFrame(data=list(players_db.find())).drop(columns=['_id'])
     #TODO: Need to change this to not just be current year
     players = players[players['YEAR'] == 2024]
     return plays, spots, games, players, plays_db
@@ -44,15 +44,19 @@ def load_data():
     client = get_client()
     all_plays, spots, games, players, plays_db = get_my_db(client=client)
     players['YEAR'] = (
-        players['YEAR'].astype('str').str.replace('.0', '', regex=False)
+        players['YEAR'].astype(dtype='str').str.replace(pat='.0',
+                                                        repl='',
+                                                        regex=False)
     )
     games['SEASON'] = (
-        games['SEASON'].astype('str').str.replace('.0', '', regex=False)
+        games['SEASON'].astype(dtype='str').str.replace(pat='.0',
+                                                        repl='',
+                                                        regex=False)
     )
     games['LABEL'] = games['OPPONENT'] + ' - ' + games['DATE']
 
     players['LABEL'] = (
-        players['NUMBER'].astype('str') + ' - ' + players['FIRST_NAME']
+        players['NUMBER'].astype(dtype='str') + ' - ' + players['FIRST_NAME']
     )
     return plays_db, players, games, spots, all_plays
 
@@ -113,10 +117,10 @@ def create_df(
 # ----------------------------------------------------------------------------
 password = st.text_input(label='Password', type='password')
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
-    image = Image.open('SHOT_CHART.jpg')
-    st.image(image)
+    image = Image.open(fp='SHOT_CHART.jpg')
+    st.image(image=image)
     _shot_defenses = ['OPEN', 'GUARDED', 'HEAVILY_GUARDED']
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns(spec=2)
     plays_db, players, games, spots, all_plays = load_data()
 
     season_list = games['SEASON'].unique().tolist()
@@ -135,12 +139,14 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     game = get_selected_game(
         games_season=games_season, game_select=game_select
     )
-    with st.form('Play Event', clear_on_submit=False):
+    with st.form(key='Play Event', clear_on_submit=False):
         game_val = game['LABEL'].values[0]
         players_season = players_season.sort_values(by='NUMBER')
-        spots['VALUE'] = spots['SPOT'].str.strip().str[-1].astype('int64')
+        spots['VALUE'] = (
+            spots['SPOT'].str.strip().str[-1].astype(dtype='int64')
+        )
         spots = spots.sort_values(by=['VALUE', 'SPOT'])
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns(spec=2)
         with col1:
             player_val = st.radio(
             label='Player', options=players_season['LABEL'], horizontal=True
@@ -151,7 +157,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             label='Shot Spot', options=spots['SPOT'], horizontal=True
         )
         st.divider()
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns(spec=2)
 
         with col1:
             make_miss = st.radio(
@@ -162,7 +168,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             shot_defense = st.radio(
                 label='Shot Defense', options=_shot_defenses, horizontal=True
         )
-        add = st.form_submit_button('Add Play')
+        add = st.form_submit_button(label='Add Play')
         if add:
             time.sleep(.5)
             player_number, game_val_final = get_values_needed(
@@ -171,7 +177,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             player_number = int(player_number)
             test_make = np.where(make_miss == 'Y', 'Make', 'Miss')
             st.text(
-                f'Submitted {test_make} by {player_number} from {spot_val} with defense {shot_defense} for {game_val_final}'
+                body=f'Submitted {test_make} by {player_number} from {spot_val} with defense {shot_defense} for {game_val_final}'
             )
             my_df = create_df(
                 game_val_final=game_val_final, player_number=player_number,
@@ -185,9 +191,9 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                 current_play = len(all_data_game)
                 my_df['PLAY_NUM'] = current_play
             
-            current_game = pd.concat([all_data_game, my_df])
-            current_play_dict = my_df.to_dict('records')
+            current_game = pd.concat(objs=[all_data_game, my_df])
+            current_play_dict = my_df.to_dict(orient='records')
             plays_db.insert_many(
-                current_play_dict, bypass_document_validation=True
+                documents=current_play_dict, bypass_document_validation=True
             )
             st.write(f'Added to DB, {len(current_game)} shots in DB for game {game_val_final}')

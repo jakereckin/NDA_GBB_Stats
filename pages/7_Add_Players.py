@@ -20,7 +20,7 @@ def get_client():
     pwd = st.secrets['mongo_gbb']['MONGBO_GBB_PASSWORD']
     uri =  f"mongodb+srv://nda-gbb-admin:{pwd}@nda-gbb.1lq4irv.mongodb.net/"
     # Create a new client and connect to the server
-    client = MongoClient(uri, server_api=ServerApi('1'))
+    client = MongoClient(host=uri, server_api=ServerApi(version='1'))
     return client
 
 
@@ -28,7 +28,7 @@ def get_client():
 def get_my_db(client):
     my_db = client['NDA_GBB']
     players_db = my_db['PLAYERS']
-    players = pd.DataFrame(list(players_db.find())).drop(columns=['_id'])
+    players = pd.DataFrame(data=list(players_db.find())).drop(columns=['_id'])
     return players_db, players
 
 
@@ -37,7 +37,9 @@ def load_data():
     client = get_client()
     players_db, players = get_my_db(client)
     players['YEAR'] = (
-        players['YEAR'].astype('str').str.replace('.0', '', regex=False)
+        players['YEAR'].astype(dtype='str').str.replace(pat='.0', 
+                                                        repl='', 
+                                                        regex=False)
     )
     players = (
         players.sort_values(by=['YEAR', 'NUMBER']).reset_index(drop=True)
@@ -48,44 +50,41 @@ def load_data():
 password = st.text_input(label='Password', type='password')
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
     players_db, players = load_data()
-    save = st.button('Save')
-    delete = st.button('Delete Game')
-    players.insert(0, 'SELECT', False)
+    save = st.button(label='Save')
+    delete = st.button(label='Delete Game')
+    players.insert(loc=0, column='SELECT', value=False)
     edited_df = st.data_editor(
-        players, 
-        num_rows='dynamic', 
-        key='new_players',
-        use_container_width=True,
-        hide_index=True,
+        data=players, num_rows='dynamic', key='new_players',
+        use_container_width=True, hide_index=True,
         column_config={
             'SELECT': st.column_config.CheckboxColumn(required=False)
         } 
     )
     if save:
         if st.session_state['new_players'].get('edit_rows') != {}:
-            check_player = pd.merge(players.drop(columns=['SELECT']),
-                                    edited_df.drop(columns=['SELECT']),
-                                    on=['NUMBER', 
-                                        'FIRST_NAME', 
-                                        'LAST_NAME',
-                                        'YEAR'],
-                                    how='outer',
-                                    indicator='exists'
+            check_player = pd.merge(
+                left=players.drop(columns=['SELECT']),
+                right=edited_df.drop(columns=['SELECT']),
+                on=['NUMBER', 'FIRST_NAME', 'LAST_NAME', 'YEAR'],
+                how='outer', indicator='exists'
             )
-            my_df = (check_player[check_player['exists'] == 'right_only']
+            my_df = (
+                check_player[check_player['exists'] == 'right_only']
                             .drop(columns=['exists'])
             )
             my_df['_id'] = (
-                my_df['FIRST_NAME'].astype(str).str.replace('.0', 
-                                                            '', 
-                                                            regex=False)
+                my_df['FIRST_NAME'].astype(dtype=str).str.replace(pat='.0', 
+                                                                  repl='', 
+                                                                  regex=False)
                 + '_'
                 + my_df['LAST_NAME'] 
                 + '_'
-                + my_df['YEAR'].astype(str)
+                + my_df['YEAR'].astype(dtype=str)
             )
-            data_list = my_df.to_dict('records')
-            players_db.insert_many(data_list, bypass_document_validation=True)
+            data_list = my_df.to_dict(orient='records')
+            players_db.insert_many(
+                documents=data_list, bypass_document_validation=True
+            )
             my_players_add = my_df['LAST_NAME'].tolist()
             st.write(f'Added {my_players_add} to DB')
 
@@ -98,16 +97,16 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
         else:
             delete_player = selected_rows.copy().drop(columns=['SELECT'])
             delete_player['_id'] = (
-                delete_player['FIRST_NAME'].astype(str).str.replace('.0', 
-                                                                    '', 
-                                                                    regex=False)
+                delete_player['FIRST_NAME'].astype(dtype=str).str.replace(pat='.0', 
+                                                                          repl='', 
+                                                                          regex=False)
                 + '_'
                 + delete_player['LAST_NAME'] 
                 + '_'
-                + delete_player['YEAR'].astype(str)
+                + delete_player['YEAR'].astype(dtype=str)
             )
-            data_list = delete_player.to_dict('records')[0]
-            players_db.delete_many(data_list)
+            data_list = delete_player.to_dict(orient='records')[0]
+            players_db.delete_many(filter=data_list)
             st.write('Player Deleted')
             time.sleep(.5)
             st.rerun()
