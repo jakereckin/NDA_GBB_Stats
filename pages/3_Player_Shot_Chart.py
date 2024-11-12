@@ -45,14 +45,18 @@ def load_data():
      client = get_client()
      play_event, spot, games, players = get_my_db(client=client)
      spot = spot[spot['SPOT'] != 'FREE_THROW1']
-     players = players[players['YEAR'] == 2024]
+     players['YEAR'] = (
+          players['YEAR'].astype(dtype='str').str.replace(pat='.0', 
+                                                            repl='', 
+                                                            regex=False)
+     )
      return play_event, spot, games, players
 
 
 # ----------------------------------------------------------------------------
 @st.cache_data
-def get_player_data(play_event, spot, games, players):
-
+def get_player_data(play_event, spot, games, players, season):
+     players = players[players['YEAR'] == season]
      player_data = (
           play_event.merge(spot, left_on='SHOT_SPOT', right_on='SPOT')
                     .merge(games, on='GAME_ID')
@@ -119,36 +123,43 @@ def filter_player_data(players_selected, player_data):
      return this_game
 
 play_event, spot, games, players = load_data()
-player_data = get_player_data(
-     play_event=play_event, spot=spot, games=games, players=players
-)
 
+season_list = players['YEAR'].unique().tolist()
 
-player_names = player_data['U_ID'].unique()
-players_selected = st.radio(
-     label='Choose Player', options=player_names, horizontal=True
-)
+season = st.radio(label='Select Season', options=season_list, horizontal=True)
 
-this_game = filter_player_data(
-     players_selected=players_selected, player_data=player_data
-)
-if players_selected:
-    totals, totals_sorted = format_visual_data(this_game=this_game)
-    fig = ut.load_shot_chart_player(
-         totals=totals, players_selected=players_selected
+if season:
+     player_data = get_player_data(
+          play_event=play_event, spot=spot, games=games, players=players, 
+          season=season
      )
-    st.markdown(
-         body=f"<h1 style='text-align: center; color: black;'>Shot Chart for {players_selected}</h1>", 
-         unsafe_allow_html=True
-    )
 
-    st.plotly_chart(figure_or_data=fig, use_container_width=True)
 
-    st.markdown(
-         body=f"<h1 style='text-align: center; color: black;'>Top 5 Spots for {players_selected}</h1>", 
-         unsafe_allow_html=True
-    )
+     player_names = player_data['U_ID'].unique()
+     players_selected = st.radio(
+          label='Choose Player', options=player_names, horizontal=True
+     )
 
-    st.dataframe(
-         data=totals_sorted.head(5), use_container_width=True, hide_index=True
-    )
+     this_game = filter_player_data(
+          players_selected=players_selected, player_data=player_data
+     )
+     if players_selected:
+          totals, totals_sorted = format_visual_data(this_game=this_game)
+          fig = ut.load_shot_chart_player(
+               totals=totals, players_selected=players_selected
+               )
+          st.markdown(
+               body=f"<h1 style='text-align: center; color: black;'>Shot Chart for {players_selected}</h1>", 
+               unsafe_allow_html=True
+          )
+
+          st.plotly_chart(figure_or_data=fig, use_container_width=True)
+
+          st.markdown(
+               body=f"<h1 style='text-align: center; color: black;'>Top 5 Spots for {players_selected}</h1>", 
+               unsafe_allow_html=True
+          )
+
+          st.dataframe(
+               data=totals_sorted.head(5), use_container_width=True, hide_index=True
+          )

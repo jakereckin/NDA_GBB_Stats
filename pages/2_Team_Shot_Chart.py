@@ -43,6 +43,11 @@ def load_frames():
      client = get_client()
      play_event, spot, games = get_my_db(client)
      spot = spot[spot['SPOT'] != 'FREE_THROW1']
+     games['SEASON'] = (
+          games['SEASON'].astype(dtype='str').str.replace(pat='.0', 
+                                                          repl='', 
+                                                          regex=False)
+     )
      return play_event, spot, games
 
 
@@ -69,7 +74,7 @@ def get_game_data(play_event, spot, games):
 def filter_team_data(team_data):
      team_data_filtered = team_data[[
           'GAME', 'GAME_ID', 'OPPONENT', 'DATE', 'SHOT_SPOT', 'MAKE',
-          'ATTEMPT', 'XSPOT', 'YSPOT', 'HEAVILY_GUARDED'
+          'ATTEMPT', 'XSPOT', 'YSPOT', 'HEAVILY_GUARDED', 'SEASON'
      ]]
      team_data_filtered = team_data_filtered.sort_values(
           by='GAME_ID', ascending=False
@@ -137,28 +142,40 @@ team_data = get_game_data(play_event=play_event, spot=spot, games=games)
 
 team_data_filtered = filter_team_data(team_data=team_data)
 
+season_list = games['SEASON'].sort_values().unique().tolist()
+#games = team_data_filtered['U_ID'].unique()
 
-games = team_data_filtered['U_ID'].unique()
-games_selected = st.multiselect(label='Choose Games', options=games)
+season = st.multiselect(label='Select Season', options=season_list)
+if season:
+     print(season)
+     this_year = (
+          team_data_filtered[team_data_filtered['SEASON'].isin(values=season)]
+                         .sort_values(by='GAME_ID')
+     )
+     print(this_year)
+     games = this_year['U_ID'].unique()
+     games_selected = st.multiselect(label='Choose Games', options=games)
 
-this_game = get_selected_games(
-     games_selected=games_selected, team_data_filtered=team_data_filtered
-)
+     this_game = get_selected_games(
+          games_selected=games_selected, team_data_filtered=team_data_filtered
+     )
 
-# ----------------------------------------------------------------------------
-if games_selected:
-    totals, totals_sorted = format_selected_games(this_game=this_game)
-    top_five_spots = totals_sorted.head(5)
-    fig = ut.load_shot_chart_team(totals=totals, team_selected=games_selected)
-    st.markdown(
-         body="<h1 style='text-align: center; color: black;'>Shot Chart</h1>", 
-         unsafe_allow_html=True
-    )
-    st.plotly_chart(figure_or_data=fig, use_container_width=True)
-    st.markdown(
-         body="<h1 style='text-align: center; color: black;'>Top 5 Spots</h1>",
-         unsafe_allow_html=True
-    )
-    st.dataframe(
-         data=top_five_spots, use_container_width=True, hide_index=True
-    )
+
+
+     # ----------------------------------------------------------------------------
+     if games_selected:
+          totals, totals_sorted = format_selected_games(this_game=this_game)
+          top_five_spots = totals_sorted.head(5)
+          fig = ut.load_shot_chart_team(totals=totals, team_selected=games_selected)
+          st.markdown(
+               body="<h1 style='text-align: center; color: black;'>Shot Chart</h1>", 
+               unsafe_allow_html=True
+          )
+          st.plotly_chart(figure_or_data=fig, use_container_width=True)
+          st.markdown(
+               body="<h1 style='text-align: center; color: black;'>Top 5 Spots</h1>",
+               unsafe_allow_html=True
+          )
+          st.dataframe(
+               data=top_five_spots, use_container_width=True, hide_index=True
+          )
