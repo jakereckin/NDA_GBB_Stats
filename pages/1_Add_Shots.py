@@ -33,7 +33,6 @@ def get_my_db(client):
     games = pd.DataFrame(data=list(games_db.find())).drop(columns=['_id'])
     players = pd.DataFrame(data=list(players_db.find())).drop(columns=['_id'])
     #TODO: Need to change this to not just be current year
-    players = players[players['YEAR'] == 2024]
     return plays, spots, games, players, plays_db
 
 
