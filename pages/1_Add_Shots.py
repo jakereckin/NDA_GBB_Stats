@@ -54,7 +54,10 @@ def load_data():
     games['LABEL'] = games['OPPONENT'] + ' - ' + games['DATE']
 
     players['LABEL'] = (
-        players['NUMBER'].astype(dtype='str') + ' - ' + players['FIRST_NAME']
+        players['NUMBER'].astype(dtype='str').str.replace(pat='.0',
+                                                        repl='',
+                                                        regex=False) 
+        + ' - ' + players['FIRST_NAME']
     )
     return plays_db, players, games, spots, all_plays
 
@@ -106,9 +109,7 @@ def create_df(
     col_names = [
         'GAME_ID', 'PLAYER_ID', 'SHOT_SPOT', 'SHOT_DEFENSE', 'MAKE_MISS'
     ]
-    my_df = pd.DataFrame(data=[this_data],
-                         columns=col_names
-    )
+    my_df = pd.DataFrame(data=[this_data], columns=col_names)
     return my_df
 
 
