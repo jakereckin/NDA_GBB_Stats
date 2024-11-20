@@ -231,7 +231,7 @@ if season:
 
         _show_columns = [
             'NAME', 'SHOT_SPOT', 'SHOT_DEFENSE', 'EXPECTED_POINTS',
-            'ACTUAL_POINTS'
+            'ACTUAL_POINTS', 'EXPECTED_VALUE', 'ATTEMPTS'
         ]
         st.dataframe(
             data=this_game[_show_columns], use_container_width=True,
