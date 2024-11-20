@@ -153,7 +153,7 @@ def get_team_data(t_game, grouped_all_spots):
 
 
 play_event, spot, games, players, gs_data = load_data()
-print(games)
+games = games.sort_values(by='SEASON').reset_index(drop=True)
 season_list = games['SEASON'].unique().tolist()
 season = st.radio(label='Select Season', options=season_list, horizontal=True)
 if season:
