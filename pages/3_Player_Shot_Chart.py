@@ -54,6 +54,7 @@ def load_data():
 @st.cache_data
 def get_player_data(play_event, spot, games, players, season):
      players = players[players['YEAR'] == season]
+     games = games[games['SEASON'] == season]
      player_data = (
           play_event.merge(spot, left_on='SHOT_SPOT', right_on='SPOT')
                     .merge(games, on='GAME_ID')
