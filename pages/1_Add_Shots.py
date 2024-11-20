@@ -67,8 +67,6 @@ def get_season_data(games, players, season):
     games_season = games[games['SEASON'] == season]
     games_season['DATE_DTTM'] = pd.to_datetime(games_season['DATE'])
     games_season = games_season.sort_values(by='DATE_DTTM')
-    st.write(season)
-    st.write(players['YEAR'].unique())
     players_season = players[players['YEAR'] == season]
     games_season['LABEL'] = (
         games_season['OPPONENT'] + ' - ' + games_season['DATE']
@@ -122,7 +120,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     _shot_defenses = ['OPEN', 'GUARDED', 'HEAVILY_GUARDED']
     col1, col2 = st.columns(spec=2)
     plays_db, players, games, spots, all_plays = load_data()
-
+    games = games.sort_values(by='SEASON').reset_index(drop=True)
     season_list = games['SEASON'].unique().tolist()
 
     with col1:
