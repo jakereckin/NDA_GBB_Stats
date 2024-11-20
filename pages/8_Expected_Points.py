@@ -52,6 +52,7 @@ def format_data(spot, games, players, game_summary_data, selected_season):
     Format data to count makes and misses.
     '''
     games = games[games['SEASON'] == selected_season]
+    players = players[players['YEAR'] == selected_season]
     player_data = (
         play_event.merge(right=spot, left_on='SHOT_SPOT', right_on='SPOT')
                   .merge(right=games, on='GAME_ID')
