@@ -32,7 +32,6 @@ def get_my_db(client):
     spots = pd.DataFrame(data=list(spots_db.find())).drop(columns=['_id'])
     games = pd.DataFrame(data=list(games_db.find())).drop(columns=['_id'])
     players = pd.DataFrame(data=list(players_db.find())).drop(columns=['_id'])
-    players = players[players['YEAR'] == 2024]
     game_summary = (
         pd.DataFrame(data=list(game_summary_db.find())).drop(columns=['_id'])
     )
