@@ -100,7 +100,7 @@ def get_values_needed(game_val, game):
 
 # ----------------------------------------------------------------------------
 def create_df(
-        game_val_final, player_number, spot_val, shot_defense, make_miss
+        game_val_final, player_number, spot_val, shot_defense, make_miss, 
     ):
     this_data = [
         game_val_final, player_number, spot_val, shot_defense, make_miss
@@ -115,8 +115,8 @@ def create_df(
 # ----------------------------------------------------------------------------
 password = st.text_input(label='Password', type='password')
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
-    image = Image.open(fp='SHOT_CHART.jpg')
-    st.image(image=image)
+    #image = Image.open(fp='SHOT_CHART.jpg')
+    #st.image(image=image)
     _shot_defenses = ['OPEN', 'GUARDED', 'HEAVILY_GUARDED']
     col1, col2 = st.columns(spec=2)
     plays_db, players, games, spots, all_plays = load_data()
@@ -142,10 +142,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     with st.form(key='Play Event', clear_on_submit=False):
         game_val = game['LABEL'].values[0]
         players_season = players_season.sort_values(by='NUMBER')
-        spots['VALUE'] = (
-            spots['SPOT'].str.strip().str[-1].astype(dtype='int64')
-        )
-        spots = spots.sort_values(by=['VALUE', 'SPOT'])
+        spots = spots.sort_values(by=['POINTS', 'SPOT'])
         col1, col2 = st.columns(spec=2)
         with col1:
             player_val = st.radio(
@@ -176,9 +173,6 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             )
             player_number = int(player_number)
             test_make = np.where(make_miss == 'Y', 'Make', 'Miss')
-            st.text(
-                body=f'Submitted {test_make} by {player_number} from {spot_val} with defense {shot_defense} for {game_val_final}'
-            )
             my_df = create_df(
                 game_val_final=game_val_final, player_number=player_number,
                 spot_val=spot_val, shot_defense=shot_defense,
@@ -196,4 +190,22 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             plays_db.insert_many(
                 documents=current_play_dict, bypass_document_validation=True
             )
-            st.write(f'Added to DB, {len(current_game)} shots in DB for game {game_val_final}')
+            current_game_merge = current_game.merge(
+                right=spots, left_on='SHOT_SPOT', right_on='SPOT'
+            )
+            current_game_merge['ACTUAL_POINTS'] = np.where(
+                current_game_merge['MAKE_MISS'] == 'Y',
+                current_game_merge['POINTS'], 
+                0
+            )
+            my_len = len(current_game)
+            st.text(
+                body=f'Submitted {test_make} by {player_number} from {spot_val} with defense {shot_defense} for {game_val_final}'
+            )
+            st.write(f'Added to DB, {my_len} shots in DB for game {game_val_final}')
+            nda_points = current_game_merge[current_game_merge['PLAYER_ID'] != 0]
+            opp_points = current_game_merge[current_game_merge['PLAYER_ID'] == 0]
+            nda_points_val = nda_points.ACTUAL_POINTS.sum().astype(int)
+            opp_points_val = opp_points.ACTUAL_POINTS.sum().astype(int)
+            st.write(f'NDA Points: {nda_points_val}')
+            st.write(f'Opp Points: {opp_points_val}')
