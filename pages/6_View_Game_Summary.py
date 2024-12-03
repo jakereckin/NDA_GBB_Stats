@@ -106,7 +106,7 @@ def apply_derived(data):
         data['FGA'] - data['OFFENSIVE_REBOUNDS'] + data['ASSISTS'] 
         + data['TURNOVER']
     )
-    data['EFG_NUM'] = data['FGM'] + (.5*data['THREE_FGM'])
+    data['EFG_NUM'] = data['TWO_FGM'] + (1.5*data['THREE_FGM'])
 
     data['2PPA'] = np.where(
         data['TWO_FGA'] > 0, data['TWO_POINTS_SCORED'] / data['TWO_FGA'], 0

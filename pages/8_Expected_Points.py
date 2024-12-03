@@ -183,6 +183,22 @@ if season:
 
         # ========== EXPECTED TRITONS ==========
         tritons = this_game[this_game['NAME'] != 'OPPONENT TEAM']
+        tritons_grouped = tritons.groupby(by=['POINTS'], as_index=False)[['ATTEMPTS', 'MAKES']].sum()
+        tritons_grouped = tritons_grouped[tritons_grouped['POINTS'] != 1]
+        tritons_grouped['3MAKE'] = np.where(
+            tritons_grouped['POINTS'] == 3,
+            1.5 * tritons_grouped['MAKES'],
+            0
+        )
+        tritons_grouped['2MAKE'] = np.where(
+            tritons_grouped['POINTS'] == 2,
+            tritons_grouped['MAKES'],
+            0
+        )
+        tritons_efg_percent = (
+            (tritons_grouped['2MAKE'].sum()+tritons_grouped['3MAKE'].sum())
+            / tritons_grouped['ATTEMPTS'].sum()
+        )
         expected_fg = tritons['EXPECTED_POINTS'].sum()
         
         # ========== ACTUAL TRITONS ==========
@@ -190,6 +206,22 @@ if season:
 
         # ========== EXPECTED OPP ==========
         opp = this_game[this_game['NAME'] == 'OPPONENT TEAM']
+        opp_grouped = opp.groupby(by=['POINTS'], as_index=False)[['ATTEMPTS', 'MAKES']].sum()
+        opp_grouped = opp_grouped[opp_grouped['POINTS'] != 1]
+        opp_grouped['3MAKE'] = np.where(
+            opp_grouped['POINTS'] == 3,
+            1.5 * opp_grouped['MAKES'],
+            0
+        )
+        opp_grouped['2MAKE'] = np.where(
+            opp_grouped['POINTS'] == 2,
+            opp_grouped['MAKES'],
+            0
+        )
+        opp_efg_percent = (
+            (opp_grouped['2MAKE'].sum()+opp_grouped['3MAKE'].sum())
+            / opp_grouped['ATTEMPTS'].sum()
+        )
         expected_fg_opp = opp['EXPECTED_POINTS'].sum()
 
         # ========== ACTUAL OPP ==========
@@ -217,6 +249,8 @@ if season:
 
         opp_expected, opp_actual = st.columns(spec=2)
 
+        tri_efg, op_efg = st.columns(spec=2)
+
         with opp_expected:
             st.metric(
                 value=np.round(a=expected_fg_opp, decimals=2),
@@ -229,11 +263,14 @@ if season:
                 delta=opp_delta, delta_color='inverse'
             )
 
-        _show_columns = [
-            'NAME', 'SHOT_SPOT', 'SHOT_DEFENSE', 'EXPECTED_POINTS',
-            'ACTUAL_POINTS', 'EXPECTED_VALUE', 'ATTEMPTS'
-        ]
-        st.dataframe(
-            data=this_game[_show_columns], use_container_width=True,
-            hide_index=True
-        )
+        with tri_efg:
+            st.metric(
+                value=np.round(tritons_efg_percent, 3),
+                label='NDA EFG%' 
+            )
+
+        with op_efg:
+            st.metric(
+                value=np.round(opp_efg_percent, 3),
+                label='OPPONENT EFG%' 
+            )
