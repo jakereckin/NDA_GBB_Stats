@@ -130,6 +130,29 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             + '_' 
             + data['GAME_ID'].astype(str).str.replace('.0', '', regex=False)
         )
+        data[['TWO_FGM',
+              'TWO_FGA',
+              'THREE_FGM',
+              'THREE_FGA',
+              'FTM',
+              'FTA',
+              'OFFENSIVE_REBOUNDS',
+              'DEFENSIVE_REBOUNDS',
+              'ASSISTS',
+              'STEALS',
+              'BLOCKS',
+              'TURNOVER']] = data[['TWO_FGM',
+                                    'TWO_FGA',
+                                    'THREE_FGM',
+                                    'THREE_FGA',
+                                    'FTM',
+                                    'FTA',
+                                    'OFFENSIVE_REBOUNDS',
+                                    'DEFENSIVE_REBOUNDS',
+                                    'ASSISTS',
+                                    'STEALS',
+                                    'BLOCKS',
+                                    'TURNOVER']].astype(int)
         new_data = data[~data['_id'].isin(game_summary_ids_list)]
         if len(new_data) > 0:
             data_list = new_data.to_dict('records')
