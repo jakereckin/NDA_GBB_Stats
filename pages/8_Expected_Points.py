@@ -233,7 +233,11 @@ if season:
         )
 
 
-        triton_expected, triton_actual = st.columns(spec=2)
+        triton_expected, opp_expected = st.columns(spec=2)
+
+        triton_actual, opp_actual = st.columns(spec=2)
+
+        tri_efg, op_efg = st.columns(spec=2)
 
         with triton_expected:
             st.metric(
@@ -246,10 +250,6 @@ if season:
                 value=actual_fg, label='ACTUAL TRITON POINTS',
                 delta=tritons_delta
             )
-
-        opp_expected, opp_actual = st.columns(spec=2)
-
-        tri_efg, op_efg = st.columns(spec=2)
 
         with opp_expected:
             st.metric(
