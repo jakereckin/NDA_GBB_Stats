@@ -16,7 +16,7 @@ list_of_stats = [
 ]
 other_stats = [
     'OFFENSIVE_EFFICENCY', 'EFF_POINTS', 'EFG%', '2PPA', '3PPA', 'PPA',
-    'POINTS'
+    'POINTS', 'GAME_SCORE'
 ]
 
 # ----------------------------------------------------------------------------
@@ -86,6 +86,15 @@ def get_games(game_summary, games, players):
     game_summary['POINTS'] = (
         (2*game_summary['TWO_FGM']) + (3*game_summary['THREE_FGM'])
         + (game_summary['FTM'])
+    )
+    game_summary['GAME_SCORE'] = (
+        game_summary['POINTS']
+        + 0.4*game_summary['FGM'] - 0.7*game_summary['FGA']
+        - 0.4*(game_summary['FTA']-game_summary['FTM'])
+        + 0.7*game_summary['OFFENSIVE_REBOUNDS']
+        + 0.3*game_summary['DEFENSIVE_REBOUNDS'] + game_summary['STEALS']
+        + 0.7*game_summary['ASSISTS'] + 0.7*game_summary['BLOCKS']
+        - game_summary['TURNOVER']
     )
     team_data = (
         game_summary.copy().groupby(by='LABEL', as_index=False).sum()
