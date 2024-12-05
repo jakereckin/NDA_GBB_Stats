@@ -37,6 +37,7 @@ def get_my_db(client):
     game_summary_db = my_db['GAME_SUMMARY']
     games = pd.DataFrame(data=list(games_db.find())).drop(columns=['_id'])
     players = pd.DataFrame(data=list(players_db.find())).drop(columns=['_id'])
+    players = players[players['NUMBER'] != 0]
     game_summary = (
         pd.DataFrame(data=list(game_summary_db.find())).drop(columns=['_id'])
     )
