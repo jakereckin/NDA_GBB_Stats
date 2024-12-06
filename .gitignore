@@ -8,3 +8,4 @@ ipynb/Build_DB.ipynb
 *.csv
 *.ipynb
 *.ipynb
+/ipynb
