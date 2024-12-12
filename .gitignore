@@ -2,5 +2,5 @@
 NDA_DB - game_summary.csv
 *.ipynb
 *.csv
-*.csv
+*.pyc
 /ipynb
