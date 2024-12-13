@@ -8,7 +8,10 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 pd.options.mode.chained_assignment = None
 
-st.cache_data.clear()
+def clear_cache():
+    st.cache_data.clear()
+
+st.sidebar.button(label='Refresh Data', on_click=clear_cache)
 
 # ----------------------------------------------------------------------------
 @st.cache_resource
