@@ -9,10 +9,8 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 pd.options.mode.chained_assignment = None
 
-def clear_cache():
-    st.rerun()
+st.cache_resource.clear()
 
-st.sidebar.button(label='Refresh Data', on_click=clear_cache)
 
 list_of_stats = [
     'LABEL', 'OFFENSIVE_EFFICENCY', 'EFF_POINTS', 'EFG%', '2PPA', '3PPA',
