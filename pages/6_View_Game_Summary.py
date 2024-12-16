@@ -172,10 +172,19 @@ if season_list:
             team_data[list_of_stats]
                      .rename(columns={'LABEL': 'Opponent'}).round(decimals=2)
         )
-        present = final_data.groupby(by='NAME', as_index=False).sum()
+        player_level = final_data.groupby(by='NAME', as_index=False).sum()
 
-        present = apply_derived(data=present).round(decimals=2)
-
+        player_level = apply_derived(data=player_level).round(decimals=2)
+        team_data = team_data.rename(
+            {'OFFENSIVE_EFFICENCY': 'Offensive Efficency',
+             'EFF_POINTS': 'Efficent Points Scored',
+             'EFG%': 'Effective FG%',
+             '2PPA': '2 Points Per Attempt',
+             '3PPA': '3 Points Per Attempt',
+             'PPA': 'Pointers Per Attempt',
+             'POINTS': 'Points Scored',
+             'GAME_SCORE': 'Game Score'}
+        )
         st.text(body='Team Level Data')
         st.dataframe(
             data=team_data, use_container_width=True, hide_index=True
@@ -187,7 +196,7 @@ if season_list:
 
         if data:
             fig = px.bar(
-                data_frame=present, x=data, y='NAME', orientation='h',
+                data_frame=player_level, x=data, y='NAME', orientation='h',
                 text=data
             )
             st.plotly_chart(figure_or_data=fig, use_container_width=True)
