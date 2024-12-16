@@ -261,7 +261,7 @@ if season:
         with opp_expected:
             st.metric(
                 value=np.round(a=expected_fg_opp, decimals=2),
-                label='EXPECTED OPPONENT POINTS'
+                label='EXPECTED OPPONENT POINTS', border=True
             )
 
         with opp_actual:
