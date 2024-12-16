@@ -182,7 +182,7 @@ if season_list:
              'EFG%': 'Effective FG%',
              '2PPA': '2 Points Per Attempt',
              '3PPA': '3 Points Per Attempt',
-             'PPA': 'Pointers Per Attempt',
+             'PPA': 'Points Per Attempt',
              'POINTS': 'Points Scored',
              'GAME_SCORE': 'Game Score'}
         )
@@ -192,7 +192,7 @@ if season_list:
              'EFG%': 'Effective FG%',
              '2PPA': '2 Points Per Attempt',
              '3PPA': '3 Points Per Attempt',
-             'PPA': 'Pointers Per Attempt',
+             'PPA': 'Points Per Attempt',
              'POINTS': 'Points Scored',
              'GAME_SCORE': 'Game Score'}
         )
