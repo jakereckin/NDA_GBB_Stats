@@ -155,7 +155,7 @@ def get_team_data(t_game, grouped_all_spots):
 
 
 play_event, spot, games, players, gs_data = load_data()
-games['SEASON2'] = games['SEASON'].astype(int)
+games['SEASON2'] = games['SEASON'].astype(dtype=int)
 games = games.sort_values(by='SEASON2').reset_index(drop=True)
 season_list = games['SEASON'].unique().tolist()
 season = st.radio(label='Select Season', options=season_list, horizontal=True)
@@ -184,7 +184,10 @@ if season:
 
         # ========== EXPECTED TRITONS ==========
         tritons = this_game[this_game['NAME'] != 'OPPONENT TEAM']
-        tritons_grouped = tritons.groupby(by=['POINTS'], as_index=False)[['ATTEMPTS', 'MAKES']].sum()
+        tritons_grouped = (
+            tritons.groupby(by=['POINTS'], as_index=False)
+                   [['ATTEMPTS', 'MAKES']].sum()
+        )
         tritons_grouped = tritons_grouped[tritons_grouped['POINTS'] != 1]
         tritons_grouped['3MAKE'] = np.where(
             tritons_grouped['POINTS'] == 3,
