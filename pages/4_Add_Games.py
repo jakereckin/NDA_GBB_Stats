@@ -49,6 +49,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     delete = st.button(label='Delete Game')
     games.insert(loc=0, column="SELECT", value=False)
     games = games.sort_values(by='GAME_ID').reset_index(drop=True)
+    games['SEASON'] = games['SEASON'].astype(dtype='int64')
     edited_df = st.data_editor(
         data=games, num_rows='dynamic', key='new_games',
         use_container_width=True, hide_index=True,
