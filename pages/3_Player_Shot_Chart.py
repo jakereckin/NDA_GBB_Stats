@@ -42,11 +42,6 @@ def load_data():
      client = get_client()
      play_event, spot, games, players = get_my_db(client=client)
      spot = spot[spot['SPOT'] != 'FREE_THROW1']
-     players['YEAR'] = (
-          players['YEAR'].astype(dtype='str').str.replace(pat='.0', 
-                                                            repl='', 
-                                                            regex=False)
-     )
      return play_event, spot, games, players
 
 
@@ -122,7 +117,7 @@ def filter_player_data(players_selected, player_data):
 
 play_event, spot, games, players = load_data()
 
-season_list = players['YEAR'].unique().tolist()
+season_list = players[players['YEAR'] > 2023].YEAR.unique().tolist()
 
 season = st.radio(label='Select Season', options=season_list, horizontal=True)
 

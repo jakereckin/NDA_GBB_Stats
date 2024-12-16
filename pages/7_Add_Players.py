@@ -32,11 +32,6 @@ def get_my_db(client):
 def load_data():
     client = get_client()
     players_db, players = get_my_db(client)
-    players['YEAR'] = (
-        players['YEAR'].astype(dtype='str').str.replace(pat='.0', 
-                                                        repl='', 
-                                                        regex=False)
-    )
     players = (
         players.sort_values(by=['YEAR', 'NUMBER']).reset_index(drop=True)
     )
@@ -49,6 +44,9 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     save = st.button(label='Save')
     delete = st.button(label='Delete Game')
     players.insert(loc=0, column='SELECT', value=False)
+    players[['YEAR', 'NUMBER']] = (
+        players[['YEAR', 'NUMBER']].astype(dtype='int32')
+    )
     edited_df = st.data_editor(
         data=players, num_rows='dynamic', key='new_players',
         use_container_width=True, hide_index=True,
@@ -73,7 +71,9 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                                                                   repl='',
                                                                   regex=False)
                 + '_' + my_df['LAST_NAME'] + '_'
-                + my_df['YEAR'].astype(dtype=str)
+                + my_df['YEAR'].astype(dtype=str).str.replace(pat='.0',
+                                                                          repl='',
+                                                                          regex=False)
             )
             data_list = my_df.to_dict(orient='records')
             players_db.insert_many(
@@ -95,7 +95,9 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                                                                           repl='',
                                                                           regex=False)
                 + '_' + delete_player['LAST_NAME'] + '_'
-                + delete_player['YEAR'].astype(dtype=str)
+                + delete_player['YEAR'].astype(dtype=str).str.replace(pat='.0',
+                                                                          repl='',
+                                                                          regex=False)
             )
             data_list = delete_player.to_dict(orient='records')[0]
             players_db.delete_many(filter=data_list)
