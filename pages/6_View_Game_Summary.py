@@ -176,7 +176,7 @@ if season_list:
 
         player_level = apply_derived(data=player_level).round(decimals=2)
         team_data = team_data.rename(
-            {'OFFENSIVE_EFFICENCY': 'Offensive Efficency',
+            columns={'OFFENSIVE_EFFICENCY': 'Offensive Efficency',
              'EFF_POINTS': 'Efficent Points Scored',
              'EFG%': 'Effective FG%',
              '2PPA': '2 Points Per Attempt',
