@@ -207,7 +207,10 @@ if season:
 
         # ========== EXPECTED OPP ==========
         opp = this_game[this_game['NAME'] == 'OPPONENT TEAM']
-        opp_grouped = opp.groupby(by=['POINTS'], as_index=False)[['ATTEMPTS', 'MAKES']].sum()
+        opp_grouped = (
+            opp.groupby(by=['POINTS'], as_index=False)
+               [['ATTEMPTS', 'MAKES']].sum()
+        )
         opp_grouped = opp_grouped[opp_grouped['POINTS'] != 1]
         opp_grouped['3MAKE'] = np.where(
             opp_grouped['POINTS'] == 3,
@@ -266,7 +269,7 @@ if season:
 
         with tri_efg:
             st.metric(
-                value=np.round(tritons_efg_percent, 3),
+                value=f'{tritons_efg_percent:.2%}',
                 label='NDA EFG%' 
             )
 
