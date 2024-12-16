@@ -269,12 +269,12 @@ if season:
 
         with tri_efg:
             st.metric(
-                value=f'{tritons_efg_percent:.2%}',
+                value=f'{tritons_efg_percent:.1%}',
                 label='NDA EFG%' 
             )
 
         with op_efg:
             st.metric(
-                value=np.round(opp_efg_percent, 3),
+                value=f'{opp_efg_percent:.1%}',
                 label='OPPONENT EFG%' 
             )
