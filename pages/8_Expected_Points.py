@@ -10,6 +10,12 @@ pd.options.mode.chained_assignment = None
 
 st.cache_resource.clear()
 
+effective_field_goal_description = """
+Effective FG% is a useful metric to understand shot selection.
+The formula is (2FGM + 1.5 * 3FGM) / FGA. This weights 3 point
+makes as more since they count for more points. In the NBA,
+87% of teams who win have a higher EFG%.
+"""
 
 # ----------------------------------------------------------------------------
 @st.cache_resource
@@ -170,7 +176,7 @@ if season:
 
     game = st.radio(label='Select Game', options=games_list, horizontal=True)
 
-    if game != []:
+    if game:
         t_game, game_data = get_games_data(
             player_data=player_data, game_summary=game_summary_cleaned,
             game=game
@@ -274,11 +280,12 @@ if season:
             st.metric(
                 value=f'{tritons_efg_percent:.1%}',
                 label='NDA EFG%',
-                help='Effective FG% is a useful predictor for who will win.'
+                help=effective_field_goal_description
             )
 
         with op_efg:
             st.metric(
                 value=f'{opp_efg_percent:.1%}',
-                label='OPPONENT EFG%' 
+                label='OPPONENT EFG%',
+                help=effective_field_goal_description
             )
