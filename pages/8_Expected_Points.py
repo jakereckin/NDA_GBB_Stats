@@ -273,7 +273,8 @@ if season:
         with tri_efg:
             st.metric(
                 value=f'{tritons_efg_percent:.1%}',
-                label='NDA EFG%' 
+                label='NDA EFG%',
+                help='Effective FG% is a useful predictor for who will win.'
             )
 
         with op_efg:
