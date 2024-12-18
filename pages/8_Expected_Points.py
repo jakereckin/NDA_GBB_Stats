@@ -168,7 +168,7 @@ if season:
 
     games_list = player_data['LABEL'].unique().tolist()
 
-    game = st.selectbox(label='Select Game', options=games_list)
+    game = st.radio(label='Select Game', options=games_list, horizontal=True)
 
     if game != []:
         t_game, game_data = get_games_data(
