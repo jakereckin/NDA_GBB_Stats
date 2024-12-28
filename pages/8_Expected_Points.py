@@ -115,12 +115,14 @@ def get_grouped_all_spots(player_data2, spot):
     grouped = (
         player_data2.groupby(by=['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE'], 
                              as_index=False)
-                    .agg(ATTEMPTS=('ATTEMPT', np.sum), MAKES=('MAKE', np.sum))
+                    .agg(ATTEMPTS=('ATTEMPT', 'sum'), MAKES=('MAKE', 'sum'))
     )
     # Basically counting for divison by 0
     # If denom (attempts) is 0, return 0, else get percent
     grouped['MAKE_PERCENT'] = np.where(
-        grouped['ATTEMPTS'] > 0,grouped['MAKES'] / grouped['ATTEMPTS'],0
+        grouped['ATTEMPTS'] > 0, 
+        grouped['MAKES'] / grouped['ATTEMPTS'],
+        0
     )
     all_spots = spot.copy()
     # Spot name final character is point value.. easy fix is putting this into DB
@@ -154,7 +156,7 @@ def get_team_data(t_game, grouped_all_spots):
     this_game = (
         t_game.groupby(by=['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE'], 
                        as_index=False)
-              .agg(ATTEMPTS=('ATTEMPT', np.sum), MAKES=('MAKE', np.sum))
+              .agg(ATTEMPTS=('ATTEMPT', 'sum'), MAKES=('MAKE', 'sum'))
               .merge(grouped_all_spots, 
                      on=['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE'])
     )
@@ -199,7 +201,8 @@ if season:
         tritons = this_game[this_game['NAME'] != 'OPPONENT TEAM']
         tritons_grouped = (
             tritons.groupby(by=['POINTS'], as_index=False)
-                   [['ATTEMPTS', 'MAKES']].sum()
+                   .agg(ATTEMPTS=('ATTEMPTS', 'sum'),
+                        MAKES=('MAKES', 'sum'))
         )
         tritons_grouped = tritons_grouped[tritons_grouped['POINTS'] != 1]
         tritons_grouped['3MAKE'] = np.where(
@@ -212,9 +215,11 @@ if season:
             tritons_grouped['MAKES'],
             0
         )
-        tritons_efg_percent = (
+        tritons_efg_percent = np.where(
+            tritons_grouped['ATTEMPTS'].sum() > 0,
             (tritons_grouped['2MAKE'].sum()+tritons_grouped['3MAKE'].sum())
-            / tritons_grouped['ATTEMPTS'].sum()
+            / tritons_grouped['ATTEMPTS'].sum(),
+            0
         )
         expected_fg = tritons['EXPECTED_POINTS'].sum()
         
@@ -225,7 +230,8 @@ if season:
         opp = this_game[this_game['NAME'] == 'OPPONENT TEAM']
         opp_grouped = (
             opp.groupby(by=['POINTS'], as_index=False)
-               [['ATTEMPTS', 'MAKES']].sum()
+               .agg(ATTEMPTS=('ATTEMPTS', 'sum'),
+                    MAKES=('MAKES', 'sum'))
         )
         opp_grouped = opp_grouped[opp_grouped['POINTS'] != 1]
         opp_grouped['3MAKE'] = np.where(
@@ -238,9 +244,11 @@ if season:
             opp_grouped['MAKES'],
             0
         )
-        opp_efg_percent = (
+        opp_efg_percent = np.where(
+            opp_grouped['ATTEMPTS'].sum() > 0,
             (opp_grouped['2MAKE'].sum()+opp_grouped['3MAKE'].sum())
-            / opp_grouped['ATTEMPTS'].sum()
+            / opp_grouped['ATTEMPTS'].sum(),
+            0
         )
         expected_fg_opp = opp['EXPECTED_POINTS'].sum()
 

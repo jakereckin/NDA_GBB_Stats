@@ -144,12 +144,10 @@ season_list = games['SEASON'].sort_values().unique().tolist()
 
 season = st.multiselect(label='Select Season', options=season_list)
 if season:
-     print(season)
      this_year = (
           team_data_filtered[team_data_filtered['SEASON'].isin(values=season)]
                          .sort_values(by='GAME_ID')
      )
-     print(this_year)
      games = this_year['U_ID'].unique()
      games_selected = st.multiselect(label='Choose Games', options=games)
 
