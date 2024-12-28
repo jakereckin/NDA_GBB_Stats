@@ -46,7 +46,8 @@ def get_my_db(client):
 def load_data():
     client = get_client()
     play_event, spot, games, players, game_summary = get_my_db(client=client)
-
+    games['SEASON'] = games['SEASON'].astype(int)
+    players['YEAR'] = players['YEAR'].astype(int)
     return play_event, spot, games, players, game_summary
 
 
