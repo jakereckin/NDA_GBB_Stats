@@ -14,6 +14,15 @@ makes as more since they count for more points. In the NBA,
 87% of teams who win have a higher EFG%.
 """
 
+expected_points_description = """
+Expected points takes the point value for a shot multiplied by
+the percent chance of making that shot. For NDA, this uses their
+historical data to determine the percentage. For opponents, it
+uses D3 womens average for different spots that are hard coded.
+
+Example: 33% chance of making a 3 pointer is 0.33 * 3 = 1 expected point.
+"""
+
 # ----------------------------------------------------------------------------
 @st.cache_resource
 def get_client():
@@ -253,7 +262,8 @@ if season:
         with triton_expected:
             st.metric(
                 value=np.round(a=expected_fg, decimals=2),
-                label='EXPECTED TRITON POINTS'
+                label='EXPECTED TRITON POINTS',
+                help=expected_points_description
             )
 
         with triton_actual:
@@ -265,7 +275,8 @@ if season:
         with opp_expected:
             st.metric(
                 value=np.round(a=expected_fg_opp, decimals=2),
-                label='EXPECTED OPPONENT POINTS'
+                label='EXPECTED OPPONENT POINTS',
+                help=expected_points_description
             )
 
         with opp_actual:
