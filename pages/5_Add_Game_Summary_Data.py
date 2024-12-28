@@ -1,10 +1,6 @@
 import streamlit as st
-import sys
 import time
-import sys
-import os
 import pandas as pd
-sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 pd.options.mode.chained_assignment = None

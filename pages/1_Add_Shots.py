@@ -1,20 +1,22 @@
 import streamlit as st
-import sys
 import time
 import sys
 import numpy as np
-import os
 import pandas as pd
-sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 pd.options.mode.chained_assignment = None
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
-from PIL import Image
 
 
 # ----------------------------------------------------------------------------
 @st.cache_resource
 def get_client():
+    """
+    Establishes a connection to the MongoDB server using credentials stored in Streamlit secrets.
+
+    Returns:
+        MongoClient: A MongoClient instance connected to the specified MongoDB server.
+    """
     pwd = st.secrets['mongo_gbb']['MONGBO_GBB_PASSWORD']
     uri =  f"mongodb+srv://nda-gbb-admin:{pwd}@nda-gbb.1lq4irv.mongodb.net/"
     # Create a new client and connect to the server
@@ -23,6 +25,15 @@ def get_client():
 
 # ----------------------------------------------------------------------------
 def get_my_db(client):
+    """
+    Retrieves various collections from the MongoDB database and converts them to pandas DataFrames.
+
+    Parameters:
+        client (MongoClient): A MongoClient instance connected to the MongoDB server.
+
+    Returns:
+        tuple: A tuple containing DataFrames for plays, spots, games, players, and the plays collection.
+    """
     my_db = client['NDA_GBB']
     plays_db = my_db['PLAYS']
     spots_db = my_db['SPOTS']
@@ -32,24 +43,30 @@ def get_my_db(client):
     spots = pd.DataFrame(data=list(spots_db.find())).drop(columns=['_id'])
     games = pd.DataFrame(data=list(games_db.find())).drop(columns=['_id'])
     players = pd.DataFrame(data=list(players_db.find())).drop(columns=['_id'])
-    #TODO: Need to change this to not just be current year
     return plays, spots, games, players, plays_db
 
 
 # ----------------------------------------------------------------------------
 def load_data():
+    """
+    Loads and cleans data from the database.
+    This function connects to the database, retrieves various datasets, and performs
+    cleaning operations on specific columns to ensure data consistency.
+    Returns:
+        tuple: A tuple containing the following elements:
+            - plays_db (DataFrame): The plays database.
+            - players (DataFrame): The players data with cleaned 'YEAR' and 'LABEL' columns.
+            - games (DataFrame): The games data with cleaned 'SEASON' and 'LABEL' columns.
+            - spots (DataFrame): The spots data.
+            - all_plays (DataFrame): All plays data.
+    """
     client = get_client()
     all_plays, spots, games, players, plays_db = get_my_db(client=client)
-    players['YEAR'] = (
-        players['YEAR'].astype(dtype='str').str.replace(pat='.0',
-                                                        repl='',
-                                                        regex=False)
-    )
-    games['SEASON'] = (
-        games['SEASON'].astype(dtype='str').str.replace(pat='.0',
-                                                        repl='',
-                                                        regex=False)
-    )
+    def clean_column(column):
+        return column.astype(dtype='str').str.replace(pat='.0', repl='', regex=False)
+
+    players['YEAR'] = clean_column(players['YEAR'])
+    games['SEASON'] = clean_column(games['SEASON'])
     games['LABEL'] = games['OPPONENT'] + ' - ' + games['DATE']
 
     players['LABEL'] = (
@@ -64,10 +81,11 @@ def load_data():
 # ----------------------------------------------------------------------------
 @st.cache_data
 def get_season_data(games, players, season):
-    games_season = games[games['SEASON'] == season]
+    games_season = games[games['SEASON'] == season].copy()
     games_season['DATE_DTTM'] = pd.to_datetime(games_season['DATE'])
     games_season = games_season.sort_values(by='DATE_DTTM')
-    players_season = players[players['YEAR'] == season]
+    players_season = players[players['YEAR'] == season].copy()
+    players_season = players[players['YEAR'] == season].copy()
     games_season['LABEL'] = (
         games_season['OPPONENT'] + ' - ' + games_season['DATE']
     )
