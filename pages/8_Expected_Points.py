@@ -1,6 +1,8 @@
 import numpy as np
 import streamlit as st
 import pandas as pd
+import random
+import plotly.express as px
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 pd.options.mode.chained_assignment = None
@@ -171,7 +173,9 @@ def get_team_data(t_game, grouped_all_spots):
 
 play_event, spot, games, players, gs_data = load_data()
 games['SEASON2'] = games['SEASON'].astype(dtype=int)
-games = games.sort_values(by='SEASON2').reset_index(drop=True)
+games = (
+    games.sort_values(by='SEASON2', ascending=False).reset_index(drop=True)
+)
 season_list = games['SEASON'].unique().tolist()
 season = st.radio(label='Select Season', options=season_list, horizontal=True)
 if season:
@@ -306,3 +310,73 @@ if season:
                 label='OPPONENT EFG%',
                 help=effective_field_goal_description
             )
+        sim_count = st.number_input(
+            label='Number of Simulations', min_value=1, max_value=10000
+        )
+        standard_dev = st.number_input(
+            label='Standard Deviation', min_value=0.01, max_value=1.0
+        )
+        run_sim = st.button(label='Run Simulation')
+        if run_sim:
+            st.write('Running Simulation...')
+            STANDARD_DEV = standard_dev
+            SIMS = sim_count
+            my_frame_list = []
+            sim_count = 0
+            while sim_count < SIMS:
+                this_sim_nda = tritons.copy()
+                this_sim_opp = opp.copy()
+                this_sim_opp['SIMULATED_EXPECTED'] = random.gauss(
+                    this_sim_opp['OPP_EXPECTED'], STANDARD_DEV
+                )
+                this_sim_nda['SIMULATED_PERCENT'] = random.gauss(
+                    this_sim_nda['MAKE_PERCENT'],STANDARD_DEV
+                )
+                this_sim_nda['SIMULATED_EXPECTED'] = (
+                    this_sim_nda['POINT_VALUE'] * this_sim_nda['SIMULATED_PERCENT']
+                )
+                this_sim_nda['SIMULATED_POINTS'] = (
+                    this_sim_nda['ATTEMPTS'] * this_sim_nda['SIMULATED_EXPECTED']
+                )
+                this_sim_opp['SIMULATED_POINTS'] = (
+                    this_sim_opp['ATTEMPTS'] * this_sim_opp['SIMULATED_EXPECTED']
+                )
+                this_sim_opp['SIMULATED_POINTS'] = np.where(
+                    this_sim_opp['SIMULATED_POINTS'] < 0,
+                    0,
+                    this_sim_opp['SIMULATED_POINTS']
+                )
+                this_sim_nda['SIMULATED_POINTS'] = np.where(
+                    this_sim_nda['SIMULATED_POINTS'] < 0,
+                    0,
+                    this_sim_nda['SIMULATED_POINTS']
+                )
+                this_sim_opp['RUN'] = sim_count
+                this_sim_nda['RUN'] = sim_count
+                this_sim_simple_nda = this_sim_nda.groupby(by='RUN', as_index=False).agg(
+                    SIMULATED_POINTS=('SIMULATED_POINTS', 'sum')
+                )
+                this_sim_simple_opp = this_sim_opp.groupby(by='RUN', as_index=False).agg(
+                    SIMULATED_POINTS=('SIMULATED_POINTS', 'sum')
+                )
+                this_sim_simple_nda['NAME'] = 'NDA'
+                this_sim_simple_opp['NAME'] = 'OPPONENT'
+                this_sim_simple_nda['WIN'] = np.where(
+                    this_sim_simple_nda['SIMULATED_POINTS'] > this_sim_simple_opp['SIMULATED_POINTS'],
+                    1,
+                    0
+                )
+                all_simple = pd.concat([this_sim_simple_nda, this_sim_simple_opp]).reset_index(drop=True)
+                my_frame_list.append(all_simple)
+                sim_count += 1
+            all_sims = pd.concat(my_frame_list).reset_index(drop=True)
+            nda_win_percent = all_sims[all_sims['NAME'] == 'NDA']['WIN'].mean()
+            st.write(f'NDA Wins {nda_win_percent} of simulations')
+            fig = px.histogram(
+                data_frame=all_sims, x="SIMULATED_POINTS", histnorm="percent", color='NAME',
+                color_discrete_sequence=['blue', 'indianred']
+            )
+            fig.update_layout(barmode='overlay')
+            # Reduce opacity to see both histograms
+            fig.update_traces(opacity=0.75)
+            st.plotly_chart(fig)
