@@ -376,7 +376,7 @@ if season:
                 label='Standard Deviation', min_value=0.01, max_value=1.0,
                 value=0.1
             )
-            
+
         run_sim = st.button(label='Run Simulation')
         if run_sim:
             st.write('Running Simulation...')
@@ -390,7 +390,7 @@ if season:
             st.write(f'NDA Wins {nda_win_percent} of simulations')
             fig = px.histogram(
                 data_frame=all_sims, x='SIMULATED_POINTS', histnorm='percent', 
-                olor='NAME', color_discrete_sequence=['blue', 'indianred']
+                color='NAME', color_discrete_sequence=['blue', 'indianred']
             )
             fig.update_layout(barmode='overlay')
             # Reduce opacity to see both histograms
