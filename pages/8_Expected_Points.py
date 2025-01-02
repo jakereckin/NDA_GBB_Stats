@@ -1,7 +1,6 @@
 import numpy as np
 import streamlit as st
 import pandas as pd
-import random
 import plotly.express as px
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -177,10 +176,10 @@ def run_simulations(tritons, opp, sims, standard_dev):
     while sim_count < sims:
         this_sim_nda = tritons.copy()
         this_sim_opp = opp.copy()
-        this_sim_opp['SIMULATED_EXPECTED'] = random.gauss(
+        this_sim_opp['SIMULATED_EXPECTED'] = np.random.normal(
             this_sim_opp['OPP_EXPECTED'], standard_dev
         )
-        this_sim_nda['SIMULATED_PERCENT'] = random.gauss(
+        this_sim_nda['SIMULATED_PERCENT'] = np.random.normal(
                     this_sim_nda['MAKE_PERCENT'],standard_dev
         )
         this_sim_nda['SIMULATED_EXPECTED'] = (
