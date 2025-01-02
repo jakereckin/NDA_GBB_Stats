@@ -139,6 +139,9 @@ def get_grouped_all_spots(player_data2, spot):
     grouped_all_spots['EXPECTED_VALUE'] = (
         grouped_all_spots['POINT_VALUE'] * grouped_all_spots['MAKE_PERCENT']
     )
+    grouped_all_spots['OPP_MAKE_PERCENT'] = (
+        grouped_all_spots['OPP_EXPECTED'] / grouped_all_spots['POINT_VALUE']
+    )
     grouped_all_spots['EXPECTED_VALUE'] = np.where(
         grouped_all_spots['NAME'] == 'OPPONENT TEAM',
         grouped_all_spots['OPP_EXPECTED'],
@@ -171,22 +174,36 @@ def get_team_data(t_game, grouped_all_spots):
 
 #-----------------------------------------------------------------------------
 def run_simulations(tritons, opp, sims, standard_dev):
+    """
+    for sim_count in range(sims):
+    Parameters:
+    tritons (DataFrame): DataFrame containing Tritons' game data.
+    opp (DataFrame): DataFrame containing opponent's game data.
+    sims (int): Number of simulations to run.
+    standard_dev (float): Standard deviation for the normal distribution.
+
+    Returns:
+    DataFrame: DataFrame containing the results of all simulations.
+    """
     my_frame_list = []
     sim_count = 0
     while sim_count < sims:
         this_sim_nda = tritons.copy()
         this_sim_opp = opp.copy()
-        this_sim_opp['SIMULATED_EXPECTED'] = np.random.normal(
-            this_sim_opp['OPP_EXPECTED'], standard_dev
+        this_sim_opp['SIMULATED_PERCENT'] = np.random.normal(
+            this_sim_opp['OPP_MAKE_PERCENT'], standard_dev
         )
         this_sim_nda['SIMULATED_PERCENT'] = np.random.normal(
-                    this_sim_nda['MAKE_PERCENT'],standard_dev
+                    this_sim_nda['MAKE_PERCENT'], standard_dev
         )
         this_sim_nda['SIMULATED_EXPECTED'] = (
                     this_sim_nda['POINT_VALUE'] * this_sim_nda['SIMULATED_PERCENT']
         )
         this_sim_nda['SIMULATED_POINTS'] = (
                     this_sim_nda['ATTEMPTS'] * this_sim_nda['SIMULATED_EXPECTED']
+        )
+        this_sim_opp['SIMULATED_EXPECTED'] = (
+                    this_sim_opp['POINT_VALUE'] * this_sim_opp['SIMULATED_PERCENT']
         )
         this_sim_opp['SIMULATED_POINTS'] = (
                     this_sim_opp['ATTEMPTS'] * this_sim_opp['SIMULATED_EXPECTED']
@@ -204,22 +221,21 @@ def run_simulations(tritons, opp, sims, standard_dev):
         this_sim_opp['RUN'] = sim_count
         this_sim_nda['RUN'] = sim_count
         this_sim_simple_nda = this_sim_nda.groupby(by='RUN', as_index=False).agg(
-                    SIMULATED_POINTS=('SIMULATED_POINTS', 'sum')
+                    NDA_SIMULATED_POINTS=('SIMULATED_POINTS', 'sum')
         )
         this_sim_simple_opp = this_sim_opp.groupby(by='RUN', as_index=False).agg(
-                    SIMULATED_POINTS=('SIMULATED_POINTS', 'sum')
+                    OPP_SIMULATED_POINTS=('SIMULATED_POINTS', 'sum')
         )
-        this_sim_simple_nda['NAME'] = 'NDA'
-        this_sim_simple_opp['NAME'] = 'OPPONENT'
-        this_sim_simple_nda['WIN'] = np.where(
-            this_sim_simple_nda['SIMULATED_POINTS'] > this_sim_simple_opp['SIMULATED_POINTS'],
+        this_sim_simple = pd.merge(left=this_sim_simple_nda, right=this_sim_simple_opp, on='RUN')
+        this_sim_simple['WIN'] = np.where(
+            (this_sim_simple['NDA_SIMULATED_POINTS'] 
+             > this_sim_simple['OPP_SIMULATED_POINTS']),
             1,
             0
         )
-        all_simple = pd.concat([this_sim_simple_nda, this_sim_simple_opp]).reset_index(drop=True)
-        my_frame_list.append(all_simple)
         sim_count += 1
-    all_sims = pd.concat(my_frame_list).reset_index(drop=True)
+        my_frame_list.append(this_sim_simple)
+    all_sims = pd.concat(my_frame_list, ignore_index=True)
     return all_sims
 
 play_event, spot, games, players, gs_data = load_data()
@@ -251,7 +267,6 @@ if season:
         this_game = get_team_data(
             t_game=t_game, grouped_all_spots=grouped_all_spots
         )
-
         # ========== EXPECTED TRITONS ==========
         tritons = this_game[this_game['NAME'] != 'OPPONENT TEAM']
         tritons_grouped = (
@@ -384,11 +399,41 @@ if season:
                 standard_dev=standard_dev
             )
             nda_win_percent = (
-                all_sims[all_sims['NAME'] == 'NDA']['WIN'].mean()
+                all_sims['WIN'].mean()
             )
-            st.write(f'NDA Wins {nda_win_percent} of simulations')
+
+            win_percent, twenty_five, seventy_five = st.columns(spec=3)
+            with win_percent:
+                st.metric(label=f'NDA Win % of simulations',
+                        value=f'{nda_win_percent:.1%}')
+                
+            with twenty_five:
+                st.metric(
+                    label='25th Percentile Points',
+                    value=all_sims['NDA_SIMULATED_POINTS'].quantile(0.25).round(2)
+                )
+                st.metric(
+                    label='25th Percentile Points',
+                    value=all_sims['OPP_SIMULATED_POINTS'].quantile(0.25).round(2)
+                )
+                
+            with seventy_five:
+                st.metric(
+                    label='75th Percentile Points',
+                    value=all_sims['NDA_SIMULATED_POINTS'].quantile(0.75).round(2)
+                )
+                st.metric(
+                    label='75th Percentile Points',
+                    value=all_sims['OPP_SIMULATED_POINTS'].quantile(0.75).round(2)
+                )
+                
+            nda = all_sims[['NDA_SIMULATED_POINTS']].rename(columns={'NDA_SIMULATED_POINTS': 'POINTS'})
+            opp = all_sims[['OPP_SIMULATED_POINTS']].rename(columns={'OPP_SIMULATED_POINTS': 'POINTS'})
+            nda['NAME'] = 'NDA'
+            opp['NAME'] = 'OPPONENT'
+            all_sims = pd.concat([nda, opp], ignore_index=True)
             fig = px.histogram(
-                data_frame=all_sims, x='SIMULATED_POINTS', histnorm='percent', 
+                data_frame=all_sims, x='POINTS', histnorm='percent', 
                 color='NAME', color_discrete_sequence=['blue', 'indianred']
             )
             fig.update_layout(barmode='overlay')
