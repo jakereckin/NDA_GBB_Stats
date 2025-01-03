@@ -234,6 +234,8 @@ def run_simulations(tritons, opp, sims, standard_dev):
             0
         )
         sim_count += 1
+        if sim_count % 100 == 0:
+            st.write(f'Simulation {sim_count} of {sims} complete.')
         my_frame_list.append(this_sim_simple)
     all_sims = pd.concat(my_frame_list, ignore_index=True)
     return all_sims
