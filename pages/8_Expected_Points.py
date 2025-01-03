@@ -187,6 +187,7 @@ def run_simulations(tritons, opp, sims, standard_dev):
     """
     my_frame_list = []
     sim_count = 0
+    my_bar = st.progress(0)
     while sim_count < sims:
         this_sim_nda = tritons.copy()
         this_sim_opp = opp.copy()
@@ -234,8 +235,8 @@ def run_simulations(tritons, opp, sims, standard_dev):
             0
         )
         sim_count += 1
-        if sim_count % 100 == 0:
-            st.write(f'Simulation {sim_count} of {sims} complete.')
+        percent_complete = sim_count / sims
+        my_bar.progress(percent_complete)
         my_frame_list.append(this_sim_simple)
     all_sims = pd.concat(my_frame_list, ignore_index=True)
     return all_sims
