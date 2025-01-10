@@ -244,10 +244,8 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                 documents=data_list, bypass_document_validation=True
             )
         update_data = data[data['_id'].isin(game_summary_ids_list)]
-        print(update_data)
         data_list = update_data.to_dict('records')
         for doc in data_list:
-            print(doc)
             game_summary_db.update_one(
                 filter={'_id': doc['_id']}, update={"$set": doc}, upsert=True
             )    
