@@ -34,6 +34,7 @@ def get_my_db(client):
 def load_data():
     client = get_client()
     games, players, game_summary, game_summary_db = get_my_db(client=client)
+    games = games[games['OPPONENT'] != 'PRACTICE']
     games['SEASON'] = (
         games['SEASON'].astype(dtype='str').str.replace(pat='.0',
                                                         repl='',
