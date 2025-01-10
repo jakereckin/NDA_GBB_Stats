@@ -106,13 +106,39 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     player_val = st.radio(
         label='Select Player', options=player_values, horizontal=True
     )
-        
+
     this_player_val = game_summary_data[
         (game_summary_data['PLAYER_ID'].astype(int) 
          == player_val) 
         & (game_summary_data['GAME_ID'] 
            == this_game['GAME_ID'].astype(int).values[0])
     ]
+    if len(this_player_val) == 0:
+        data = [
+            player_val, this_game['GAME_ID'].astype(int).values[0], 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+        columns = [
+            'PLAYER_ID', 'GAME_ID', 'TWO_FGM', 'TWO_FGA', 'THREE_FGM',
+            'THREE_FGA', 'FTM', 'FTA', 'OFFENSIVE_REBOUNDS',
+            'DEFENSIVE_REBOUNDS', 'ASSISTS', 'STEALS', 'BLOCKS', 'TURNOVER'
+        ]
+        this_player_val = pd.DataFrame(data=[data], columns=columns)
+        this_player_val['PLAYER_ID'] = player_val
+        this_player_val['GAME_ID'] = this_game['GAME_ID'].astype(int).values[0]
+        this_player_val['TWO_FGM'] = 0
+        this_player_val['TWO_FGA'] = 0
+        this_player_val['THREE_FGM'] = 0
+        this_player_val['THREE_FGA'] = 0
+        this_player_val['FTM'] = 0
+        this_player_val['FTA'] = 0
+        this_player_val['OFFENSIVE_REBOUNDS'] = 0
+        this_player_val['DEFENSIVE_REBOUNDS'] = 0
+        this_player_val['ASSISTS'] = 0
+        this_player_val['STEALS'] = 0
+        this_player_val['BLOCKS'] = 0
+        this_player_val['TURNOVER'] = 0
+
     two_one, two_two = st.columns(spec=2)
     three_one, three_two = st.columns(spec=2)
     ft_one, ft_two = st.columns(spec=2)
@@ -195,7 +221,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     save = st.button(label='Save')
     if save:
         my_id = (
-            str(player_val) 
+            str(object=player_val) 
             + '_' 
             + this_game['GAME_ID'].astype(int).astype(str).values[0]
         )
