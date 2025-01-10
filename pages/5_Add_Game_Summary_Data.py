@@ -67,6 +67,7 @@ def get_season_data(games, players, season):
 def get_selected_game(games_season, game_select):
     game_val_opp = game_select.split(' - ')[0]
     game_val_date = game_select.split(' - ')[1]
+    games_season = games_season[games_season['OPPONENT'] != 'PRACTICE']
     this_game = games_season[
         (games_season['OPPONENT']==game_val_opp)
         & (games_season['DATE']==game_val_date)
