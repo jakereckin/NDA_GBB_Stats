@@ -278,3 +278,5 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                     filter={'_id': doc['_id']}, update={"$set": doc}, upsert=True
                 )    
             st.write('Added to DB!')
+            time.sleep(.1)
+            st.rerun()
