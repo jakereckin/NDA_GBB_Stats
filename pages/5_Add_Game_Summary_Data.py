@@ -138,145 +138,143 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
         this_player_val['STEALS'] = 0
         this_player_val['BLOCKS'] = 0
         this_player_val['TURNOVER'] = 0
-
-    two_one, two_two = st.columns(spec=2)
-    three_one, three_two = st.columns(spec=2)
-    ft_one, ft_two = st.columns(spec=2)
-    reb_one, reb_two = st.columns(spec=2)
-    ast_one, stl_one = st.columns(spec=2)
-    blk_two, turn = st.columns(spec=2)
-    with two_one:
-        two_fgm = st.number_input(
-            label='2pt FGM', 
-            min_value=0, 
-            max_value=100,
-            value=this_player_val['TWO_FGM'].values[0].astype(int)
-        )
-    with two_two:
-        two_fga = st.number_input(
-            label='2pt FGA', 
-            min_value=0, 
-            max_value=100, 
-            value=this_player_val['TWO_FGA'].values[0].astype(int))
-    with three_one:
-        three_fgm = st.number_input(
-            label='3pt FGM', 
-            min_value=0, 
-            max_value=100, 
-            value=this_player_val['THREE_FGM'].values[0].astype(int))
-    with three_two:
-        three_fga = st.number_input(
-            label='3pt FGA', 
-            min_value=0, 
-            max_value=100, 
-            value=this_player_val['THREE_FGA'].values[0].astype(int))
-    with ft_one:
-        ftm = st.number_input(
-            label='FTM', 
-            min_value=0, 
-            max_value=100, 
-            value=this_player_val['FTM'].values[0].astype(int))
-    with ft_two:
-        fta = st.number_input(
-            label='FTA', 
-            min_value=0, 
-            max_value=100, 
-            value=this_player_val['FTA'].values[0].astype(int))
-    with reb_one:
-        off_rebounds = st.number_input(
-            label='Off Reb', 
-            min_value=0, 
-            max_value=100, 
-            value=this_player_val['OFFENSIVE_REBOUNDS'].values[0].astype(int))
-    with reb_two:
-        def_rebounds = st.number_input(
-            label='Def Reb', 
-            min_value=0, 
-            max_value=100, 
-            value=this_player_val['DEFENSIVE_REBOUNDS'].values[0].astype(int))
-    with ast_one:
-        assists = st.number_input(
-            label='Ast', 
-            min_value=0, 
-            max_value=100, 
-            value=this_player_val['ASSISTS'].values[0].astype(int))
-    with stl_one:
-        steals = st.number_input(
-            label='Steal', 
-            min_value=0, 
-            max_value=100, 
-            value=this_player_val['STEALS'].values[0].astype(int))
-    with blk_two:
-        blocks = st.number_input(
-            label='Block', 
-            min_value=0, 
-            max_value=100, 
-            value=this_player_val['BLOCKS'].values[0].astype(int))
-    with turn:
-        turnover = st.number_input(
-            label='Turnover', 
-            min_value=0, 
-            max_value=100, 
-            value=this_player_val['TURNOVER'].values[0].astype(int))
-    save = st.button(label='Save')
-    if save:
-        my_id = (
-            str(object=player_val) 
-            + '_' 
-            + this_game['GAME_ID'].astype(int).astype(str).values[0]
-        )
-        game_summary_ids = pd.DataFrame(data=list(game_summary_db.find()))
-        game_summary_ids_list = game_summary_ids['_id'].unique().tolist()
-        my_vals = [
-            my_id, player_val, this_game['GAME_ID'].astype(int).values[0], 
-            two_fgm, two_fga, three_fgm, three_fga, ftm, fta, off_rebounds,
-            def_rebounds, assists, steals, blocks, turnover
-        ]
-        data = pd.DataFrame(
-            data=[my_vals], 
-            columns=['_id', 'PLAYER_ID', 'GAME_ID', 'TWO_FGM', 'TWO_FGA',
-                     'THREE_FGM', 'THREE_FGA', 'FTM', 'FTA',
-                     'OFFENSIVE_REBOUNDS', 'DEFENSIVE_REBOUNDS', 'ASSISTS',
-                     'STEALS', 'BLOCKS', 'TURNOVER']
-        )
-        #data = data.fillna(0)
-        game_summary_ids = pd.DataFrame(data=list(game_summary_db.find()))
-        game_summary_ids_list = game_summary_ids['_id'].unique().tolist()
-        data[['TWO_FGM',
-              'TWO_FGA',
-              'THREE_FGM',
-              'THREE_FGA',
-              'FTM',
-              'FTA',
-              'OFFENSIVE_REBOUNDS',
-              'DEFENSIVE_REBOUNDS',
-              'ASSISTS',
-              'STEALS',
-              'BLOCKS',
-              'TURNOVER']] = data[['TWO_FGM',
-                                    'TWO_FGA',
-                                    'THREE_FGM',
-                                    'THREE_FGA',
-                                    'FTM',
-                                    'FTA',
-                                    'OFFENSIVE_REBOUNDS',
-                                    'DEFENSIVE_REBOUNDS',
-                                    'ASSISTS',
-                                    'STEALS',
-                                    'BLOCKS',
-                                    'TURNOVER']].astype(int)
-        new_data = data[~data['_id'].isin(game_summary_ids_list)]
-        if len(new_data) > 0:
-            data_list = new_data.to_dict('records')
-            game_summary_db.insert_many(
-                documents=data_list, bypass_document_validation=True
+    with st.form(key='Game Data', clear_on_submit=False):
+        two_one, two_two = st.columns(spec=2)
+        three_one, three_two = st.columns(spec=2)
+        ft_one, ft_two = st.columns(spec=2)
+        reb_one, reb_two = st.columns(spec=2)
+        ast_one, stl_one = st.columns(spec=2)
+        blk_two, turn = st.columns(spec=2)
+        with two_one:
+            two_fgm = st.number_input(
+                label='2pt FGM', 
+                min_value=0, 
+                max_value=100,
+                value=this_player_val['TWO_FGM'].values[0].astype(int)
             )
-        update_data = data[data['_id'].isin(game_summary_ids_list)]
-        data_list = update_data.to_dict('records')
-        for doc in data_list:
-            game_summary_db.update_one(
-                filter={'_id': doc['_id']}, update={"$set": doc}, upsert=True
-            )    
-        st.write('Added to DB!')
-        time.sleep(2)
-        st.rerun()
+        with two_two:
+            two_fga = st.number_input(
+                label='2pt FGA', 
+                min_value=0, 
+                max_value=100, 
+                value=this_player_val['TWO_FGA'].values[0].astype(int))
+        with three_one:
+            three_fgm = st.number_input(
+                label='3pt FGM', 
+                min_value=0, 
+                max_value=100, 
+                value=this_player_val['THREE_FGM'].values[0].astype(int))
+        with three_two:
+            three_fga = st.number_input(
+                label='3pt FGA', 
+                min_value=0, 
+                max_value=100, 
+                value=this_player_val['THREE_FGA'].values[0].astype(int))
+        with ft_one:
+            ftm = st.number_input(
+                label='FTM', 
+                min_value=0, 
+                max_value=100, 
+                value=this_player_val['FTM'].values[0].astype(int))
+        with ft_two:
+            fta = st.number_input(
+                label='FTA', 
+                min_value=0, 
+                max_value=100, 
+                value=this_player_val['FTA'].values[0].astype(int))
+        with reb_one:
+            off_rebounds = st.number_input(
+                label='Off Reb', 
+                min_value=0, 
+                max_value=100, 
+                value=this_player_val['OFFENSIVE_REBOUNDS'].values[0].astype(int))
+        with reb_two:
+            def_rebounds = st.number_input(
+                label='Def Reb', 
+                min_value=0, 
+                max_value=100, 
+                value=this_player_val['DEFENSIVE_REBOUNDS'].values[0].astype(int))
+        with ast_one:
+            assists = st.number_input(
+                label='Ast', 
+                min_value=0, 
+                max_value=100, 
+                value=this_player_val['ASSISTS'].values[0].astype(int))
+        with stl_one:
+            steals = st.number_input(
+                label='Steal', 
+                min_value=0, 
+                max_value=100, 
+                value=this_player_val['STEALS'].values[0].astype(int))
+        with blk_two:
+            blocks = st.number_input(
+                label='Block', 
+                min_value=0, 
+                max_value=100, 
+                value=this_player_val['BLOCKS'].values[0].astype(int))
+        with turn:
+            turnover = st.number_input(
+                label='Turnover', 
+                min_value=0, 
+                max_value=100, 
+                value=this_player_val['TURNOVER'].values[0].astype(int))
+        save = st.form_submit_button(label='Save')
+        if save:
+            my_id = (
+                str(object=player_val) 
+                + '_' 
+                + this_game['GAME_ID'].astype(int).astype(str).values[0]
+            )
+            game_summary_ids = pd.DataFrame(data=list(game_summary_db.find()))
+            game_summary_ids_list = game_summary_ids['_id'].unique().tolist()
+            my_vals = [
+                my_id, player_val, this_game['GAME_ID'].astype(int).values[0], 
+                two_fgm, two_fga, three_fgm, three_fga, ftm, fta, off_rebounds,
+                def_rebounds, assists, steals, blocks, turnover
+            ]
+            data = pd.DataFrame(
+                data=[my_vals], 
+                columns=['_id', 'PLAYER_ID', 'GAME_ID', 'TWO_FGM', 'TWO_FGA',
+                        'THREE_FGM', 'THREE_FGA', 'FTM', 'FTA',
+                        'OFFENSIVE_REBOUNDS', 'DEFENSIVE_REBOUNDS', 'ASSISTS',
+                        'STEALS', 'BLOCKS', 'TURNOVER']
+            )
+            #data = data.fillna(0)
+            game_summary_ids = pd.DataFrame(data=list(game_summary_db.find()))
+            game_summary_ids_list = game_summary_ids['_id'].unique().tolist()
+            data[['TWO_FGM',
+                'TWO_FGA',
+                'THREE_FGM',
+                'THREE_FGA',
+                'FTM',
+                'FTA',
+                'OFFENSIVE_REBOUNDS',
+                'DEFENSIVE_REBOUNDS',
+                'ASSISTS',
+                'STEALS',
+                'BLOCKS',
+                'TURNOVER']] = data[['TWO_FGM',
+                                        'TWO_FGA',
+                                        'THREE_FGM',
+                                        'THREE_FGA',
+                                        'FTM',
+                                        'FTA',
+                                        'OFFENSIVE_REBOUNDS',
+                                        'DEFENSIVE_REBOUNDS',
+                                        'ASSISTS',
+                                        'STEALS',
+                                        'BLOCKS',
+                                        'TURNOVER']].astype(int)
+            new_data = data[~data['_id'].isin(game_summary_ids_list)]
+            if len(new_data) > 0:
+                data_list = new_data.to_dict('records')
+                game_summary_db.insert_many(
+                    documents=data_list, bypass_document_validation=True
+                )
+            update_data = data[data['_id'].isin(game_summary_ids_list)]
+            data_list = update_data.to_dict('records')
+            for doc in data_list:
+                game_summary_db.update_one(
+                    filter={'_id': doc['_id']}, update={"$set": doc}, upsert=True
+                )    
+            st.write('Added to DB!')
