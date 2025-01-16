@@ -194,9 +194,29 @@ def run_simulations(tritons, opp, sims, standard_dev):
         this_sim_opp['SIMULATED_PERCENT'] = np.random.normal(
             this_sim_opp['OPP_MAKE_PERCENT'], standard_dev
         )
+        this_sim_opp['SIMULATED_PERCENT'] = np.where(
+            this_sim_opp['SIMULATTED_PERCENT'] < 0,
+            0,
+            this_sim_opp['SIMULATTED_PERCENT']
+        )
+        this_sim_opp['SIMULATED_PERCENT'] = np.where(
+            this_sim_opp['SIMULATTED_PERCENT'] > 1,
+            1,
+            this_sim_opp['SIMULATTED_PERCENT']
+        )        
         this_sim_nda['SIMULATED_PERCENT'] = np.random.normal(
                     this_sim_nda['MAKE_PERCENT'], standard_dev
         )
+        this_sim_nda['SIMULATED_PERCENT'] = np.where(
+            this_sim_nda['SIMULATTED_PERCENT'] < 0,
+            0,
+            this_sim_nda['SIMULATTED_PERCENT']
+        )
+        this_sim_nda['SIMULATED_PERCENT'] = np.where(
+            this_sim_nda['SIMULATTED_PERCENT'] > 1,
+            1,
+            this_sim_nda['SIMULATTED_PERCENT']
+        )  
         this_sim_nda['SIMULATED_EXPECTED'] = (
                     this_sim_nda['POINT_VALUE'] * this_sim_nda['SIMULATED_PERCENT']
         )
@@ -391,7 +411,7 @@ if season:
         with std:
             standard_dev = st.number_input(
                 label='Standard Deviation', min_value=0.01, max_value=1.0,
-                value=0.1
+                value=0.15
             )
 
         run_sim = st.button(label='Run Simulation')
