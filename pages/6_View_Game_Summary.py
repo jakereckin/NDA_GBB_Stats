@@ -16,7 +16,7 @@ list_of_stats = [
 other_stats = [
     'Offensive Efficency', 'Efficent Points Scored', 'Effective FG%',
     '2 Points Per Attempt', '3 Points Per Attempt', 'Points Per Attempt',
-    'Points Scored', 'Game Score'
+    'Points Scored', 'Game Score', 'Possessions'
 ]
 
 # ----------------------------------------------------------------------------
@@ -136,7 +136,10 @@ def apply_derived(data):
         data['FGA'] > 0, data['EFG_NUM'] / data['FGA'], 0
     ) 
     data['EFF_POINTS'] = data['POINTS'] * data['OFFENSIVE_EFFICENCY']
-
+    data['POSSESSIONS'] = (
+        .96 * (data['FGA'] + data['TURNOVER'] 
+               + (.44 * data['FTA']) - data['OFFENSIVE_REBOUNDS'])
+    )
     return data
 
 
@@ -181,7 +184,8 @@ if season_list:
              '3PPA': '3 Points Per Attempt',
              'PPA': 'Points Per Attempt',
              'POINTS': 'Points Scored',
-             'GAME_SCORE': 'Game Score'}
+             'GAME_SCORE': 'Game Score',
+             'POSSESSIONS': 'Possessions'}
         )
         player_level = player_level.rename(
             columns={'OFFENSIVE_EFFICENCY': 'Offensive Efficency',
@@ -191,7 +195,8 @@ if season_list:
              '3PPA': '3 Points Per Attempt',
              'PPA': 'Points Per Attempt',
              'POINTS': 'Points Scored',
-             'GAME_SCORE': 'Game Score'}
+             'GAME_SCORE': 'Game Score',
+             'POSSESSIONS': 'Possessions'}
         )
         st.text(body='Team Level Data')
         st.dataframe(
