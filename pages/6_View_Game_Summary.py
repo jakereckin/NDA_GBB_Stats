@@ -16,7 +16,7 @@ list_of_stats = [
 other_stats = [
     'Offensive Efficency', 'Efficent Points Scored', 'Effective FG%',
     '2 Points Per Attempt', '3 Points Per Attempt', 'Points Per Attempt',
-    'Points Scored', 'Game Score', 'Possessions'
+    'Points Scored', 'Game Score'
 ]
 
 # ----------------------------------------------------------------------------
