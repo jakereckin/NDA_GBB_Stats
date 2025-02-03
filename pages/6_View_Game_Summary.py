@@ -11,7 +11,7 @@ st.cache_resource.clear()
 
 list_of_stats = [
     'LABEL', 'OFFENSIVE_EFFICENCY', 'EFF_POINTS', 'EFG%', '2PPA', '3PPA',
-    'PPA', 'POINTS'
+    'PPA', 'POINTS', 'POSSESSIONS', 'GAME_SCORE'
 ]
 other_stats = [
     'Offensive Efficency', 'Efficent Points Scored', 'Effective FG%',
