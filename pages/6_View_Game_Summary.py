@@ -11,11 +11,11 @@ st.cache_resource.clear()
 st.set_page_config(layout='wide')
 
 list_of_stats = [
-    'LABEL', 'OFFENSIVE_EFFICENCY', 'EFF_POINTS', 'EFG%', '2PPA', '3PPA',
+    'LABEL', 'OFFENSIVE_EFFICENCY', 'EFG%', '2PPA', '3PPA',
     'PPA', 'POINTS', 'POSSESSIONS', 'GAME_SCORE'
 ]
 other_stats = [
-    'Offensive Efficency', 'Efficent Points Scored', 'Effective FG%',
+    'Offensive Efficency', 'Effective FG%',
     '2 Points Per Attempt', '3 Points Per Attempt', 'Points Per Attempt',
     'Points Scored', 'Game Score'
 ]
