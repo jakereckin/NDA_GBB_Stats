@@ -14,7 +14,7 @@ list_of_stats = [
     'PPA', 'POINTS', 'POSSESSIONS', 'GAME_SCORE'
 ]
 other_stats = [
-    'Offensive Efficency', 'EFG%', '2 PPA', '3 PPA', 'PPA', 'Points Scored',
+    'Offensive Efficency', 'EFG%', '2 PPA', '3 PPA', 'PPA', 'Points',
     'Game Score'
 ]
 
@@ -181,7 +181,7 @@ if season_list:
              '2PPA': '2 PPA',
              '3PPA': '3 PPA',
              'PPA': 'PPA',
-             'POINTS': 'Points Scored',
+             'POINTS': 'Points',
              'GAME_SCORE': 'Game Score',
              'POSSESSIONS': 'Possessions'}
         )
@@ -191,7 +191,7 @@ if season_list:
              '2PPA': '2 PPA',
              '3PPA': '3 PPA',
              'PPA': 'PPA',
-             'POINTS': 'Points Scored',
+             'POINTS': 'Points',
              'GAME_SCORE': 'Game Score',
              'POSSESSIONS': 'Possessions'}
         )
