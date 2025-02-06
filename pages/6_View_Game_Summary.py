@@ -187,7 +187,7 @@ if season_list:
              'POINTS': 'Points',
              'GAME_SCORE': 'Game Score',
              'POSSESSIONS': 'Possessions',
-             'TURNOVER_RATE': 'Turnover Rate'}
+             'TURNOVER_RATE': 'Turnover %'}
         )
         player_level = player_level.rename(
             columns={'OFFENSIVE_EFFICENCY': 'OE',
