@@ -8,7 +8,6 @@ pd.options.mode.chained_assignment = None
 
 st.cache_resource.clear()
 
-st.set_page_config(layout='wide')
 
 list_of_stats = [
     'LABEL', 'OFFENSIVE_EFFICENCY', 'EFG%', '2PPA', '3PPA',
