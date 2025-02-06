@@ -8,6 +8,7 @@ pd.options.mode.chained_assignment = None
 
 st.cache_resource.clear()
 
+st.set_page_config(layout='wide')
 
 list_of_stats = [
     'LABEL', 'OFFENSIVE_EFFICENCY', 'EFF_POINTS', 'EFG%', '2PPA', '3PPA',
@@ -200,9 +201,7 @@ if season_list:
         )
         st.text(body='Team Level Data')
         st.dataframe(
-            data=team_data, use_container_width=True, hide_index=True,
-            column_config={'Opponent': {'max_width': 100},
-                           'Offensive Efficency': {'max_width': 100},}
+            data=team_data, use_container_width=True, hide_index=True
         )
 
         data = st.radio(
