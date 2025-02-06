@@ -14,9 +14,8 @@ list_of_stats = [
     'PPA', 'POINTS', 'POSSESSIONS', 'GAME_SCORE'
 ]
 other_stats = [
-    'Offensive Efficency', 'Effective FG%',
-    '2 Points Per Attempt', '3 Points Per Attempt', 'Points Per Attempt',
-    'Points Scored', 'Game Score'
+    'Offensive Efficency', 'EFG%', '2 PPA', '3 PPA', 'PPA', 'Points Scored',
+    'Game Score'
 ]
 
 # ----------------------------------------------------------------------------
@@ -178,22 +177,20 @@ if season_list:
         player_level = apply_derived(data=player_level).round(decimals=2)
         team_data = team_data.rename(
             columns={'OFFENSIVE_EFFICENCY': 'Offensive Efficency',
-             'EFF_POINTS': 'Efficent Points Scored',
-             'EFG%': 'Effective FG%',
-             '2PPA': '2 Points Per Attempt',
-             '3PPA': '3 Points Per Attempt',
-             'PPA': 'Points Per Attempt',
+             'EFG%': 'EFG%',
+             '2PPA': '2 PPA',
+             '3PPA': '3 PPA',
+             'PPA': 'PPA',
              'POINTS': 'Points Scored',
              'GAME_SCORE': 'Game Score',
              'POSSESSIONS': 'Possessions'}
         )
         player_level = player_level.rename(
             columns={'OFFENSIVE_EFFICENCY': 'Offensive Efficency',
-             'EFF_POINTS': 'Efficent Points Scored',
-             'EFG%': 'Effective FG%',
-             '2PPA': '2 Points Per Attempt',
-             '3PPA': '3 Points Per Attempt',
-             'PPA': 'Points Per Attempt',
+             'EFG%': 'EFG%',
+             '2PPA': '2 PPA',
+             '3PPA': '3 PPA',
+             'PPA': 'PPA',
              'POINTS': 'Points Scored',
              'GAME_SCORE': 'Game Score',
              'POSSESSIONS': 'Possessions'}
