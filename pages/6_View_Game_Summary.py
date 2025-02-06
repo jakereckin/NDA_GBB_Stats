@@ -11,7 +11,7 @@ st.cache_resource.clear()
 
 list_of_stats = [
     'LABEL', 'OFFENSIVE_EFFICENCY', 'EFG%', '2PPA', '3PPA',
-    'PPA', 'POINTS', 'POSSESSIONS', 'GAME_SCORE'
+    'PPA', 'POINTS', 'POSSESSIONS', 'GAME_SCORE', 'TURNOVER_RATE'
 ]
 other_stats = [
     'OE', 'EFG%', '2 PPA', '3 PPA', 'PPA', 'Points',
@@ -139,6 +139,9 @@ def apply_derived(data):
         .96 * (data['FGA'] + data['TURNOVER'] 
                + (.44 * data['FTA']) - data['OFFENSIVE_REBOUNDS'])
     )
+    data['TURNOVER_RATE'] = (
+        data['TURNOVER'] / data['POSSESSIONS']
+    )
     return data
 
 
@@ -183,7 +186,8 @@ if season_list:
              'PPA': 'PPA',
              'POINTS': 'Points',
              'GAME_SCORE': 'Game Score',
-             'POSSESSIONS': 'Possessions'}
+             'POSSESSIONS': 'Possessions',
+             'TURNOVER_RATE': 'Turnover Rate'}
         )
         player_level = player_level.rename(
             columns={'OFFENSIVE_EFFICENCY': 'OE',
@@ -192,8 +196,7 @@ if season_list:
              '3PPA': '3 PPA',
              'PPA': 'PPA',
              'POINTS': 'Points',
-             'GAME_SCORE': 'Game Score',
-             'POSSESSIONS': 'Possessions'}
+             'GAME_SCORE': 'Game Score'}
         )
         st.text(body='Team Level Data')
         st.dataframe(
