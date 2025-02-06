@@ -14,7 +14,7 @@ list_of_stats = [
     'PPA', 'POINTS', 'POSSESSIONS', 'GAME_SCORE'
 ]
 other_stats = [
-    'Offensive Efficency', 'EFG%', '2 PPA', '3 PPA', 'PPA', 'Points',
+    'OE', 'EFG%', '2 PPA', '3 PPA', 'PPA', 'Points',
     'Game Score'
 ]
 
@@ -176,7 +176,7 @@ if season_list:
 
         player_level = apply_derived(data=player_level).round(decimals=2)
         team_data = team_data.rename(
-            columns={'OFFENSIVE_EFFICENCY': 'Offensive Efficency',
+            columns={'OFFENSIVE_EFFICENCY': 'OE',
              'EFG%': 'EFG%',
              '2PPA': '2 PPA',
              '3PPA': '3 PPA',
@@ -186,7 +186,7 @@ if season_list:
              'POSSESSIONS': 'Possessions'}
         )
         player_level = player_level.rename(
-            columns={'OFFENSIVE_EFFICENCY': 'Offensive Efficency',
+            columns={'OFFENSIVE_EFFICENCY': 'OE',
              'EFG%': 'EFG%',
              '2PPA': '2 PPA',
              '3PPA': '3 PPA',
