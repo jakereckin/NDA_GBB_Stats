@@ -216,8 +216,8 @@ def apply_model(play_event_spot):
         'SPOT_TOTAL_MAKES', 'GAME_PERCENTAGE',
         'GAME_ATTEMPTS',
         'GAME_TOTAL_MAKES','SHOT_DEFENSE_CODED', 'ROLLING_PERCENT',
-        'SEASON_LAST_5_PERCENT', 'INIT_EXPECTED', 'SEASON_LAST_50_PERCENT',
-        'SEASON_LAST_100_HOME_PERCENT', 'HOME_FLAG', 'ROLLING_POINTS_TEAM', 'GAME_TEAM_PERCENTAGE'
+        'SEASON_LAST_5_PERCENT', 'INIT_EXPECTED',
+         'HOME_FLAG', 'ROLLING_POINTS_TEAM', 'GAME_TEAM_PERCENTAGE'
     ]
     X = play_event_spot[model_columns]
     play_event_spot['PROB'] = pipeline.predict(X)
