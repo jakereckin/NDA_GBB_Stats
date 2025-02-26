@@ -179,24 +179,28 @@ if season_list:
 
         player_level = apply_derived(data=player_level).round(decimals=2)
         team_data = team_data.rename(
-            columns={'OFFENSIVE_EFFICENCY': 'OE',
-             'EFG%': 'EFG%',
-             '2PPA': '2 PPA',
-             '3PPA': '3 PPA',
-             'PPA': 'PPA',
-             'POINTS': 'Points',
-             'GAME_SCORE': 'Game Score',
-             'POSSESSIONS': 'Possessions',
-             'TURNOVER_RATE': 'Turnover %'}
+            columns={
+                'OFFENSIVE_EFFICENCY': 'OE',
+                'EFG%': 'EFG%',
+                '2PPA': '2 PPA',
+                '3PPA': '3 PPA',
+                'PPA': 'PPA',
+                'POINTS': 'Points',
+                'GAME_SCORE': 'Game Score',
+                'POSSESSIONS': 'Possessions',
+                'TURNOVER_RATE': 'Turnover %'
+            }
         )
         player_level = player_level.rename(
-            columns={'OFFENSIVE_EFFICENCY': 'OE',
-             'EFG%': 'EFG%',
-             '2PPA': '2 PPA',
-             '3PPA': '3 PPA',
-             'PPA': 'PPA',
-             'POINTS': 'Points',
-             'GAME_SCORE': 'Game Score'}
+            columns={
+                'OFFENSIVE_EFFICENCY': 'OE',
+                'EFG%': 'EFG%',
+                '2PPA': '2 PPA',
+                '3PPA': '3 PPA',
+                'PPA': 'PPA',
+                'POINTS': 'Points',
+                'GAME_SCORE': 'Game Score'
+            }
         )
         st.text(body='Team Level Data')
         st.dataframe(
@@ -210,6 +214,6 @@ if season_list:
         if data:
             fig = px.bar(
                 data_frame=player_level, x=data, y='NAME', orientation='h',
-                text=data
+                text=data, color_discrete_sequence=['green']
             )
             st.plotly_chart(figure_or_data=fig, use_container_width=True)

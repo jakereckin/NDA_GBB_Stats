@@ -138,7 +138,9 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     _shot_defenses = ['OPEN', 'GUARDED', 'HEAVILY_GUARDED']
     col1, col2 = st.columns(spec=2)
     plays_db, players, games, spots, all_plays = load_data()
-    games = games.sort_values(by='SEASON').reset_index(drop=True)
+    games = (
+        games.sort_values(by='SEASON', ascending=False).reset_index(drop=True)
+    )
     season_list = games['SEASON'].unique().tolist()
 
     with col1:
@@ -151,6 +153,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     )
 
     game_list = games_season['LABEL'].unique().tolist()
+    game_list = game_list[::-1]
 
     with col2:
         game_select = st.selectbox(label='Select Game', options=game_list)

@@ -172,6 +172,85 @@ def get_team_data(t_game, grouped_all_spots):
     )
     return this_game
 
+
+# ----------------------------------------------------------------------------
+def build_features(play_event, spot):
+    _player_merge_list = ['PLAYER_ID', 'SPOT', 'SHOT_DEFENSE', 'YEAR']
+    _player_game_merge_list = ['GAME_ID', 'PLAYER_ID', 'YEAR', 'SPOT', 'SHOT_DEFENSE']
+    _player_year_list = ['GAME_ID', 'PLAYER_ID', 'YEAR']
+    _player_game_list = ['GAME_ID', 'PLAYER_ID', 'YEAR', 'SHOT_DEFENSE']
+    play_event_spot = (
+        pd.merge(left=play_event, right=spot, left_on='SHOT_SPOT',
+                 right_on='SPOT', how='left')
+          .sort_values(by=['GAME_ID', 'PLAY_NUM'])
+          .reset_index(drop=True)
+    )
+    play_event_spot['INTIAL_PERCENTAGE'] = np.where(
+        play_event_spot['PLAYER_ID'] == 0,
+        play_event_spot['OPP_EXPECTED'] / play_event_spot['POINTS'],
+        .33
+    )
+    play_event_spot['MAKE'] = np.where(
+        play_event_spot['MAKE_MISS'] == 'Y', 1, 0
+    )
+    play_event_spot['ATTEMPT'] = 1
+    play_event_spot['INIT_EXPECTED'] = (
+        play_event_spot['INTIAL_PERCENTAGE'] * play_event_spot['POINTS']
+    )
+    play_event_spot['SPOT_TOTAL_MAKES'] = (
+        play_event_spot.groupby(by=_player_merge_list)
+                       ['MAKE'].transform(func='sum')
+    )
+    play_event_spot['SPOT_TOTAL_ATTEMPTS'] = (
+        play_event_spot.groupby(by=_player_merge_list)['ATTEMPT'].transform('sum')
+    )
+    play_event_spot['SPOT_TOTAL_PERCENTAGE'] = (
+        play_event_spot['SPOT_TOTAL_MAKES'] / play_event_spot['SPOT_TOTAL_ATTEMPTS']
+    )
+    play_event_spot['GAME_MAKES'] = (
+        play_event_spot.groupby(by=_player_game_merge_list)['MAKE'].transform('sum')
+    )
+    play_event_spot['GAME_ATTEMPTS'] = (
+        play_event_spot.groupby(by=_player_game_merge_list)['ATTEMPT'].transform('sum')
+    )
+    play_event_spot['GAME_PERCENTAGE'] = (
+        play_event_spot['GAME_MAKES'] / play_event_spot['GAME_ATTEMPTS']
+    )
+    play_event_spot['GAME_TOTAL_MAKES'] = (
+        play_event_spot.groupby(by=_player_year_list)['MAKE'].transform('sum')
+    )
+    play_event_spot['GAME_TOTAL_ATTEMPTS'] = (
+        play_event_spot.groupby(by=_player_year_list)['ATTEMPT'].transform('sum')
+    )
+    play_event_spot['SHOT_DEFENSE_CODED'] = (
+        play_event_spot['SHOT_DEFENSE'].map(CODED_SHOT_DEFENSE)
+    )
+    play_event_spot['GAME_ROLLING_MAKES'] = (
+        play_event_spot.groupby(by=_player_game_list)['MAKE'].transform(lambda x: x.rolling(window=1000, min_periods=0).sum())
+    )
+    play_event_spot['GAME_ROLLING_ATTEMPTS'] = (
+        play_event_spot.groupby(by=_player_game_list)['ATTEMPT'].transform(lambda x: x.rolling(window=1000, min_periods=0).sum())
+    )
+    play_event_spot['ROLLING_PERCENT'] = (
+        play_event_spot['GAME_ROLLING_MAKES'] / play_event_spot['GAME_ROLLING_ATTEMPTS']
+    )
+    play_event_spot['SEASON_LAST_5'] = (
+        play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['MAKE'].transform(lambda x: x.rolling(window=5, min_periods=0).sum())
+    )
+    play_event_spot['SEASON_LAST_5_ATTEMPTS'] = (
+        play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['ATTEMPT'].transform(lambda x: x.rolling(window=5, min_periods=0).sum())
+    )
+    play_event_spot['SEASON_LAST_5_PERCENT'] = (
+        play_event_spot['SEASON_LAST_5'] / play_event_spot['SEASON_LAST_5_ATTEMPTS']
+    )
+    play_event_spot['SEASON_LAST_10'] = (
+        play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['MAKE'].transform(lambda x: x.rolling(window=10, min_periods=0).sum())
+    )
+    play_event_spot['SEASON_LAST_10_ATTEMPTS'] = (
+        play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['ATTEMPT'].transform(lambda x: x.rolling(window=10, min_periods=0).sum())
+    play_event_spot['SEASON_LAST_10_PERCENT'] = (
+        play_event_spot['SEASON_LAST_10'] / play_event_spot['SEASON_LAST_10_ATTEMPTS']
+
 #-----------------------------------------------------------------------------
 def run_simulations(tritons, opp, sims, standard_dev):
     """
@@ -432,22 +511,22 @@ if season:
                 
             with twenty_five:
                 st.metric(
-                    label='25th Percentile Points',
-                    value=all_sims['NDA_SIMULATED_POINTS'].quantile(0.25).round(2)
+                    label='10th Percentile Points',
+                    value=all_sims['NDA_SIMULATED_POINTS'].quantile(0.1).round(2)
                 )
                 st.metric(
-                    label='25th Percentile Points',
-                    value=all_sims['OPP_SIMULATED_POINTS'].quantile(0.25).round(2)
+                    label='10th Percentile Points',
+                    value=all_sims['OPP_SIMULATED_POINTS'].quantile(0.1).round(2)
                 )
                 
             with seventy_five:
                 st.metric(
-                    label='75th Percentile Points',
-                    value=all_sims['NDA_SIMULATED_POINTS'].quantile(0.75).round(2)
+                    label='90th Percentile Points',
+                    value=all_sims['NDA_SIMULATED_POINTS'].quantile(0.9).round(2)
                 )
                 st.metric(
-                    label='75th Percentile Points',
-                    value=all_sims['OPP_SIMULATED_POINTS'].quantile(0.75).round(2)
+                    label='90 Percentile Points',
+                    value=all_sims['OPP_SIMULATED_POINTS'].quantile(0.9).round(2)
                 )
                 
             nda = all_sims[['NDA_SIMULATED_POINTS']].rename(columns={'NDA_SIMULATED_POINTS': 'POINTS'})
