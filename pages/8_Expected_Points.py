@@ -4,6 +4,9 @@ import pandas as pd
 import plotly.express as px
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+import joblib
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import MinMaxScaler
 pd.options.mode.chained_assignment = None
 
 st.cache_resource.clear()
@@ -111,74 +114,19 @@ def get_games_data(player_data, game_summary, game):
     return t_game, game_data
 
 
-#-------------------------------------------------------------------------------
-def get_grouped_all_spots(player_data2, spot):
-    grouped = (
-        player_data2.groupby(by=['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE'], 
-                             as_index=False)
-                    .agg(ATTEMPTS=('ATTEMPT', 'sum'), MAKES=('MAKE', 'sum'))
-    )
-    # Basically counting for divison by 0
-    # If denom (attempts) is 0, return 0, else get percent
-    grouped['MAKE_PERCENT'] = np.where(
-        grouped['ATTEMPTS'] > 0, 
-        grouped['MAKES'] / grouped['ATTEMPTS'],
-        0
-    )
-    all_spots = spot.copy()
-    # Spot name final character is point value.. easy fix is putting this into DB
-    # TODO: add to DB instead of here.
-    all_spots['POINT_VALUE'] = (
-        all_spots['SPOT'].str.strip().str[-1].astype('int64')
-    )
-    grouped_all_spots = pd.merge(
-        left=all_spots, right=grouped, left_on='SPOT', right_on='SHOT_SPOT',
-        how='left'
-    )
-    # Expected value = point value * percent make (accounting for defense)
-    grouped_all_spots['EXPECTED_VALUE'] = (
-        grouped_all_spots['POINT_VALUE'] * grouped_all_spots['MAKE_PERCENT']
-    )
-    grouped_all_spots['OPP_MAKE_PERCENT'] = (
-        grouped_all_spots['OPP_EXPECTED'] / grouped_all_spots['POINT_VALUE']
-    )
-    grouped_all_spots['EXPECTED_VALUE'] = np.where(
-        grouped_all_spots['NAME'] == 'OPPONENT TEAM',
-        grouped_all_spots['OPP_EXPECTED'],
-        grouped_all_spots['EXPECTED_VALUE']
-    )
-    _drop_columns = ['SPOT', 'XSPOT', 'YSPOT', 'MAKES', 'ATTEMPTS']
-    grouped_all_spots = grouped_all_spots.drop(columns=_drop_columns)
-    return grouped_all_spots
-
-
-#-----------------------------------------------------------------------------
-def get_team_data(t_game, grouped_all_spots):
-    '''
-    Get expected points, but on team level instead of individual
-    '''
-    this_game = (
-        t_game.groupby(by=['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE'], 
-                       as_index=False)
-              .agg(ATTEMPTS=('ATTEMPT', 'sum'), MAKES=('MAKE', 'sum'))
-              .merge(grouped_all_spots, 
-                     on=['NAME', 'SHOT_SPOT', 'SHOT_DEFENSE'])
-    )
-    this_game['EXPECTED_POINTS'] = (
-        this_game['ATTEMPTS'] * this_game['EXPECTED_VALUE']
-    )
-    this_game['ACTUAL_POINTS'] = (
-        this_game['MAKES'] * this_game['POINT_VALUE']
-    )
-    return this_game
-
-
 # ----------------------------------------------------------------------------
-def build_features(play_event, spot):
+def build_features(play_event, spot, players, games):
+    CODED_SHOT_DEFENSE = {
+        'OPEN': 0,
+        'GUARDED': 1,
+        'HEAVILY_GUARDED': 2
+    }
     _player_merge_list = ['PLAYER_ID', 'SPOT', 'SHOT_DEFENSE', 'YEAR']
     _player_game_merge_list = ['GAME_ID', 'PLAYER_ID', 'YEAR', 'SPOT', 'SHOT_DEFENSE']
     _player_year_list = ['GAME_ID', 'PLAYER_ID', 'YEAR']
     _player_game_list = ['GAME_ID', 'PLAYER_ID', 'YEAR', 'SHOT_DEFENSE']
+    play_event = play_event.merge(players, left_on='PLAYER_ID', right_on='NUMBER').merge(games, on='GAME_ID')
+    play_event = play_event[play_event['YEAR'] == play_event['SEASON']]
     play_event_spot = (
         pd.merge(left=play_event, right=spot, left_on='SHOT_SPOT',
                  right_on='SPOT', how='left')
@@ -243,13 +191,46 @@ def build_features(play_event, spot):
     play_event_spot['SEASON_LAST_5_PERCENT'] = (
         play_event_spot['SEASON_LAST_5'] / play_event_spot['SEASON_LAST_5_ATTEMPTS']
     )
-    play_event_spot['SEASON_LAST_10'] = (
-        play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['MAKE'].transform(lambda x: x.rolling(window=10, min_periods=0).sum())
+    play_event_spot['SEASON_LAST_50'] = play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['MAKE'].transform(lambda x: x.rolling(window=50, min_periods=0).sum())
+    play_event_spot['SEASON_LAST_50_ATTEMPTS'] = play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['ATTEMPT'].transform(lambda x: x.rolling(window=50, min_periods=0).sum())
+    play_event_spot['SEASON_LAST_50_PERCENT'] = play_event_spot['SEASON_LAST_50'] / play_event_spot['SEASON_LAST_50_ATTEMPTS']
+    play_event_spot['SEASON_LAST_100_HOME'] = play_event_spot.groupby(by=['PLAYER_ID', 'YEAR', 'LOCATION'])['MAKE'].transform(lambda x: x.rolling(window=100, min_periods=0).sum())
+    play_event_spot['SEASON_LAST_100_HOME_ATTEMPTS'] = play_event_spot.groupby(by=['PLAYER_ID', 'YEAR', 'LOCATION'])['ATTEMPT'].transform(lambda x: x.rolling(window=100, min_periods=0).sum())
+    play_event_spot['SEASON_LAST_200'] = play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['MAKE'].transform(lambda x: x.rolling(window=200, min_periods=0).sum())
+    play_event_spot['SEASON_LAST_200_ATTEMPTS'] = play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['ATTEMPT'].transform(lambda x: x.rolling(window=200, min_periods=0).sum())
+    play_event_spot['SEASON_LAST_200_PERCENT'] = play_event_spot['SEASON_LAST_200'] / play_event_spot['SEASON_LAST_200_ATTEMPTS']
+    play_event_spot['SEASON_LAST_100_HOME_PERCENT'] = play_event_spot['SEASON_LAST_100_HOME'] / play_event_spot['SEASON_LAST_100_HOME_ATTEMPTS']
+    play_event_spot['HOME_FLAG'] = np.where(play_event_spot['LOCATION'] == 'Home', 1, 0)
+    play_event_spot['ACTUAL_POINTS'] = play_event_spot['MAKE'] * play_event_spot['POINTS']
+    play_event_spot['TEAM'] = np.where(play_event_spot['PLAYER_ID'] == 0, 'OPPONENT', 'NDA')
+    play_event_spot['ROLLING_POINTS_TEAM'] = play_event_spot.groupby(by=['GAME_ID', 'YEAR', 'TEAM'])['ACTUAL_POINTS'].transform(lambda x: x.rolling(window=1000, min_periods=0).sum())
+    play_event_spot['GAME_TEAM_MAKES'] = play_event_spot.groupby(by=['GAME_ID', 'TEAM', 'YEAR', 'SPOT', 'SHOT_DEFENSE'])['MAKE'].transform('sum')
+    play_event_spot['GAME_TEAM_ATTEMPTS'] = play_event_spot.groupby(by=['GAME_ID', 'TEAM', 'YEAR', 'SPOT', 'SHOT_DEFENSE'])['ATTEMPT'].transform('sum')
+    play_event_spot['GAME_TEAM_PERCENTAGE'] = play_event_spot['GAME_TEAM_MAKES'] / play_event_spot['GAME_TEAM_ATTEMPTS']
+    return play_event_spot
+
+def apply_model(play_event_spot):
+    pipeline = joblib.load('pipeline.pkl')
+    model_columns = [
+        'XSPOT', 'YSPOT',
+        'SPOT_TOTAL_MAKES', 'GAME_PERCENTAGE',
+        'GAME_ATTEMPTS',
+        'GAME_TOTAL_MAKES','SHOT_DEFENSE_CODED', 'ROLLING_PERCENT',
+        'SEASON_LAST_5_PERCENT', 'INIT_EXPECTED', 'SEASON_LAST_50_PERCENT',
+        'SEASON_LAST_100_HOME_PERCENT', 'HOME_FLAG', 'ROLLING_POINTS_TEAM', 'GAME_TEAM_PERCENTAGE'
+    ]
+    X = play_event_spot[model_columns]
+    play_event_spot['PROB'] = pipeline.predict(X)
+    play_event_spot['EXPECTED_POINTS'] = play_event_spot['PROB'] * play_event_spot['POINTS']
+    play_event_spot['LABEL'] = (
+        play_event_spot['OPPONENT'] + ' - ' + play_event_spot['DATE']
     )
-    play_event_spot['SEASON_LAST_10_ATTEMPTS'] = (
-        play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['ATTEMPT'].transform(lambda x: x.rolling(window=10, min_periods=0).sum())
-    play_event_spot['SEASON_LAST_10_PERCENT'] = (
-        play_event_spot['SEASON_LAST_10'] / play_event_spot['SEASON_LAST_10_ATTEMPTS']
+    return play_event_spot
+
+def get_expected_points(play_event_spot, this_game):
+    return play_event_spot[play_event_spot['LABEL'] == this_game]
+
+
 
 #-----------------------------------------------------------------------------
 def run_simulations(tritons, opp, sims, standard_dev):
@@ -271,7 +252,7 @@ def run_simulations(tritons, opp, sims, standard_dev):
         this_sim_nda = tritons.copy()
         this_sim_opp = opp.copy()
         this_sim_opp['SIMULATED_PERCENT'] = np.random.normal(
-            this_sim_opp['OPP_MAKE_PERCENT'], standard_dev
+            this_sim_opp['PROB'], standard_dev
         )
         this_sim_opp['SIMULATED_PERCENT'] = np.where(
             this_sim_opp['SIMULATED_PERCENT'] < 0,
@@ -284,7 +265,7 @@ def run_simulations(tritons, opp, sims, standard_dev):
             this_sim_opp['SIMULATED_PERCENT']
         )        
         this_sim_nda['SIMULATED_PERCENT'] = np.random.normal(
-                    this_sim_nda['MAKE_PERCENT'], standard_dev
+                    this_sim_nda['PROB'], standard_dev
         )
         this_sim_nda['SIMULATED_PERCENT'] = np.where(
             this_sim_nda['SIMULATED_PERCENT'] < 0,
@@ -297,16 +278,16 @@ def run_simulations(tritons, opp, sims, standard_dev):
             this_sim_nda['SIMULATED_PERCENT']
         )  
         this_sim_nda['SIMULATED_EXPECTED'] = (
-                    this_sim_nda['POINT_VALUE'] * this_sim_nda['SIMULATED_PERCENT']
+                    this_sim_nda['POINTS'] * this_sim_nda['SIMULATED_PERCENT']
         )
         this_sim_nda['SIMULATED_POINTS'] = (
-                    this_sim_nda['ATTEMPTS'] * this_sim_nda['SIMULATED_EXPECTED']
+                    this_sim_nda['ATTEMPT'] * this_sim_nda['SIMULATED_EXPECTED']
         )
         this_sim_opp['SIMULATED_EXPECTED'] = (
-                    this_sim_opp['POINT_VALUE'] * this_sim_opp['SIMULATED_PERCENT']
+                    this_sim_opp['POINTS'] * this_sim_opp['SIMULATED_PERCENT']
         )
         this_sim_opp['SIMULATED_POINTS'] = (
-                    this_sim_opp['ATTEMPTS'] * this_sim_opp['SIMULATED_EXPECTED']
+                    this_sim_opp['ATTEMPT'] * this_sim_opp['SIMULATED_EXPECTED']
         )
         this_sim_opp['SIMULATED_POINTS'] = np.where(
             this_sim_opp['SIMULATED_POINTS'] < 0,
@@ -340,7 +321,10 @@ def run_simulations(tritons, opp, sims, standard_dev):
     all_sims = pd.concat(my_frame_list, ignore_index=True)
     return all_sims
 
+
 play_event, spot, games, players, gs_data = load_data()
+play_event_spot = build_features(play_event=play_event, spot=spot, players=players, games=games)
+play_event_spot = apply_model(play_event_spot=play_event_spot)
 games['SEASON2'] = games['SEASON'].astype(dtype=int)
 games = (
     games.sort_values(by='SEASON2', ascending=False).reset_index(drop=True)
@@ -363,18 +347,17 @@ if season:
             player_data=player_data, game_summary=game_summary_cleaned,
             game=game
         )
-        grouped_all_spots = get_grouped_all_spots(
-            player_data2=player_data2, spot=spot
+
+        this_game = get_expected_points(
+            play_event_spot=play_event_spot, this_game=game
         )
-        this_game = get_team_data(
-            t_game=t_game, grouped_all_spots=grouped_all_spots
-        )
+
         # ========== EXPECTED TRITONS ==========
-        tritons = this_game[this_game['NAME'] != 'OPPONENT TEAM']
+        tritons = this_game[this_game['TEAM'] != 'OPPONENT']
         tritons_grouped = (
             tritons.groupby(by=['POINTS'], as_index=False)
-                   .agg(ATTEMPTS=('ATTEMPTS', 'sum'),
-                        MAKES=('MAKES', 'sum'))
+                   .agg(ATTEMPTS=('ATTEMPT', 'sum'),
+                        MAKES=('MAKE', 'sum'))
         )
         tritons_grouped = tritons_grouped[tritons_grouped['POINTS'] != 1]
         tritons_grouped['3MAKE'] = np.where(
@@ -399,11 +382,11 @@ if season:
         actual_fg = tritons['ACTUAL_POINTS'].sum()
 
         # ========== EXPECTED OPP ==========
-        opp = this_game[this_game['NAME'] == 'OPPONENT TEAM']
+        opp = this_game[this_game['TEAM'] == 'OPPONENT']
         opp_grouped = (
             opp.groupby(by=['POINTS'], as_index=False)
-               .agg(ATTEMPTS=('ATTEMPTS', 'sum'),
-                    MAKES=('MAKES', 'sum'))
+               .agg(ATTEMPTS=('ATTEMPT', 'sum'),
+                    MAKES=('MAKE', 'sum'))
         )
         opp_grouped = opp_grouped[opp_grouped['POINTS'] != 1]
         opp_grouped['3MAKE'] = np.where(
