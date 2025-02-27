@@ -353,7 +353,7 @@ if season:
             play_event_spot=play_event_spot, this_game=game
         )
         last_20 = this_game.tail(n=20)
-        last_20 = last_20[['NAME', 'SHOT_SPOT', 'MAKE', 'PROB', 'EXPECTED_POINTS', 'ACTUAL_POINTS']]
+        last_20 = last_20[['NUMBER', 'SHOT_SPOT', 'MAKE', 'PROB', 'EXPECTED_POINTS', 'ACTUAL_POINTS']]
         st.write(last_20)
         # ========== EXPECTED TRITONS ==========
         tritons = this_game[this_game['TEAM'] != 'OPPONENT']
