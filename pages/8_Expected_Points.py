@@ -5,8 +5,7 @@ import plotly.express as px
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import joblib
-from sklearn.neural_network import MLPClassifier
-from sklearn.preprocessing import MinMaxScaler
+
 pd.options.mode.chained_assignment = None
 
 st.cache_resource.clear()
