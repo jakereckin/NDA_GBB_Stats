@@ -391,7 +391,7 @@ if season:
         expected_fg = tritons['EXPECTED_POINTS'].sum()
         
         # ========== ACTUAL TRITONS ==========
-        actual_fg = tritons['ACTUAL_POINTS'].sum()
+        actual_fg = tritons['ACTUAL_POINTS'].sum().astype(int)
 
         # ========== EXPECTED OPP ==========
         opp = this_game[this_game['TEAM'] == 'OPPONENT']
@@ -420,7 +420,7 @@ if season:
         expected_fg_opp = opp['EXPECTED_POINTS'].sum()
 
         # ========== ACTUAL OPP ==========
-        actual_fg_opp = opp['ACTUAL_POINTS'].sum()
+        actual_fg_opp = opp['ACTUAL_POINTS'].sum().astype(int)
 
         tritons_delta = round(number=actual_fg-expected_fg, ndigits=2)
         opp_delta = float(
