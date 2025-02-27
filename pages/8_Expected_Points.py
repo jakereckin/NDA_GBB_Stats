@@ -358,7 +358,11 @@ if season:
             play_event_spot=play_event_spot, this_game=game
         )
         last_20 = this_game.tail(n=50)
-        last_20 = last_20[['NUMBER', 'SHOT_SPOT', 'PROB', 'EXPECTED_POINTS', 'ACTUAL_POINTS', 'ROLLING_TEAM_POINTS']]
+        last_20 = last_20[[
+            'NUMBER', 'SHOT_SPOT', 'PROB', 'EXPECTED_POINTS', 'ACTUAL_POINTS', 'LAST_ROLLING_POINTS_TEAM_NDA',
+            'LAST_ROLLING_POINTS_TEAM_OPPONENT'
+        ]]
+        last_20 = last_20.rename(columns={'LAST_ROLLING_POINTS_TEAM_NDA': 'NDA_POINTS', 'LAST_ROLLING_POINTS_TEAM_OPPONENT': 'OPP_POINTS'})
         st.dataframe(last_20, use_container_width=True, hide_index=True)
         # ========== EXPECTED TRITONS ==========
         tritons = this_game[this_game['TEAM'] != 'OPPONENT']
