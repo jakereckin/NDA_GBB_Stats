@@ -221,7 +221,7 @@ def apply_model(play_event_spot):
         'TEAM_POINTS'
     ]
     X = play_event_spot[model_columns]
-    play_event_spot['PROB'] = pipeline.predict(X)
+    play_event_spot['PROB'] = pipeline.predict_proba(X)[:,1]
     play_event_spot['EXPECTED_POINTS'] = play_event_spot['PROB'] * play_event_spot['POINTS']
     play_event_spot['LABEL'] = (
         play_event_spot['OPPONENT'] + ' - ' + play_event_spot['DATE']
@@ -352,7 +352,7 @@ if season:
         this_game = get_expected_points(
             play_event_spot=play_event_spot, this_game=game
         )
-
+        st.write(this_game)
         # ========== EXPECTED TRITONS ==========
         tritons = this_game[this_game['TEAM'] != 'OPPONENT']
         tritons_grouped = (
