@@ -207,6 +207,11 @@ def build_features(play_event, spot, players, games):
     play_event_spot['GAME_TEAM_MAKES'] = play_event_spot.groupby(by=['GAME_ID', 'TEAM', 'YEAR', 'SPOT', 'SHOT_DEFENSE'])['MAKE'].transform('sum')
     play_event_spot['GAME_TEAM_ATTEMPTS'] = play_event_spot.groupby(by=['GAME_ID', 'TEAM', 'YEAR', 'SPOT', 'SHOT_DEFENSE'])['ATTEMPT'].transform('sum')
     play_event_spot['GAME_TEAM_PERCENTAGE'] = play_event_spot['GAME_TEAM_MAKES'] / play_event_spot['GAME_TEAM_ATTEMPTS']
+    play_event_spot['LAST_ROLLING_POINTS_TEAM_NDA'] = play_event_spot[play_event_spot['TEAM'] == 'NDA'].groupby('GAME_ID')['ROLLING_POINTS_TEAM'].shift(1)
+    play_event_spot['LAST_ROLLING_POINTS_TEAM_OPPONENT'] = play_event_spot[play_event_spot['TEAM'] == 'OPPONENT'].groupby('GAME_ID')['ROLLING_POINTS_TEAM'].shift(1)
+    play_event_spot['LAST_ROLLING_POINTS_TEAM_NDA'] = play_event_spot['LAST_ROLLING_POINTS_TEAM_NDA'].fillna(method='ffill').fillna(0)
+    play_event_spot['LAST_ROLLING_POINTS_TEAM_OPPONENT'] = play_event_spot['LAST_ROLLING_POINTS_TEAM_OPPONENT'].fillna(method='ffill').fillna(0)
+    play_event_spot['TEAM_SPREAD'] = play_event_spot['ROLLING_POINTS_TEAM'] - play_event_spot['LAST_ROLLING_POINTS_TEAM_OPPONENT']
     return play_event_spot
 
 def apply_model(play_event_spot):
@@ -217,8 +222,8 @@ def apply_model(play_event_spot):
         'GAME_ATTEMPTS', 'INTIAL_PERCENTAGE',
         'GAME_TOTAL_MAKES','SHOT_DEFENSE_CODED', 'ROLLING_PERCENT',
         'SEASON_LAST_5_PERCENT', 'INIT_EXPECTED',
-        'HOME_FLAG', 'ROLLING_POINTS_TEAM', 'GAME_TEAM_PERCENTAGE', 'OPP_EXPECTED',
-        'TEAM_POINTS'
+        'HOME_FLAG', 'GAME_TEAM_PERCENTAGE', 'OPP_EXPECTED',
+        'LAST_ROLLING_POINTS_TEAM_OPPONENT', 'TEAM_SPREAD', 'LAST_ROLLING_POINTS_TEAM_NDA'
     ]
     X = play_event_spot[model_columns]
     play_event_spot['PROB'] = pipeline.predict_proba(X)[:,1]
