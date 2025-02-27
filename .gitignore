@@ -4,3 +4,4 @@ NDA_DB - game_summary.csv
 *.csv
 *.pyc
 /ipynb
+*.html
