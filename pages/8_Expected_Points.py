@@ -352,9 +352,9 @@ if season:
         this_game = get_expected_points(
             play_event_spot=play_event_spot, this_game=game
         )
-        last_20 = this_game.tail(n=20)
+        last_20 = this_game.tail(n=50)
         last_20 = last_20[['NUMBER', 'SHOT_SPOT', 'MAKE', 'PROB', 'EXPECTED_POINTS', 'ACTUAL_POINTS']]
-        st.write(last_20)
+        st.dataframe(last_20, use_container_width=True, hide_index=True)
         # ========== EXPECTED TRITONS ==========
         tritons = this_game[this_game['TEAM'] != 'OPPONENT']
         tritons_grouped = (
