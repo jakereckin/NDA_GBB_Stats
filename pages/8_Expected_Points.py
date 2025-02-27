@@ -352,7 +352,6 @@ if season:
         this_game = get_expected_points(
             play_event_spot=play_event_spot, this_game=game
         )
-        st.write(this_game)
         # ========== EXPECTED TRITONS ==========
         tritons = this_game[this_game['TEAM'] != 'OPPONENT']
         tritons_grouped = (
