@@ -190,19 +190,9 @@ def build_features(play_event, spot, players, games):
     play_event_spot['SEASON_LAST_5_PERCENT'] = (
         play_event_spot['SEASON_LAST_5'] / play_event_spot['SEASON_LAST_5_ATTEMPTS']
     )
-    play_event_spot['SEASON_LAST_50'] = play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['MAKE'].transform(lambda x: x.rolling(window=50, min_periods=0).sum())
-    play_event_spot['SEASON_LAST_50_ATTEMPTS'] = play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['ATTEMPT'].transform(lambda x: x.rolling(window=50, min_periods=0).sum())
-    play_event_spot['SEASON_LAST_50_PERCENT'] = play_event_spot['SEASON_LAST_50'] / play_event_spot['SEASON_LAST_50_ATTEMPTS']
-    play_event_spot['SEASON_LAST_100_HOME'] = play_event_spot.groupby(by=['PLAYER_ID', 'YEAR', 'LOCATION'])['MAKE'].transform(lambda x: x.rolling(window=100, min_periods=0).sum())
-    play_event_spot['SEASON_LAST_100_HOME_ATTEMPTS'] = play_event_spot.groupby(by=['PLAYER_ID', 'YEAR', 'LOCATION'])['ATTEMPT'].transform(lambda x: x.rolling(window=100, min_periods=0).sum())
-    play_event_spot['SEASON_LAST_200'] = play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['MAKE'].transform(lambda x: x.rolling(window=200, min_periods=0).sum())
-    play_event_spot['SEASON_LAST_200_ATTEMPTS'] = play_event_spot.groupby(by=['PLAYER_ID', 'YEAR'])['ATTEMPT'].transform(lambda x: x.rolling(window=200, min_periods=0).sum())
-    play_event_spot['SEASON_LAST_200_PERCENT'] = play_event_spot['SEASON_LAST_200'] / play_event_spot['SEASON_LAST_200_ATTEMPTS']
-    play_event_spot['SEASON_LAST_100_HOME_PERCENT'] = play_event_spot['SEASON_LAST_100_HOME'] / play_event_spot['SEASON_LAST_100_HOME_ATTEMPTS']
     play_event_spot['HOME_FLAG'] = np.where(play_event_spot['LOCATION'] == 'Home', 1, 0)
     play_event_spot['ACTUAL_POINTS'] = play_event_spot['MAKE'] * play_event_spot['POINTS']
     play_event_spot['TEAM'] = np.where(play_event_spot['PLAYER_ID'] == 0, 'OPPONENT', 'NDA')
-    play_event_spot['TEAM_POINTS'] = play_event_spot.groupby(by=['GAME_ID', 'YEAR', 'TEAM'])['ACTUAL_POINTS'].transform('sum')
     play_event_spot['ROLLING_POINTS_TEAM'] = play_event_spot.groupby(by=['GAME_ID', 'YEAR', 'TEAM'])['ACTUAL_POINTS'].transform(lambda x: x.rolling(window=1000, min_periods=0).sum())
     play_event_spot['GAME_TEAM_MAKES'] = play_event_spot.groupby(by=['GAME_ID', 'TEAM', 'YEAR', 'SPOT', 'SHOT_DEFENSE'])['MAKE'].transform('sum')
     play_event_spot['GAME_TEAM_ATTEMPTS'] = play_event_spot.groupby(by=['GAME_ID', 'TEAM', 'YEAR', 'SPOT', 'SHOT_DEFENSE'])['ATTEMPT'].transform('sum')
