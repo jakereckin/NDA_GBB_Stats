@@ -7,12 +7,7 @@ import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
 
-def create_db():
-    if os.path.exists(r'C:\Users\Jake\Documents\GitHub\NDA_GBB_Stats'):
-        return r'C:\Users\Jake\Documents\GitHub\NDA_GBB_Stats\NDA_BB.db'
-    else:
-        return 'NDA_BB.db'
-    
+
 def ellipse_arc(x_center=0.0,
                  y_center=0.0, 
                  a=8.5, 
@@ -31,12 +26,12 @@ def ellipse_arc(x_center=0.0,
             path += ' Z'
         return path
 
-def load_shot_chart_team(totals,
-                         team_selected):
+def load_shot_chart_team(totals, team_selected):
     xlocs = totals['XSPOT']
     ylocs = totals['YSPOT']
-    freq_by_hex = totals['ATTEMPT']
+    freq_by_hex = totals['ATTEMPTS']
     accs_by_hex = totals['POINTS_PER_ATTEMPT']
+    st.write(accs_by_hex[1])
     spot = totals['SHOT_SPOT']
     hg_percent = totals['HG_PERCENT'].round(3)
     marker_cmin = 0.0
@@ -55,7 +50,7 @@ def load_shot_chart_team(totals,
                              mode='markers',
                              name='markers',
                              marker=dict(color=totals['POINTS_PER_ATTEMPT'],
-                                         size=totals['ATTEMPT'],
+                                         size=totals['ATTEMPTS'],
                                          sizemode='area', 
                                          sizeref=2. * max(freq_by_hex) / (11. ** 3),
                                          sizemin=2.5,
@@ -86,19 +81,13 @@ def load_shot_chart_team(totals,
                              hoverinfo='text')
     )
     fig_height = 600 * (470 + 2 * 10) / (500 + 2 * 10)
-    fig.update_layout(width=10, 
-                      height=fig_height)
-    fig.update_xaxes(range=[-250 - 10, 
-                            250 + 10])
-    fig.update_yaxes(range=[-52.5 - 10, 
-                            417.5 + 10])
+    fig.update_layout(width=10, height=fig_height)
+    fig.update_xaxes(range=[-250 - 10, 250 + 10])
+    fig.update_yaxes(range=[-52.5 - 10, 417.5 + 10])
     threept_break_y = 0.47765084
     three_line_col = "#777777"
     main_line_col = "#777777"
-    fig.update_layout(margin=dict(l=20, 
-                                  r=20, 
-                                  t=20, 
-                                  b=20),
+    fig.update_layout(margin=dict(l=20, r=20, t=20, b=20),
                       paper_bgcolor="white",
                       plot_bgcolor="white",
                       yaxis=dict(scaleanchor="x",
@@ -120,16 +109,14 @@ def load_shot_chart_team(totals,
                                    y0=-52.5, 
                                    x1=250, 
                                    y1=417.5,
-                                   line=dict(color=main_line_col, 
-                                             width=1),
+                                   line=dict(color=main_line_col, width=1),
                                    layer='below'),
                               dict(type="rect", 
                                    x0=-60, 
                                    y0=-52.5, 
                                    x1=60, 
                                    y1=137.5,
-                                   line=dict(color=main_line_col, 
-                                             width=1),
+                                   line=dict(color=main_line_col, width=1),
                                    layer='below'),
                               dict(type="circle", 
                                    x0=-60, 
@@ -138,24 +125,21 @@ def load_shot_chart_team(totals,
                                    y1=197.5, 
                                    xref="x", 
                                    yref="y",
-                                   line=dict(color=main_line_col, 
-                                             width=1),
+                                   line=dict(color=main_line_col, width=1),
                                    layer='below'),
                               dict(type="line", 
                                    x0=-60, 
                                    y0=137.5, 
                                    x1=60, 
                                    y1=137.5,
-                                   line=dict(color=main_line_col, 
-                                             width=1),
+                                   line=dict(color=main_line_col, width=1),
                                    layer='below'),
                                dict(type="rect", 
                                     x0=-2, 
                                     y0=-7.25, 
                                     x1=2, 
                                     y1=-12.5,
-                                    line=dict(color="#ec7607", 
-                                              width=1),
+                                    line=dict(color="#ec7607", width=1),
                                     fillcolor='#ec7607',),
                                dict(type="circle", 
                                     x0=-7.5, 
@@ -164,15 +148,13 @@ def load_shot_chart_team(totals,
                                     y1=7.5, 
                                     xref="x", 
                                     yref="y",
-                                    line=dict(color="#ec7607", 
-                                              width=1),),
+                                    line=dict(color="#ec7607", width=1),),
                               dict(type="line", 
                                    x0=-30, 
                                    y0=-12.5, 
                                    x1=30, 
                                    y1=-12.5,
-                                   line=dict(color="#ec7607", 
-                                             width=1),),
+                                   line=dict(color="#ec7607", width=1),),
                               dict(type="path",
                                    path=ellipse_arc(a=40,
                                                     b=40, 
@@ -187,24 +169,21 @@ def load_shot_chart_team(totals,
                                                     start_angle=0.0, 
                                                     end_angle=np.pi - 0.0, 
                                                     N=5000),
-                                   line=dict(color=main_line_col, 
-                                             width=1),
+                                   line=dict(color=main_line_col, width=1),
                                    layer='below'),
                               dict(type="line", 
                                    x0=-200.5, 
                                    y0=-52.5,
                                    x1=-200.5, 
                                    y1=threept_break_y,
-                                   line=dict(color=three_line_col, 
-                                             width=1), 
+                                   line=dict(color=three_line_col, width=1), 
                                    layer='below'),
                               dict(type="line", 
                                    x0=200.5, 
                                    y0=-52.5, 
                                    x1=200.5, 
                                    y1=threept_break_y,
-                                   line=dict(color=three_line_col, 
-                                             width=1), 
+                                   line=dict(color=three_line_col, width=1), 
                                    layer='below'),
                               dict(type="path",
                                    path=ellipse_arc(y_center=417.5, 
@@ -212,14 +191,12 @@ def load_shot_chart_team(totals,
                                                     b=60, 
                                                     start_angle=-0, 
                                                     end_angle=-np.pi),
-                                  line=dict(color=main_line_col, 
-                                            width=1), 
+                                  line=dict(color=main_line_col, width=1), 
                                   layer='below'),]
     )
     return fig
     
-def load_shot_chart_player(totals,
-                    players_selected):
+def load_shot_chart_player(totals, players_selected):
     xlocs = totals['XSPOT']
     ylocs = totals['YSPOT']
     freq_by_hex = totals['ATTEMPT']
@@ -275,19 +252,13 @@ def load_shot_chart_player(totals,
                              hoverinfo='text')
     )
     fig_height = 600 * (470 + 2 * 10) / (500 + 2 * 10)
-    fig.update_layout(width=10, 
-                      height=fig_height)
-    fig.update_xaxes(range=[-250 - 10, 
-                            250 + 10])
-    fig.update_yaxes(range=[-52.5 - 10, 
-                            417.5 + 10])
+    fig.update_layout(width=10, height=fig_height)
+    fig.update_xaxes(range=[-250 - 10, 250 + 10])
+    fig.update_yaxes(range=[-52.5 - 10, 417.5 + 10])
     threept_break_y = 0.47765084
     three_line_col = "#777777"
     main_line_col = "#777777"
-    fig.update_layout(margin=dict(l=20, 
-                                  r=20, 
-                                  t=20, 
-                                  b=20),
+    fig.update_layout(margin=dict(l=20, r=20, t=20, b=20),
                       paper_bgcolor="white",
                       plot_bgcolor="white",
                       yaxis=dict(scaleanchor="x",
@@ -309,16 +280,14 @@ def load_shot_chart_player(totals,
                                    y0=-52.5, 
                                    x1=250, 
                                    y1=417.5,
-                                   line=dict(color=main_line_col, 
-                                             width=1),
+                                   line=dict(color=main_line_col, width=1),
                                    layer='below'),
                               dict(type="rect", 
                                    x0=-60, 
                                    y0=-52.5, 
                                    x1=60, 
                                    y1=137.5,
-                                   line=dict(color=main_line_col, 
-                                             width=1),
+                                   line=dict(color=main_line_col, width=1),
                                    layer='below'),
                               dict(type="circle", 
                                    x0=-60, 
@@ -327,24 +296,21 @@ def load_shot_chart_player(totals,
                                    y1=197.5, 
                                    xref="x", 
                                    yref="y",
-                                   line=dict(color=main_line_col, 
-                                             width=1),
+                                   line=dict(color=main_line_col, width=1),
                                    layer='below'),
                               dict(type="line", 
                                    x0=-60, 
                                    y0=137.5, 
                                    x1=60, 
                                    y1=137.5,
-                                   line=dict(color=main_line_col, 
-                                             width=1),
+                                   line=dict(color=main_line_col, width=1),
                                    layer='below'),
                                dict(type="rect", 
                                     x0=-2, 
                                     y0=-7.25, 
                                     x1=2, 
                                     y1=-12.5,
-                                    line=dict(color="#ec7607", 
-                                              width=1),
+                                    line=dict(color="#ec7607", width=1),
                                     fillcolor='#ec7607',),
                                dict(type="circle", 
                                     x0=-7.5, 
@@ -353,22 +319,19 @@ def load_shot_chart_player(totals,
                                     y1=7.5, 
                                     xref="x", 
                                     yref="y",
-                                    line=dict(color="#ec7607", 
-                                              width=1),),
+                                    line=dict(color="#ec7607", width=1),),
                               dict(type="line", 
                                    x0=-30, 
                                    y0=-12.5, 
                                    x1=30, 
                                    y1=-12.5,
-                                   line=dict(color="#ec7607", 
-                                             width=1),),
+                                   line=dict(color="#ec7607", width=1),),
                               dict(type="path",
                                    path=ellipse_arc(a=40,
                                                     b=40, 
                                                     start_angle=0, 
                                                     end_angle=np.pi),
-                                   line=dict(color=main_line_col, 
-                                             width=1), 
+                                   line=dict(color=main_line_col, width=1),
                                    layer='below'),
                               dict(type="path",
                                    path=ellipse_arc(a=200.5, 
@@ -376,24 +339,21 @@ def load_shot_chart_player(totals,
                                                     start_angle=0.0, 
                                                     end_angle=np.pi - 0.0, 
                                                     N=5000),
-                                   line=dict(color=main_line_col, 
-                                             width=1),
+                                   line=dict(color=main_line_col, width=1),
                                    layer='below'),
                               dict(type="line", 
                                    x0=-200.5, 
                                    y0=-52.5,
                                    x1=-200.5, 
                                    y1=threept_break_y,
-                                   line=dict(color=three_line_col, 
-                                             width=1), 
+                                   line=dict(color=three_line_col, width=1), 
                                    layer='below'),
                               dict(type="line", 
                                    x0=200.5, 
                                    y0=-52.5, 
                                    x1=200.5, 
                                    y1=threept_break_y,
-                                   line=dict(color=three_line_col, 
-                                             width=1), 
+                                   line=dict(color=three_line_col, width=1), 
                                    layer='below'),
                               dict(type="path",
                                    path=ellipse_arc(y_center=417.5, 
@@ -401,8 +361,7 @@ def load_shot_chart_player(totals,
                                                     b=60, 
                                                     start_angle=-0, 
                                                     end_angle=-np.pi),
-                                  line=dict(color=main_line_col, 
-                                            width=1), 
+                                  line=dict(color=main_line_col, width=1), 
                                   layer='below'),]
     )
     return fig

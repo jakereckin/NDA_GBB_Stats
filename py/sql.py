@@ -49,6 +49,7 @@ SELECT PLAYER_ID,
 
 def team_shot_chart_sql():
     sql = """
+    WITH RAW_DATA AS (
     SELECT PLAYS.GAME_ID,
                 PLAYS.PLAYER_ID,
                 PLAYS.SHOT_SPOT,
@@ -82,6 +83,62 @@ def team_shot_chart_sql():
     INNER JOIN GAMES
         ON GAMES.GAME_ID = PLAYS.GAME_ID
     WHERE PLAYS.SHOT_SPOT != 'FREE_THROW1'
-    AND PLAYS.PLAYER_ID != '0'
+    AND PLAYS.PLAYER_ID != '0'),
+
+    SUMMED_TABLE AS (
+    SELECT U_ID,
+                    XSPOT,
+                    YSPOT,
+                    SHOT_SPOT,
+                    POINTS,
+                    OPPONENT,
+                    LOCATION,
+                    DATE,
+                    SEASON,
+                    GAME_ID,
+                    SUM(MAKE) AS MAKES,
+                    SUM(HEAVILY_GUARDED) HEAVILY_GUARDED,
+                    SUM(ATTEMPT) AS ATTEMPTS
+        FROM RAW_DATA
+        GROUP BY U_ID,
+                    XSPOT,
+                    YSPOT,
+                    SHOT_SPOT,
+                    POINTS,
+                    OPPONENT,
+                    LOCATION,
+                    DATE,
+                    SEASON,
+                    GAME_ID)
+
+    SELECT U_ID,
+                    XSPOT,
+                    YSPOT,
+                    SHOT_SPOT,
+                    POINTS,
+                    OPPONENT,
+                    GAME_ID,
+                    LOCATION,
+                    DATE,
+                    SEASON,
+                    MAKES,
+                    HEAVILY_GUARDED,
+                    ATTEMPTS,
+                    CASE
+                            WHEN ATTEMPTS = 0
+                                THEN 0
+                        ELSE CAST(MAKES AS FLOAT) / CAST(ATTEMPTS AS FLOAT)
+                    END AS MAKE_PERCENT,
+                    CASE
+                            WHEN ATTEMPTS = 0
+                                THEN 0
+                        ELSE CAST(HEAVILY_GUARDED AS FLOAT) / CAST(ATTEMPTS AS FLOAT)
+                    END  HG_PERCENT,
+                    CASE
+                            WHEN ATTEMPTS = 0
+                                THEN 0
+                        ELSE CAST(POINTS * MAKES AS FLOAT) / CAST(ATTEMPTS AS FLOAT)
+                    END  AS POINTS_PER_ATTEMPT
+    FROM SUMMED_TABLE
     """
     return sql
