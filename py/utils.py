@@ -31,7 +31,6 @@ def load_shot_chart_team(totals, team_selected):
     ylocs = totals['YSPOT']
     freq_by_hex = totals['ATTEMPTS']
     accs_by_hex = totals['POINTS_PER_ATTEMPT']
-    st.write(accs_by_hex[1])
     spot = totals['SHOT_SPOT']
     hg_percent = totals['HG_PERCENT'].round(3)
     marker_cmin = 0.0
@@ -199,7 +198,7 @@ def load_shot_chart_team(totals, team_selected):
 def load_shot_chart_player(totals, players_selected):
     xlocs = totals['XSPOT']
     ylocs = totals['YSPOT']
-    freq_by_hex = totals['ATTEMPT']
+    freq_by_hex = totals['ATTEMPTS']
     accs_by_hex = totals['POINTS_PER_ATTEMPT']
     spot = totals['SHOT_SPOT']
     hg_percent = totals['HG_PERCENT'].round(3)
@@ -221,7 +220,7 @@ def load_shot_chart_player(totals, players_selected):
                              mode='markers',
                              name='markers',
                              marker=dict(color=totals['POINTS_PER_ATTEMPT'],
-                                         size=totals['ATTEMPT'],
+                                         size=totals['ATTEMPTS'],
                                          sizemode='area', 
                                          sizeref=2. * max(freq_by_hex) / (11. ** 3),
                                          sizemin=2.5,

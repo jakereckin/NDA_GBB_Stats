@@ -142,3 +142,91 @@ def team_shot_chart_sql():
     FROM SUMMED_TABLE
     """
     return sql
+
+def player_shot_chart_sql():
+    sql = """
+    WITH RAW_DATA AS (
+SELECT PLAYS.GAME_ID,
+               PLAYS.PLAYER_ID,
+              PLAYS.SHOT_SPOT,
+              PLAYS.SHOT_DEFENSE,
+              PLAYS.MAKE_MISS,
+              PLAYS.PLAY_NUM,
+              SPOTS.XSPOT,
+              SPOTS.YSPOT,
+              SPOTS.OPP_EXPECTED,
+              SPOTS.POINTS,
+              GAMES.OPPONENT,
+              GAMES.LOCATION,
+              GAMES.DATE,
+              GAMES.SEASON,
+              PLAYERS.FIRST_NAME || ' ' || PLAYERS.LAST_NAME AS NAME,
+              CASE
+                    WHEN PLAYS.MAKE_MISS = 'Y'
+                           THEN 1
+                    ELSE 0
+              END AS MAKE,
+              CASE
+                    WHEN PLAYS.SHOT_DEFENSE = 'HEAVILY_GUARDED'
+                           THEN 1
+                    ELSE 0
+              END AS HEAVILY_GUARDED,
+              1 AS ATTEMPT
+  FROM PLAYS
+  INNER JOIN SPOTS
+   ON PLAYS.SHOT_SPOT = SPOTS.SPOT
+INNER JOIN GAMES
+    ON GAMES.GAME_ID = PLAYS.GAME_ID
+INNER JOIN PLAYERS
+     ON PLAYERS.YEAR = GAMES.SEASON
+  AND PLAYERS.NUMBER = PLAYS.PLAYER_ID
+WHERE PLAYS.SHOT_SPOT != 'FREE_THROW1'
+AND PLAYS.PLAYER_ID != '0'
+AND PLAYERS.YEAR > 2023),
+
+SUMMED_TABLE AS (
+  SELECT NAME,
+                  XSPOT,
+                  YSPOT,
+                  SHOT_SPOT,
+                  POINTS,
+                  SEASON,
+                  SUM(MAKE) AS MAKES,
+                  SUM(HEAVILY_GUARDED) HEAVILY_GUARDED,
+                  SUM(ATTEMPT) AS ATTEMPTS
+    FROM RAW_DATA
+    GROUP BY NAME,
+                  XSPOT,
+                  YSPOT,
+                  SHOT_SPOT,
+                  POINTS,
+                  SEASON)
+
+SELECT NAME,
+                  XSPOT,
+                  YSPOT,
+                  SHOT_SPOT,
+                  POINTS,
+                  SEASON,
+                  MAKES,
+                  HEAVILY_GUARDED,
+                  ATTEMPTS,
+                  CASE
+                        WHEN ATTEMPTS = 0
+                              THEN 0
+                       ELSE CAST(MAKES AS FLOAT) / CAST(ATTEMPTS AS FLOAT)
+                   END AS MAKE_PERCENT,
+                  CASE
+                        WHEN ATTEMPTS = 0
+                              THEN 0
+                       ELSE CAST(HEAVILY_GUARDED AS FLOAT) / CAST(ATTEMPTS AS FLOAT)
+                   END  HG_PERCENT,
+                  CASE
+                        WHEN ATTEMPTS = 0
+                              THEN 0
+                       ELSE CAST(POINTS * MAKES AS FLOAT) / CAST(ATTEMPTS AS FLOAT)
+                   END  AS POINTS_PER_ATTEMPT
+  FROM SUMMED_TABLE
+  
+    """
+    return sql
