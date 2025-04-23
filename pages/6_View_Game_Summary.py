@@ -37,14 +37,13 @@ def load_data():
         sql=sql.get_game_summary_sql(),
         connection=sql_lite_connect
     )
-    game_summary_pl = pl.from_pandas(data=game_summary)
-    return game_summary_pl
+    return game_summary
 
 # ----------------------------------------------------------------------------
-@st.cache_data
 def get_team_games(game_summary):
+    game_summary_pl = pl.from_pandas(data=game_summary)
     team_data = (
-        game_summary.groupby(by='LABEL').sum()
+        game_summary_pl.groupby(by='LABEL').sum()
     )
     return team_data
 
@@ -125,12 +124,12 @@ def apply_derived(data):
 
 # ============================================================================
 game_summary = load_data()
-
-
 team_data = get_team_games(game_summary=game_summary)
 
 game_summary = game_summary.to_pandas()
 team_data = team_data.to_pandas()
+
+
 season_list = game_summary['SEASON'].unique().tolist()
 
 season = st.multiselect(label='Select Season', options=season_list)
