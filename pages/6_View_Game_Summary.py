@@ -126,7 +126,7 @@ def apply_derived(data):
 game_summary = load_data()
 team_data = get_team_games(game_summary=game_summary)
 
-game_summary = game_summary.to_pandas()
+#game_summary = game_summary.to_pandas()
 team_data = team_data.to_pandas()
 
 
