@@ -1,9 +1,6 @@
-import numpy as np
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
 import polars as pl
 from py import sql, data_source
 pd.options.mode.chained_assignment = None
@@ -24,8 +21,7 @@ other_stats = [
 @st.cache_resource
 def load_data():
     game_summary = data_source.run_query(
-        sql=sql.get_game_summary_sql(),
-        connection=sql_lite_connect
+        sql=sql.get_game_summary_sql(), connection=sql_lite_connect
     )
     return game_summary
 
@@ -42,8 +38,8 @@ def get_team_games(game_summary):
 def apply_derived(data):
     data = pl.from_pandas(data)
     data = data.with_columns(
-        TWO_POINTS_SCORED=2 * pl.col(name='TWO_FGM'),
-        THREE_POINTS_SCORED=3 * pl.col(name='THREE_FGM')
+        TWO_POINTS_SCORED=(2 * pl.col(name='TWO_FGM')),
+        THREE_POINTS_SCORED=(3 * pl.col(name='THREE_FGM'))
     )
     data = data.with_columns(
         TOTAL_POINTS_SCORED=(

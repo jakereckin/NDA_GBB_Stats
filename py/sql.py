@@ -47,37 +47,41 @@ SELECT PLAYER_ID,
     """
     return sql
 
-def get_player_sql():
+def team_shot_chart_sql():
     sql = """
-    SELECT NUMBER,
-           FIRST_NAME,
-           LAST_NAME,
-           YEAR,
-           FIRST_NAME || ' ' || LAST_NAME AS NAME
-      FROM PLAYERS
-    """
-    return sql
-
-def get_player_no_opp_sql():
-    sql = """
-    SELECT NUMBER,
-           FIRST_NAME,
-           LAST_NAME,
-           YEAR,
-           FIRST_NAME || ' ' || LAST_NAME AS NAME
-      FROM PLAYERS
-      WHERE NUMBER != 0
-    """
-    return sql
-
-def get_games_sql():
-    sql = """
-    SELECT  GAME_ID,
-                    OPPONENT,
-                    LOCATION,
-                    DATE,
-                    SEASON,
-                    OPPONENT || '  -  ' || DATE AS LABEL
-    FROM GAMES
+    SELECT PLAYS.GAME_ID,
+                PLAYS.PLAYER_ID,
+                PLAYS.SHOT_SPOT,
+                PLAYS.SHOT_DEFENSE,
+                PLAYS.MAKE_MISS,
+                PLAYS.PLAY_NUM,
+                SPOTS.XSPOT,
+                SPOTS.YSPOT,
+                SPOTS.OPP_EXPECTED,
+                SPOTS.POINTS,
+                GAMES.OPPONENT,
+                GAMES.LOCATION,
+                GAMES.DATE,
+                GAMES.SEASON,
+                GAMES.OPPONENT || ' ' || GAMES.DATE AS GAME,
+                GAMES.OPPONENT || ' -  ' || GAMES.DATE AS U_ID,
+                CASE
+                        WHEN PLAYS.MAKE_MISS = 'Y'
+                            THEN 1
+                        ELSE 0
+                END AS MAKE,
+                CASE
+                        WHEN PLAYS.SHOT_DEFENSE = 'HEAVILY_GUARDED'
+                            THEN 1
+                        ELSE 0
+                END AS HEAVILY_GUARDED,
+                1 AS ATTEMPT
+    FROM PLAYS
+    INNER JOIN SPOTS
+    ON PLAYS.SHOT_SPOT = SPOTS.SPOT
+    INNER JOIN GAMES
+        ON GAMES.GAME_ID = PLAYS.GAME_ID
+    WHERE PLAYS.SHOT_SPOT != 'FREE_THROW1'
+    AND PLAYS.PLAYER_ID != '0'
     """
     return sql
