@@ -4,11 +4,13 @@ import plotly.express as px
 import pandas as pd
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+import polars as pl
+from py import sql, data_source
 pd.options.mode.chained_assignment = None
 
 st.cache_resource.clear()
 
-
+sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 list_of_stats = [
     'LABEL', 'OFFENSIVE_EFFICENCY', 'EFG%', '2PPA', '3PPA',
     'PPA', 'POINTS', 'POSSESSIONS', 'GAME_SCORE', 'TURNOVER_RATE'
@@ -29,128 +31,106 @@ def get_client():
 
 
 # ----------------------------------------------------------------------------
-def get_my_db(client):
-    my_db = client['NDA_GBB']
-    games_db = my_db['GAMES']
-    players_db = my_db['PLAYERS']
-    game_summary_db = my_db['GAME_SUMMARY']
-    games = pd.DataFrame(data=list(games_db.find())).drop(columns=['_id'])
-    players = pd.DataFrame(data=list(players_db.find())).drop(columns=['_id'])
-    players = players[players['NUMBER'] != 0]
-    game_summary = (
-        pd.DataFrame(data=list(game_summary_db.find())).drop(columns=['_id'])
-    )
-    return games, players, game_summary
-
-
-# ----------------------------------------------------------------------------
 @st.cache_resource
 def load_data():
-    client = get_client()
-    games, players, game_summary = get_my_db(client)
-    games['SEASON'] = (
-        games['SEASON'].astype(dtype='str').str.replace(pat='.0', 
-                                                        repl='', 
-                                                        regex=False)
+    game_summary = data_source.run_query(
+        sql=sql.get_game_summary_sql(),
+        connection=sql_lite_connect
     )
-    players['YEAR'] = (
-        players['YEAR'].astype(dtype='str').str.replace(pat='.0', 
-                                                        repl='', 
-                                                        regex=False)
-    )
-    return players, games, game_summary
-
+    game_summary_pl = pl.from_pandas(data=game_summary)
+    return game_summary_pl
 
 # ----------------------------------------------------------------------------
 @st.cache_data
-def get_games(game_summary, games, players):
-
-    game_summary = pd.merge(left=game_summary, right=games, on='GAME_ID')
-
-    game_summary = pd.merge(
-        left=game_summary, right=players, left_on=['PLAYER_ID', 'SEASON'],
-        right_on=['NUMBER', 'YEAR']
-    )
-    game_summary['LABEL'] = (
-        game_summary['OPPONENT'] + ' - ' + game_summary['DATE']
-    )
-    game_summary['NAME'] = (
-        game_summary['FIRST_NAME'] + ' ' + game_summary['LAST_NAME']
-    )
-    game_summary['FGA'] = (
-        game_summary['TWO_FGA'] + game_summary['THREE_FGA']
-    )
-    game_summary['FGM'] = (
-        game_summary['TWO_FGM'] + game_summary['THREE_FGM']
-    )
-    game_summary['POINTS'] = (
-        (2*game_summary['TWO_FGM']) + (3*game_summary['THREE_FGM'])
-        + (game_summary['FTM'])
-    )
-    game_summary['GAME_SCORE'] = (
-        game_summary['POINTS']
-        + 0.4*game_summary['FGM'] - 0.7*game_summary['FGA']
-        - 0.4*(game_summary['FTA']-game_summary['FTM'])
-        + 0.7*game_summary['OFFENSIVE_REBOUNDS']
-        + 0.3*game_summary['DEFENSIVE_REBOUNDS'] + game_summary['STEALS']
-        + 0.7*game_summary['ASSISTS'] + 0.7*game_summary['BLOCKS']
-        - game_summary['TURNOVER']
-    )
+def get_team_games(game_summary):
     team_data = (
-        game_summary.copy().groupby(by='LABEL', as_index=False).sum()
+        game_summary.groupby(by='LABEL').sum()
     )
-    return game_summary, team_data
+    return team_data
 
 
 # ----------------------------------------------------------------------------
 def apply_derived(data):
+    data = pl.from_pandas(data)
+    data = data.with_columns(
+        TWO_POINTS_SCORED=2 * pl.col(name='TWO_FGM'),
+        THREE_POINTS_SCORED=3 * pl.col(name='THREE_FGM')
+    )
+    data = data.with_columns(
+        TOTAL_POINTS_SCORED=(
+            pl.col(name='TWO_POINTS_SCORED') 
+            + pl.col(name='THREE_POINTS_SCORED')
+        ),
+        OE_NUM=(
+            pl.col(name='FGM') + pl.col(name='ASSISTS')
+        ),
+        OE_DENOM=(
+            pl.col(name='FGA')
+            - pl.col(name='OFFENSIVE_REBOUNDS') 
+            + pl.col(name='ASSISTS') 
+            + pl.col(name='TURNOVER')
+        ),
+        EFG_NUM=(
+            pl.col(name='TWO_FGM') + (1.5*pl.col(name='THREE_FGM'))
+        ),
+        POSSESSIONS=(
+            .96 
+            * (pl.col(name='FGA') 
+               + pl.col(name='TURNOVER') 
+               + (.44 * pl.col(name='FTA')) 
+               - pl.col(name='OFFENSIVE_REBOUNDS'))
+        )
+    )
+    data = data.with_columns(
+        TURNOVER_RATE=(
+            pl.col(name='TURNOVER') / pl.col(name='POSSESSIONS')
+        )
+    )
+    data = data.with_columns(
+        pl.when(condition=pl.col(name='TWO_FGA') > 0)
+          .then(statement=pl.col(name='TWO_POINTS_SCORED') 
+                / pl.col(name='TWO_FGA'))
+          .otherwise(statement=0)
+          .alias(name='2PPA'),
+        pl.when(condition=pl.col(name='THREE_FGA') > 0)
+          .then(statement=pl.col(name='THREE_POINTS_SCORED') 
+              / pl.col(name='THREE_FGA'))
+          .otherwise(statement=0)
+          .alias(name='3PPA'),
+        pl.when(condition=pl.col(name='FGA') > 0)
+          .then(statement=pl.col(name='TOTAL_POINTS_SCORED') 
+                / pl.col(name='FGA'))
+          .otherwise(statement=0)
+          .alias(name='PPA'),
+        pl.when(condition=pl.col(name='OE_DENOM') != 0)
+          .then(statement=pl.col(name='OE_NUM') 
+                / pl.col(name='OE_DENOM'))
+          .otherwise(statement=0)
+          .alias(name='OFFENSIVE_EFFICENCY'),
+        pl.when(condition=pl.col(name='FGA') > 0)
+          .then(statement=pl.col(name='EFG_NUM') 
+                / pl.col(name='FGA'))
+          .otherwise(statement=0)
+          .alias(name='EFG%'),
 
-    data['TWO_POINTS_SCORED'] = 2 * data['TWO_FGM']
-    data['THREE_POINTS_SCORED'] = 3 * data['THREE_FGM']
-    data['TOTAL_POINTS_SCORED'] = (
-        data['TWO_POINTS_SCORED'] + data['THREE_POINTS_SCORED']
     )
-    data['OE_NUM'] = data['FGM'] + data['ASSISTS']
-    data['OE_DENOM'] = (
-        data['FGA'] - data['OFFENSIVE_REBOUNDS'] + data['ASSISTS'] 
-        + data['TURNOVER']
+    data = data.with_columns(
+        EFF_POINTS=(
+            pl.col(name='POINTS') * pl.col(name='OFFENSIVE_EFFICENCY')
+        )
     )
-    data['EFG_NUM'] = data['TWO_FGM'] + (1.5*data['THREE_FGM'])
-
-    data['2PPA'] = np.where(
-        data['TWO_FGA'] > 0, data['TWO_POINTS_SCORED'] / data['TWO_FGA'], 0
-    )
-    data['3PPA'] = np.where(
-        data['THREE_FGA'] > 0, 
-        data['THREE_POINTS_SCORED'] / data['THREE_FGA'], 
-        0
-    )
-    data['PPA'] = np.where(
-        data['FGA'] > 0, data['TOTAL_POINTS_SCORED'] / data['FGA'], 0
-    )
-    data['OFFENSIVE_EFFICENCY'] = np.where(
-        data['OE_DENOM'] != 0, data['OE_NUM'] / data['OE_DENOM'], 0
-    )
-    data['EFG%'] = np.where(
-        data['FGA'] > 0, data['EFG_NUM'] / data['FGA'], 0
-    ) 
-    data['EFF_POINTS'] = data['POINTS'] * data['OFFENSIVE_EFFICENCY']
-    data['POSSESSIONS'] = (
-        .96 * (data['FGA'] + data['TURNOVER'] 
-               + (.44 * data['FTA']) - data['OFFENSIVE_REBOUNDS'])
-    )
-    data['TURNOVER_RATE'] = (
-        data['TURNOVER'] / data['POSSESSIONS']
-    )
+    data = data.to_pandas()
     return data
 
 
 # ============================================================================
-players, games, game_summary = load_data()
+game_summary = load_data()
 
-game_summary, team_data = get_games(
-    game_summary=game_summary, games=games, players=players
-)
+
+team_data = get_team_games(game_summary=game_summary)
+
+game_summary = game_summary.to_pandas()
+team_data = team_data.to_pandas()
 season_list = game_summary['SEASON'].unique().tolist()
 
 season = st.multiselect(label='Select Season', options=season_list)
@@ -213,7 +193,11 @@ if season_list:
 
         if data:
             fig = px.bar(
-                data_frame=player_level, x=data, y='NAME', orientation='h',
-                text=data, color_discrete_sequence=['green']
+                data_frame=player_level,
+                x=data,
+                y='NAME',
+                orientation='h',
+                text=data,
+                color_discrete_sequence=['green']
             )
             st.plotly_chart(figure_or_data=fig, use_container_width=True)

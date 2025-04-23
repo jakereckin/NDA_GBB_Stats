@@ -8,3 +8,5 @@ pymongo==4.10.1
 scikit_learn==1.6.1
 streamlit==1.37.1
 lightgbm==4.5.0
+polars==0.18.15
+sqlitecloud==0.0.83

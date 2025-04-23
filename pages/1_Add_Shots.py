@@ -302,8 +302,8 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             )
             my_len = len(current_game)
             st.text(
-                body=f'Submitted {test_make}\ 
-                      by player {player_number}\ 
+                body=f'Submitted {test_make}\
+                      by player {player_number}\
                       from spot {spot_val}\
                       with defense {shot_defense}\
                       for game {game_val_final}'
