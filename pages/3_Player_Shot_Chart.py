@@ -60,7 +60,6 @@ if season:
      )
      if players_selected:
           totals, totals_sorted = format_visual_data(this_game=this_game)
-          st.write(totals)
           fig = ut.load_shot_chart_player(
                totals=totals, players_selected=players_selected
           )
