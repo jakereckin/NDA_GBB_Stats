@@ -1,3 +1,30 @@
+def get_players_sql():
+    sql = """
+    SELECT NUMBER,
+           FIRST_NAME,
+           LAST_NAME,
+           YEAR
+      FROM PLAYERS
+    """
+    return sql
+
+def insert_player_sql():
+    sql = """
+    INSERT INTO PLAYERS (NUMBER,
+                         FIRST_NAME,
+                         LAST_NAME,
+                         YEAR)
+    VALUES (?, ?, ?, ?)
+    """
+    return sql
+
+def delete_player_sql():
+    sql = """
+    DELETE FROM PLAYERS
+     WHERE NUMBER = ? AND YEAR = ?
+    """
+    return sql
+
 def get_game_summary_sql():
     sql = """
 SELECT PLAYER_ID,
