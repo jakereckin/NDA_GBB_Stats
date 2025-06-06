@@ -2,13 +2,15 @@ import numpy as np
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
+import polars as pl
+from py import sql, data_source
 import joblib
 
 pd.options.mode.chained_assignment = None
 
 st.cache_resource.clear()
+
+sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
 effective_field_goal_description = """
 Effective FG% is a useful metric to understand shot selection.
@@ -25,97 +27,21 @@ liklihood of the shot being made.
 
 Example: 33% chance of making a 3 pointer is 0.33 * 3 = 1 expected point.
 """
-
 # ----------------------------------------------------------------------------
 @st.cache_resource
-def get_client():
-    """
-    Establishes a connection to the MongoDB server 
-    using credentials stored in Streamlit secrets.
-
-    Returns:
-        MongoClient: A client instance connected to the MongoDB server.
-    """
-    pwd = st.secrets['mongo_gbb']['MONGBO_GBB_PASSWORD']
-    uri =  f"mongodb+srv://nda-gbb-admin:{pwd}@nda-gbb.1lq4irv.mongodb.net/"
-    # Create a new client and connect to the server
-    client = MongoClient(uri, server_api=ServerApi('1'))
-    return client
-
-
-# ----------------------------------------------------------------------------
-def get_my_db(client):
-    """
-    Retrieves data from the specified MongoDB client
-    and returns it as pandas DataFrames.
-
-    Args:
-        client (pymongo.MongoClient): The MongoDB client
-        connected to the database.
-
-    Args:
-        client (pymongo.MongoClient): The MongoDB client
-        connected to the database.
-
-    Returns:
-        tuple: A tuple containing the following pandas DataFrames:
-            - plays (pd.DataFrame): DataFrame containing 
-                data from the 'PLAYS' collection.
-            - spots (pd.DataFrame): DataFrame containing
-                data from the 'SPOTS' collection.
-            - games (pd.DataFrame): DataFrame containing
-                data from the 'GAMES' collection.
-            - players (pd.DataFrame): DataFrame containing
-                data from the 'PLAYERS' collection.
-            - game_summary (pd.DataFrame): DataFrame containing
-                data from the 'GAME_SUMMARY' collection.
-    """
-    my_db = client['NDA_GBB']
-    plays_db = my_db['PLAYS']
-    spots_db = my_db['SPOTS']
-    games_db = my_db['GAMES']
-    players_db = my_db['PLAYERS']
-    game_summary_db = my_db['GAME_SUMMARY']
-    plays = pd.DataFrame(data=list(plays_db.find())).drop(columns=['_id'])
-    spots = pd.DataFrame(data=list(spots_db.find())).drop(columns=['_id'])
-    games = pd.DataFrame(data=list(games_db.find())).drop(columns=['_id'])
-    players = pd.DataFrame(data=list(players_db.find())).drop(columns=['_id'])
-    game_summary = (
-        pd.DataFrame(data=list(game_summary_db.find())).drop(columns=['_id'])
-    )
-    return plays, spots, games, players, game_summary
-
-
-#-----------------------------------------------------------------------------
 def load_data():
-    """
-    Loads data from the database and processes it.
-
-    Returns:
-        tuple: A tuple containing the following elements:
-            - plays (DataFrame): DataFrame containing 
-                play-by-play data.
-            - spot (DataFrame): DataFrame containing spot data.
-            - games (DataFrame): DataFrame containing game
-                data with 'SEASON' column converted to int.
-            - players (DataFrame): DataFrame containing player
-                data with 'YEAR' column converted to int.
-            - game_summary (DataFrame): DataFrame containing
-                game summary data.
-    """
-    client = get_client()
-    plays, spot, games, players, game_summary = get_my_db(client=client)
-    games['SEASON'] = games['SEASON'].astype(dtype=int)
-    players['YEAR'] = players['YEAR'].astype(dtype=int)
-    return plays, spot, games, players, game_summary
+    game_summary = data_source.run_query(
+        sql=sql.get_game_summary_sql(), connection=sql_lite_connect
+    )
+    player_data = data_source.run_query(
+        sql=sql.get_play_by_play_sql(), connection=sql_lite_connect
+    )
+    return game_summary, player_data
 
 
 #-----------------------------------------------------------------------------
 def format_data(
-        plays: pd.DataFrame,
-        spot: pd.DataFrame,
-        games: pd.DataFrame,
-        players: pd.DataFrame,
+        player_data: pd.DataFrame,
         game_summary_data: pd.DataFrame,
         selected_season: int
     ):
@@ -139,31 +65,9 @@ def format_data(
             - game_summary (pd.DataFrame): DataFrame containin
                  merged game summary data.
     """
-    games = games[games['SEASON'] == selected_season]
-    players = players[players['YEAR'] == selected_season]
-    player_data = (
-        plays.merge(right=spot, left_on='SHOT_SPOT', right_on='SPOT')
-             .merge(right=games, on='GAME_ID')
-             .merge(right=players, left_on='PLAYER_ID', right_on='NUMBER')
-    )
-    game_summary = pd.merge(left=game_summary_data, right=games, on='GAME_ID')
-
-    game_summary['LABEL'] = (
-        game_summary['OPPONENT'] + ' - ' + game_summary['DATE']
-    )
-    player_data['LABEL'] = (
-        player_data['OPPONENT'] + ' - ' + player_data['DATE']
-    )
-    player_data['NAME'] = (
-        player_data['FIRST_NAME'] + ' ' + player_data['LAST_NAME']
-    )
-    player_data['MAKE'] = np.where(player_data['MAKE_MISS'] == 'Y', 1, 0)
-
-    player_data['ATTEMPT'] = 1
-    player_data['DATE_DTTM'] = pd.to_datetime(arg=player_data['DATE'])
-    player_data = (
-        player_data.sort_values(by='DATE_DTTM').reset_index(drop=True)
-    )
+    game_summary = game_summary_data[game_summary_data['YEAR'] == selected_season]
+    player_data = player_data[player_data['SEASON'] == selected_season]
+    
     player_data2 = player_data[
         ['NAME', 'SHOT_SPOT', 'MAKE', 'ATTEMPT', 'SHOT_DEFENSE']
     ]
@@ -197,7 +101,7 @@ def get_games_data(
 
 
 # ----------------------------------------------------------------------------
-def build_features(play_event, spot, players, games):
+def build_features(player_data):
     """
     Build features for basketball play events.
 
@@ -251,12 +155,8 @@ def build_features(play_event, spot, players, games):
     _player_year_list = ['GAME_ID', 'PLAYER_ID', 'YEAR']
     _player_game_list = ['GAME_ID', 'PLAYER_ID', 'YEAR', 'SHOT_DEFENSE']
     _team_game_list = ['GAME_ID', 'TEAM', 'YEAR', 'SPOT', 'SHOT_DEFENSE']
-    play_event = play_event.merge(players, left_on='PLAYER_ID', right_on='NUMBER').merge(games, on='GAME_ID')
-    play_event = play_event[play_event['YEAR'] == play_event['SEASON']]
     play_event_spot = (
-        pd.merge(left=play_event, right=spot, left_on='SHOT_SPOT',
-                 right_on='SPOT', how='left')
-          .sort_values(by=['GAME_ID', 'PLAY_NUM'])
+          player_data.sort_values(by=['GAME_ID', 'PLAY_NUM'])
           .reset_index(drop=True)
     )
     play_event_spot['INTIAL_PERCENTAGE'] = np.where(
@@ -360,7 +260,7 @@ def build_features(play_event, spot, players, games):
         play_event_spot['MAKE'] * play_event_spot['POINTS']
     )
     play_event_spot['TEAM'] = np.where(
-        play_event_spot['PLAYER_ID'] == 0, 'OPPONENT', 'NDA'
+        play_event_spot['PLAYER_ID'] == '0', 'OPPONENT', 'NDA'
     )
     play_event_spot['ROLLING_POINTS_TEAM'] = (
         play_event_spot.groupby(by=['GAME_ID', 'YEAR', 'TEAM'])
@@ -572,25 +472,20 @@ def run_simulations(tritons, opp, sims, standard_dev):
     return all_sims
 
 
-plays, spot, games, players, gs_data = load_data()
+game_summary, player_data = load_data()
 play_event_spot = build_features(
-    play_event=plays, spot=spot, players=players, games=games
+    player_data=player_data
 )
 play_event_spot = apply_model(play_event_spot=play_event_spot)
-games['SEASON2'] = games['SEASON'].astype(dtype=int)
-games = (
-    games.sort_values(by='SEASON2', ascending=False).reset_index(drop=True)
+game_summary['SEASON2'] = game_summary['SEASON'].astype(dtype=int)
+game_summary = (
+    game_summary.sort_values(by='SEASON2', ascending=False).reset_index(drop=True)
 )
-season_list = games['SEASON'].unique().tolist()
+season_list = game_summary['SEASON'].unique().tolist()
 season = st.radio(label='Select Season', options=season_list, horizontal=True)
 if season:
-    player_data, player_data2, game_summary_cleaned = format_data(
-        plays=plays,
-        spot=spot,
-        games=games,
-        players=players,
-        game_summary_data=gs_data,
-        selected_season=season
+    player_data, player_data2, game_summary = format_data(
+        player_data=player_data, game_summary_data=game_summary, selected_season=season
     )
 
 
@@ -600,7 +495,8 @@ if season:
 
     if game != []:
         t_game, game_data = get_games_data(
-            player_data=player_data, game_summary=game_summary_cleaned,
+            player_data=player_data,
+            game_summary=game_summary,
             game=game
         )
 

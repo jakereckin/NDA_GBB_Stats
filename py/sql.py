@@ -257,3 +257,45 @@ SELECT NAME,
   
     """
     return sql
+
+def get_play_by_play_sql():
+    sql = """
+SELECT PLAYS.GAME_ID,
+                PLAYS.PLAYER_ID,
+                PLAYS.SHOT_SPOT,
+                PLAYS.SHOT_DEFENSE,
+                PLAYS.MAKE_MISS,
+                PLAYS.PLAY_NUM,
+                SPOTS.XSPOT,
+                SPOTS.YSPOT,
+                SPOTS.OPP_EXPECTED,
+                SPOTS.POINTS,
+                SPOTS.SPOT,
+                GAMES.OPPONENT,
+                GAMES.LOCATION,
+                GAMES.DATE,
+                GAMES.SEASON,
+                PLAYERS.YEAR,
+                PLAYERS.NUMBER,
+                GAMES.OPPONENT 
+                || ' - '
+                || GAMES.DATE AS LABEL,
+                PLAYERS.FIRST_NAME
+                || ' ' 
+                || PLAYERS.LAST_NAME AS NAME,
+                CASE
+                  WHEN PLAYS.MAKE_MISS = 'Y'
+                    THEN 1
+                  ELSE 0
+                END AS MAKE,
+                1 AS ATTEMPT
+FROM PLAYS
+INNER JOIN SPOTS
+  ON PLAYS.SHOT_SPOT = SPOTS.SPOT
+INNER JOIN GAMES
+  ON GAMES.GAME_ID = PLAYS.GAME_ID
+INNER JOIN PLAYERS
+  ON PLAYERS.NUMBER = PLAYS.PLAYER_ID
+AND PLAYERS.YEAR = GAMES.SEASON
+    """
+    return sql
