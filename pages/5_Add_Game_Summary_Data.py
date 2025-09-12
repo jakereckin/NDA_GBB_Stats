@@ -1,9 +1,11 @@
 import streamlit as st
 import time
 import pandas as pd
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
+import sqlitecloud
 pd.options.mode.chained_assignment = None
+
+
+sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
 
 # ----------------------------------------------------------------------------

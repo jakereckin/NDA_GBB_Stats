@@ -1,54 +1,12 @@
 import streamlit as st
-import time
-import sys
-import numpy as np
 import pandas as pd
+import time
+import numpy as np
+import sqlitecloud
+from py import sql, data_source, utils as ut
 pd.options.mode.chained_assignment = None
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
 
-
-# ----------------------------------------------------------------------------
-@st.cache_resource
-def get_client():
-    """
-    Establishes a connection to the MongoDB server using credentials
-    stored in Streamlit secrets.
-
-    Returns:
-        MongoClient: A MongoClient instance connected to the
-        specified MongoDB server.
-    """
-    pwd = st.secrets['mongo_gbb']['MONGBO_GBB_PASSWORD']
-    uri =  f"mongodb+srv://nda-gbb-admin:{pwd}@nda-gbb.1lq4irv.mongodb.net/"
-    # Create a new client and connect to the server
-    client = MongoClient(uri, server_api=ServerApi('1'))
-    return client
-
-# ----------------------------------------------------------------------------
-def get_my_db(client):
-    """
-    Retrieves various collections from the MongoDB database and
-    converts them to pandas DataFrames.
-
-    Parameters:
-        client (MongoClient): A MongoClient instance connected
-        to the MongoDB server.
-
-    Returns:
-        tuple: A tuple containing DataFrames for plays, spots,
-        games, players, and the plays collection.
-    """
-    my_db = client['NDA_GBB']
-    plays_db = my_db['PLAYS']
-    spots_db = my_db['SPOTS']
-    games_db = my_db['GAMES']
-    players_db = my_db['PLAYERS']
-    plays = pd.DataFrame(data=list(plays_db.find())).drop(columns=['_id'])
-    spots = pd.DataFrame(data=list(spots_db.find())).drop(columns=['_id'])
-    games = pd.DataFrame(data=list(games_db.find())).drop(columns=['_id'])
-    players = pd.DataFrame(data=list(players_db.find())).drop(columns=['_id'])
-    return plays, spots, games, players, plays_db
+sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
 
 # ----------------------------------------------------------------------------
@@ -68,36 +26,16 @@ def load_data():
             - spots (DataFrame): The spots data.
             - all_plays (DataFrame): All plays data.
     """
-    client = get_client()
-    all_plays, spots, games, players, plays_db = get_my_db(client=client)
-
-
-    def clean_column(column):
-        new_col = (
-            column.astype(dtype='str')
-                  .str
-                  .replace(pat='.0', repl='', regex=False)
-        )
-        return new_col
-
-    players['YEAR'] = clean_column(column=players['YEAR'])
-    games['SEASON'] = clean_column(column=games['SEASON'])
-    games['LABEL'] = games['OPPONENT'] + ' - ' + games['DATE']
-
-    players['LABEL'] = (
-        players['NUMBER'].astype(dtype='str').str.replace(pat='.0',
-                                                        repl='',
-                                                        regex=False) 
-        + ' - '
-        + players['FIRST_NAME']
+    pbp_data = data_source.run_query(
+        sql=sql.get_play_sql(), connection=sql_lite_connect
     )
-    return plays_db, players, games, spots, all_plays
+    return pbp_data
 
 
 # ----------------------------------------------------------------------------
 @st.cache_data
 def get_season_data(
-    games: pd.DataFrame, players: pd.DataFrame, season: int
+    pbp_data: pd.DataFrame, season: int
     ):
     """
     Extracts and processes game and player data for a specific season.
@@ -116,14 +54,9 @@ def get_season_data(
             - players_season (pd.DataFrame): Filtered player
                 data for the specified season.
     """
-    games_season = games[games['SEASON'] == season].copy()
+    games_season = pbp_data[pbp_data['SEASON'] == season].copy()
     games_season['DATE_DTTM'] = pd.to_datetime(games_season['DATE'])
-    games_season = games_season.sort_values(by='DATE_DTTM')
-    players_season = players[players['YEAR'] == season].copy()
-    games_season['LABEL'] = (
-        games_season['OPPONENT'] + ' - ' + games_season['DATE']
-    )
-    return games_season, players_season
+    return games_season
 
 
 # ----------------------------------------------------------------------------
@@ -218,9 +151,9 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     #st.image(image=image)
     _shot_defenses = ['OPEN', 'GUARDED', 'HEAVILY_GUARDED']
     col1, col2 = st.columns(spec=2)
-    plays_db, players, games, spots, all_plays = load_data()
+    pbp_data = load_data()
     games = (
-        games.sort_values(by='SEASON', ascending=False).reset_index(drop=True)
+        pbp_data.sort_values(by='SEASON', ascending=False).reset_index(drop=True)
     )
     season_list = games['SEASON'].unique().tolist()
 
@@ -229,11 +162,9 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             label='Select Season', options=season_list, horizontal=True
         )
 
-    games_season, players_season = get_season_data(
-        games=games, players=players, season=season
-    )
+    games_season = get_season_data(pbp_data=pbp_data, season=season)
 
-    game_list = games_season['LABEL'].unique().tolist()
+    game_list = games_season['GAME_LABEL'].unique().tolist()
     game_list = game_list[::-1]
 
     with col2:
@@ -242,18 +173,24 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
         games_season=games_season, game_select=game_select
     )
     with st.form(key='Play Event', clear_on_submit=False):
-        game_val = game['LABEL'].values[0]
-        players_season = players_season.sort_values(by='NUMBER')
-        spots = spots.sort_values(by=['POINTS', 'SPOT'])
+        game_val = game['GAME_LABEL'].values[0]
+        players_season = games_season.sort_values(by='NUMBER')
+        spots = games_season.sort_values(by=['POINTS', 'SPOT'])
+        unique_players = (
+            games_season.sort_values(by='NUMBER')['PLAYER_LABEL'].unique()
+        )
+        unique_spots = (
+            games_season.sort_values(by=['POINTS', 'SPOT'])['SPOT'].unique()
+        )
         col1, col2 = st.columns(spec=2)
         with col1:
             player_val = st.radio(
-            label='Player', options=players_season['LABEL'], horizontal=True
+            label='Player', options=unique_players, horizontal=True
             )
 
         with col2:
             spot_val = st.radio(
-            label='Shot Spot', options=spots['SPOT'], horizontal=True
+            label='Shot Spot', options=unique_spots, horizontal=True
         )
         st.divider()
         col1, col2 = st.columns(spec=2)
@@ -276,30 +213,46 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             player_number = int(player_number)
             test_make = np.where(make_miss == 'Y', 'Make', 'Miss')
             my_df = create_df(
-                game_val_final=game_val_final, player_number=player_number,
-                spot_val=spot_val, shot_defense=shot_defense,
+                game_val_final=game_val_final,
+                player_number=player_number,
+                spot_val=spot_val,
+                shot_defense=shot_defense,
                 make_miss=make_miss
             )
-            all_data_game = all_plays[all_plays['GAME_ID'] == game_val_final]
+
+            all_data_game = games_season[games_season['GAME_ID'] == game_val_final]
             if len(all_data_game) == 0:
                 my_df['PLAY_NUM'] = 0
             else:
                 current_play = len(all_data_game)
                 my_df['PLAY_NUM'] = current_play
-            
-            current_game = pd.concat(objs=[all_data_game, my_df])
-            current_play_dict = my_df.to_dict(orient='records')
-            plays_db.insert_many(
-                documents=current_play_dict, bypass_document_validation=True
+            with sqlitecloud.connect(sql_lite_connect) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    sql=sql.insert_plays_sql(),
+                    parameters=(
+                        str(game_val_final),
+                        str(player_number),
+                        str(spot_val),
+                        str(shot_defense),
+                        str(make_miss),
+                        str(my_df['PLAY_NUM'].values[0])
+                        )
+                    )
+                conn.commit()
+            current_game = pd.concat(
+                objs=[
+                    all_data_game.reset_index(drop=True), 
+                    my_df.reset_index(drop=True)
+                ],
+                ignore_index=True
             )
-            current_game_merge = current_game.merge(
-                right=spots, left_on='SHOT_SPOT', right_on='SPOT'
-            )
-            current_game_merge['ACTUAL_POINTS'] = np.where(
-                current_game_merge['MAKE_MISS'] == 'Y',
-                current_game_merge['POINTS'], 
+            current_game['ACTUAL_POINTS'] = np.where(
+                current_game['MAKE_MISS'] == 'Y',
+                current_game['POINTS'], 
                 0
             )
+            st.write(current_game)
             my_len = len(current_game)
             st.text(
                 body=f'Submitted {test_make}\
@@ -311,11 +264,11 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             st.write(f'Added to DB, {my_len}\
                      shots in DB for game {game_val_final}'
             )
-            nda_points = current_game_merge[
-                current_game_merge['PLAYER_ID'] != 0
+            nda_points = current_game[
+                current_game['NUMBER'] != '0'
             ]
-            opp_points = current_game_merge[
-                current_game_merge['PLAYER_ID'] == 0
+            opp_points = current_game[
+                current_game['NUMBER'] == '0'
             ]
             nda_points_val = nda_points.ACTUAL_POINTS.sum().astype(int)
             opp_points_val = opp_points.ACTUAL_POINTS.sum().astype(int)

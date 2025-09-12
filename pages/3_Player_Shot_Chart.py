@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import pandas as pd
 from py import sql, data_source, utils as ut
 pd.options.mode.chained_assignment = None
 

@@ -8,6 +8,72 @@ def get_players_sql():
     """
     return sql
 
+def get_games_sql():
+    sql = """
+    SELECT GAME_ID,
+           OPPONENT,
+           LOCATION,
+           DATE,
+           SEASON
+       FROM GAMES
+    """
+    return sql
+
+def get_play_sql():
+    sql = """
+SELECT SPOTS.SPOT,
+               PLAYS.SHOT_DEFENSE,
+               PLAYS.MAKE_MISS,
+               PLAYS.PLAY_NUM,
+              SPOTS.XSPOT,
+              SPOTS.YSPOT,
+              SPOTS.OPP_EXPECTED,
+              SPOTS.POINTS,
+              GAMES.GAME_ID,
+              GAMES.OPPONENT,
+              GAMES.LOCATION,
+              GAMES.DATE,
+              GAMES.SEASON,
+              PLAYERS.NUMBER,
+              PLAYERS.FIRST_NAME,
+              PLAYERS.LAST_NAME,
+              PLAYERS.YEAR,
+              GAMES.OPPONENT || ' - ' || GAMES.DATE AS GAME_LABEL,
+              PLAYERS.NUMBER || ' - ' || PLAYERS.FIRST_NAME AS PLAYER_LABEL
+  FROM PLAYS
+  INNER JOIN SPOTS
+  ON SPOTS.SPOT = PLAYS.SHOT_SPOT
+  INNER JOIN GAMES
+  ON GAMES.GAME_ID = PLAYS.GAME_ID
+  INNER JOIN PLAYERS
+  ON PLAYERS.NUMBER = PLAYS.PLAYER_ID
+  AND GAMES.SEASON = PLAYERS.YEAR
+  """
+    return sql
+
+def insert_plays_sql():
+    sql = """
+    INSERT INTO PLAYS (GAME_ID,
+                       PLAYER_ID,
+                       SHOT_SPOT,
+                       SHOT_DEFENSE,
+                       MAKE_MISS,
+                       PLAY_NUM)
+    VALUES (?, ?, ?, ?, ?, ?)
+    """
+    return sql
+
+def insert_game_sql():
+    sql = """
+    INSERT INTO GAMES (GAME_ID,
+                       OPPONENT,
+                       LOCATION,
+                       DATE,
+                       SEASON)
+    VALUES (?, ?, ?, ?, ?)
+    """
+    return sql
+
 def insert_player_sql():
     sql = """
     INSERT INTO PLAYERS (NUMBER,
@@ -22,6 +88,13 @@ def delete_player_sql():
     sql = """
     DELETE FROM PLAYERS
      WHERE NUMBER = ? AND YEAR = ?
+    """
+    return sql
+
+def delete_game_sql():
+    sql = """
+    DELETE FROM GAMES
+     WHERE GAME_ID = ?
     """
     return sql
 

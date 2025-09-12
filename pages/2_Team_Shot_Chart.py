@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import pandas as pd
 from py import sql, data_source, utils as ut
 pd.options.mode.chained_assignment = None
 
@@ -73,7 +72,6 @@ def format_selected_games(this_game):
 
      return totals, totals_sorted
 
-#play_event, spot, games = load_frames()
 
 team_data = get_game_data()
 
@@ -95,7 +93,6 @@ if season:
      )
 
 
-     
      # ----------------------------------------------------------------------------
      if games_selected:
           totals, totals_sorted = format_selected_games(this_game=this_game)
