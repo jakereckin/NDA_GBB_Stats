@@ -8,6 +8,14 @@ def get_players_sql():
     """
     return sql
 
+def get_users():
+    sql = """
+    SELECT USERNAME,
+           PASSWORD
+      FROM USERS
+    """
+    return sql
+
 def get_games_sql():
     sql = """
     SELECT GAME_ID,

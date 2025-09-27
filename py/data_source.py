@@ -1,7 +1,5 @@
 import sqlitecloud
-import streamlit as st
 import pandas as pd
-import polars as pl
 
 
 def run_query(sql: str, connection: str, params=()) -> pd.DataFrame:

@@ -66,7 +66,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             with sqlitecloud.connect(sql_lite_connect) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    sql=sql.insert_plays_sql(),
+                    sql=sql.insert_game_sql(),
                     parameters=(
                         str(game_id),
                         str(opponent),
