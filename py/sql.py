@@ -10,7 +10,7 @@ def get_players_sql():
 
 def get_users():
     sql = """
-    SELECT USERNAME,
+    SELECT USER_NAME,
            PASSWORD
       FROM USERS
     """
