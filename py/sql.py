@@ -11,7 +11,8 @@ def get_players_sql():
 def get_users():
     sql = """
     SELECT USER_NAME,
-           PASSWORD
+           PASSWORD,
+           TYPE
       FROM USERS
     """
     return sql
