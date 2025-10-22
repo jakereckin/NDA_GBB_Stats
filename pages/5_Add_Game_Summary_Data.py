@@ -1,6 +1,7 @@
 import streamlit as st
 import time
 import pandas as pd
+from py import sql, data_source
 import sqlitecloud
 pd.options.mode.chained_assignment = None
 
@@ -8,47 +9,19 @@ pd.options.mode.chained_assignment = None
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
 
-# ----------------------------------------------------------------------------
-@st.cache_resource
-def get_client():
-    pwd = st.secrets['mongo_gbb']['MONGBO_GBB_PASSWORD']
-    uri =  f"mongodb+srv://nda-gbb-admin:{pwd}@nda-gbb.1lq4irv.mongodb.net/"
-    # Create a new client and connect to the server
-    client = MongoClient(host=uri, server_api=ServerApi(version='1'))
-    return client
-
-
-# ----------------------------------------------------------------------------
-def get_my_db(client):
-    my_db = client['NDA_GBB']
-    games_db = my_db['GAMES']
-    players_db = my_db['PLAYERS']
-    game_summary_db = my_db['GAME_SUMMARY']
-    games = pd.DataFrame(data=list(games_db.find())).drop(columns=['_id'])
-    players = pd.DataFrame(data=list(players_db.find())).drop(columns=['_id'])
-    game_summary = (
-        pd.DataFrame(data=list(game_summary_db.find())).drop(columns=['_id'])
-    )
-    return games, players, game_summary, game_summary_db
-
 
 # ----------------------------------------------------------------------------
 def load_data():
-    client = get_client()
-    games, players, game_summary, game_summary_db = get_my_db(client=client)
-    games = games[games['OPPONENT'] != 'PRACTICE']
-    games['SEASON'] = (
-        games['SEASON'].astype(dtype='str').str.replace(pat='.0',
-                                                        repl='',
-                                                        regex=False)
+    game_summary = data_source.run_query(
+            sql=sql.get_game_summary_sql(), connection=sql_lite_connect
     )
-    players['YEAR'] = (
-        players['YEAR'].astype(dtype='str').str.replace(pat='.0',
-                                                        repl='',
-                                                        regex=False)
+    players = data_source.run_query(
+        sql=sql.get_players_sql(), connection=sql_lite_connect
     )
-    games = games.dropna(subset=['SEASON'])
-    return players, games, game_summary, game_summary_db
+    games = data_source.run_query(
+        sql=sql.get_games_sql(), connection=sql_lite_connect
+    )
+    return players, games, game_summary
 
 
 # ----------------------------------------------------------------------------
@@ -70,7 +43,6 @@ def get_season_data(games, players, season):
 def get_selected_game(games_season, game_select):
     game_val_opp = game_select.split(' - ')[0]
     game_val_date = game_select.split(' - ')[1]
-    games_season = games_season[games_season['OPPONENT'] != 'PRACTICE']
     this_game = games_season[
         (games_season['OPPONENT']==game_val_opp)
         & (games_season['DATE']==game_val_date)
@@ -83,7 +55,7 @@ password = st.text_input(label='Password', type='password')
 
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
 
-    players, games, game_summary_data, game_summary_db = load_data()
+    players, games, game_summary_data = load_data()
 
     my_season_options = (
         games['SEASON'].sort_values(ascending=False).unique().tolist()
@@ -112,13 +84,25 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     this_player_val = game_summary_data[
         (game_summary_data['PLAYER_ID'].astype(int) 
          == player_val) 
-        & (game_summary_data['GAME_ID'] 
+        & (game_summary_data['GAME_ID'].astype(int)
            == this_game['GAME_ID'].astype(int).values[0])
     ]
     if len(this_player_val) == 0:
         data = [
-            player_val, this_game['GAME_ID'].astype(int).values[0], 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            player_val,
+            this_game['GAME_ID'].astype(int).values[0],
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
         ]
         columns = [
             'PLAYER_ID', 'GAME_ID', 'TWO_FGM', 'TWO_FGA', 'THREE_FGM',
@@ -126,20 +110,22 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             'DEFENSIVE_REBOUNDS', 'ASSISTS', 'STEALS', 'BLOCKS', 'TURNOVER'
         ]
         this_player_val = pd.DataFrame(data=[data], columns=columns)
-        this_player_val['PLAYER_ID'] = player_val
-        this_player_val['GAME_ID'] = this_game['GAME_ID'].astype(int).values[0]
-        this_player_val['TWO_FGM'] = 0
-        this_player_val['TWO_FGA'] = 0
-        this_player_val['THREE_FGM'] = 0
-        this_player_val['THREE_FGA'] = 0
-        this_player_val['FTM'] = 0
-        this_player_val['FTA'] = 0
-        this_player_val['OFFENSIVE_REBOUNDS'] = 0
-        this_player_val['DEFENSIVE_REBOUNDS'] = 0
-        this_player_val['ASSISTS'] = 0
-        this_player_val['STEALS'] = 0
-        this_player_val['BLOCKS'] = 0
-        this_player_val['TURNOVER'] = 0
+        this_player_val = this_player_val.assign(
+            PLAYER_ID=player_val,
+            GAME_ID=this_game['GAME_ID'].astype(int).values[0],
+            TWO_FGM=0,
+            TWO_FGA=0,
+            THREE_FGM=0,
+            THREE_FGA=0,
+            FTM=0,
+            FTA=0,
+            OFFENSIVE_REBOUNDS=0,
+            DEFENSIVE_REBOUNDS=0,
+            ASSISTS=0,
+            STEALS=0,
+            BLOCKS=0,
+            TURNOVER=0
+        )
     with st.form(key='Game Data', clear_on_submit=False):
         two_one, two_two = st.columns(spec=2)
         three_one, three_two = st.columns(spec=2)
@@ -227,58 +213,65 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
                 + '_' 
                 + this_game['GAME_ID'].astype(int).astype(str).values[0]
             )
-            game_summary_ids = pd.DataFrame(data=list(game_summary_db.find()))
-            game_summary_ids_list = game_summary_ids['_id'].unique().tolist()
-            my_vals = [
-                my_id, player_val, this_game['GAME_ID'].astype(int).values[0], 
-                two_fgm, two_fga, three_fgm, three_fga, ftm, fta, off_rebounds,
-                def_rebounds, assists, steals, blocks, turnover
-            ]
-            data = pd.DataFrame(
-                data=[my_vals], 
-                columns=['_id', 'PLAYER_ID', 'GAME_ID', 'TWO_FGM', 'TWO_FGA',
-                        'THREE_FGM', 'THREE_FGA', 'FTM', 'FTA',
-                        'OFFENSIVE_REBOUNDS', 'DEFENSIVE_REBOUNDS', 'ASSISTS',
-                        'STEALS', 'BLOCKS', 'TURNOVER']
-            )
-            #data = data.fillna(0)
-            game_summary_ids = pd.DataFrame(data=list(game_summary_db.find()))
-            game_summary_ids_list = game_summary_ids['_id'].unique().tolist()
-            data[['TWO_FGM',
-                'TWO_FGA',
-                'THREE_FGM',
-                'THREE_FGA',
-                'FTM',
-                'FTA',
-                'OFFENSIVE_REBOUNDS',
-                'DEFENSIVE_REBOUNDS',
-                'ASSISTS',
-                'STEALS',
-                'BLOCKS',
-                'TURNOVER']] = data[['TWO_FGM',
-                                        'TWO_FGA',
-                                        'THREE_FGM',
-                                        'THREE_FGA',
-                                        'FTM',
-                                        'FTA',
-                                        'OFFENSIVE_REBOUNDS',
-                                        'DEFENSIVE_REBOUNDS',
-                                        'ASSISTS',
-                                        'STEALS',
-                                        'BLOCKS',
-                                        'TURNOVER']].astype(int)
-            new_data = data[~data['_id'].isin(game_summary_ids_list)]
-            if len(new_data) > 0:
-                data_list = new_data.to_dict('records')
-                game_summary_db.insert_many(
-                    documents=data_list, bypass_document_validation=True
+            game_summary_ids = game_summary_data.copy()
+            game_summary_ids['_id'] = (
+                game_summary_ids['PLAYER_ID'].astype(dtype=str)
+                + '_'
+                + (
+                    game_summary_ids['GAME_ID'].astype(dtype=int)
+                                               .astype(dtype=str)
+                                               .values
                 )
-            update_data = data[data['_id'].isin(game_summary_ids_list)]
-            data_list = update_data.to_dict('records')
-            for doc in data_list:
-                game_summary_db.update_one(
-                    filter={'_id': doc['_id']}, update={"$set": doc}, upsert=True
-                )    
+            )
+
+            game_summary_ids_list = game_summary_ids['_id'].unique().tolist()
+            if my_id not in game_summary_ids_list:
+                with sqlitecloud.connect(sql_lite_connect) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        sql=sql.insert_game_summary_sql(),
+                        parameters=(
+                            str(player_val),
+                            str(this_game['GAME_ID'].astype(int).values[0]),
+                            str(two_fgm),
+                            str(two_fga),
+                            str(three_fgm),
+                            str(three_fga),
+                            str(ftm),
+                            str(fta),
+                            str(off_rebounds),
+                            str(def_rebounds),
+                            str(assists),
+                            str(steals),
+                            str(blocks),
+                            str(turnover)
+                        )
+                    )
+                    conn.commit()
+            else:
+                with sqlitecloud.connect(sql_lite_connect) as conn:
+                    st.write('HERE')
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        sql=sql.update_game_summary_sql(),
+                        parameters=(
+                            str(two_fgm),
+                            str(two_fga),
+                            str(three_fgm),
+                            str(three_fga),
+                            str(ftm),
+                            str(fta),
+                            str(off_rebounds),
+                            str(def_rebounds),
+                            str(assists),
+                            str(steals),
+                            str(blocks),
+                            str(turnover),
+                            str(player_val),
+                            str(this_game['GAME_ID'].astype(int).values[0])
+                        )
+                    )
+                    conn.commit()
             st.write('Added to DB!')
             time.sleep(.1)
             st.rerun()

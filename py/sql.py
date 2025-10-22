@@ -28,6 +28,46 @@ def get_games_sql():
     """
     return sql
 
+def insert_game_summary_sql():
+    sql = """
+    INSERT INTO GAME_SUMMARY (PLAYER_ID,
+                              GAME_ID,
+                              TWO_FGM,
+                              TWO_FGA,
+                              THREE_FGM,
+                              THREE_FGA,
+                              FTM,
+                              FTA,
+                              OFFENSIVE_REBOUNDS,
+                              DEFENSIVE_REBOUNDS,
+                              ASSISTS,
+                              STEALS,
+                              BLOCKS,
+                              TURNOVER)
+    VALUES (?,? ,?,?,?,?,?,?,?,?,?,?,?,?)
+    """
+    return sql
+
+def update_game_summary_sql():
+    sql = """
+    UPDATE GAME_SUMMARY
+       SET TWO_FGM = ?,
+           TWO_FGA = ?,
+           THREE_FGM = ?,
+           THREE_FGA = ?,
+           FTM = ?,
+           FTA = ?,
+           OFFENSIVE_REBOUNDS = ?,
+           DEFENSIVE_REBOUNDS = ?,
+           ASSISTS = ?,
+           STEALS = ?,
+           BLOCKS = ?,
+           TURNOVER = ?
+        WHERE PLAYER_ID = ?
+            AND GAME_ID = ?
+    """
+    return sql
+
 def get_play_sql():
     sql = """
 SELECT SPOTS.SPOT,
@@ -58,6 +98,14 @@ SELECT SPOTS.SPOT,
   ON PLAYERS.NUMBER = PLAYS.PLAYER_ID
   AND GAMES.SEASON = PLAYERS.YEAR
   """
+    return sql
+
+
+def get_game_stats_sql():
+    sql = """
+    SELECT *
+      FROM GAME_SUMMARY
+    """
     return sql
 
 def insert_plays_sql():
