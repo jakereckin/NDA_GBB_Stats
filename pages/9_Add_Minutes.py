@@ -150,8 +150,18 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             value=0,
             step=1
         )
-    time_in = (half - 1) * 18 * 60 + minutes * 60 + seconds
-    time_out = (half_out - 1) * 18 * 60 + minutes_out * 60 + seconds_out
+    base_calc = 18 * 60
+    if half == 2:
+        time_in = base_calc + minutes * 60 + seconds
+    else:
+        time_in = 2 * base_calc+ minutes * 60 + seconds
+
+    if half_out == 2:
+        time_out = base_calc+ minutes_out * 60 + seconds_out
+    else:
+        time_out = 2 * base_calc + minutes_out * 60 + seconds_out
+
+
     add_minutes = st.button(label='Add Minutes')
     if add_minutes:
         with sqlitecloud.connect(sql_lite_connect) as conn:
