@@ -48,6 +48,7 @@ def insert_game_summary_sql():
     """
     return sql
 
+# Add
 def insert_minutes_sql():
     sql = """
     INSERT INTO MINUTES (GAME_ID,
