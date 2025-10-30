@@ -48,6 +48,21 @@ def insert_game_summary_sql():
     """
     return sql
 
+def insert_minutes_sql():
+    sql = """
+    INSERT INTO MINUTES (GAME_ID,
+                         PLAYER_ID,
+                         TIME_IN,
+                         TIME_OUT,
+                         TEAM_POINT_IN,
+                         TEAM_POINT_OUT,
+                         OPP_POINT_IN,
+                         OPP_POINT_OUT)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+
+    """
+    return sql
+
 def update_game_summary_sql():
     sql = """
     UPDATE GAME_SUMMARY
