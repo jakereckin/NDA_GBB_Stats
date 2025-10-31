@@ -9,6 +9,7 @@ pd.options.mode.chained_assignment = None
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
 # ----------------------------------------------------------------------------
+@st.cache_data
 def load_data():
     players = data_source.run_query(
         sql=sql.get_players_sql(), connection=sql_lite_connect
