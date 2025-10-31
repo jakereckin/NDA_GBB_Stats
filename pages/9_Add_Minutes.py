@@ -158,6 +158,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
         time_in = second_half_time - half_time_in
     else:
         half_time_in = minutes * 60 + seconds
+        st.write(half_time_in)
         time_in = first_half_time - half_time_in
 
     if half_out == 2:
