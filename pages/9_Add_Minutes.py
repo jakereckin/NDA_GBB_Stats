@@ -153,12 +153,12 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     if half == 2:
         time_in = minutes * 60 + seconds
     else:
-        time_in = 2 * minutes * 60 + seconds
+        time_in = (18 + minutes) * 60 + seconds
 
     if half_out == 2:
         time_out = minutes_out * 60 + seconds_out
     else:
-        time_out = 2 * minutes_out * 60 + seconds_out
+        time_out = (18 + minutes_out) * 60 + seconds_out
 
 
     add_minutes = st.button(label='Add Minutes')
