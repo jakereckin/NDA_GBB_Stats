@@ -180,5 +180,3 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             )
             conn.commit()
         st.write('Minutes Added')
-        time.sleep(.5)
-        st.rerun()
