@@ -173,20 +173,25 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
         games_season=games_season, game_select=game_select
     )
     shot_df = pd.DataFrame(columns=["x", "y", "result"], data=[[1, 1, 'Make']])
-    image = Image.open(fp='SHOT_CHART.jpg', )
+    image = Image.open('SHOT_CHART.png')
+    #img_array = np.array(image)
+    #img_array = np.array(image)
     if "clear_canvas" not in st.session_state:
         st.session_state.clear_canvas = False
 
     # Display court image
     st.subheader("Click on the court to log a shot")
+    #st.image(img_array)
     canvas_result = st_canvas(
         fill_color="rgba(255, 165, 0, 0.3)",  # orange
         stroke_width=1,
         stroke_color="#000000",
         background_image=image,  # halfcourt image
         update_streamlit=True,
-        height=600 * (470 + 2 * 10) / (500 + 2 * 10),
-        width=700,
+        height = image.height,
+        width = image.width,
+        #height=600 * (470 + 2 * 10) / (500 + 2 * 10),
+        #width=700,
         drawing_mode="point",
         key="canvas",
         initial_drawing=[] if st.session_state.clear_canvas else None
