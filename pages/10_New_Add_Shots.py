@@ -3,7 +3,6 @@ from streamlit_drawable_canvas import st_canvas
 import pandas as pd
 from PIL import Image
 from py import utils, data_source, sql
-import os
 import time
 import numpy as np
 
