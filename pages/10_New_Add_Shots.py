@@ -196,6 +196,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
         key="canvas",
         initial_drawing=[] if st.session_state.clear_canvas else None
     )
+    st.write(canvas_result.json_data)
     # Handle new clicks
     if canvas_result.json_data['objects'] != []:
         objects = canvas_result.json_data["objects"]
