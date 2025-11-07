@@ -173,7 +173,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
         games_season=games_season, game_select=game_select
     )
     shot_df = pd.DataFrame(columns=["x", "y", "result"], data=[[1, 1, 'Make']])
-    image = Image.open(fp='SHOT_CHART.png', )
+    image = Image.open(fp='SHOT_CHART.jpg', )
     if "clear_canvas" not in st.session_state:
         st.session_state.clear_canvas = False
 
