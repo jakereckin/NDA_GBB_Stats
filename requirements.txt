@@ -10,3 +10,4 @@ streamlit==1.37.1
 lightgbm==4.5.0
 polars==0.18.15
 sqlitecloud==0.0.83
+streamlit_drawable_canvas==0.9.3
