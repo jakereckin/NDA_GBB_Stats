@@ -5,6 +5,7 @@ from matplotlib.patches import Circle, Rectangle, Arc
 import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
+import math
 import plotly.graph_objects as go
 
 
@@ -26,7 +27,7 @@ def ellipse_arc(x_center=0.0,
             path += ' Z'
         return path
 
-def build_blanket_shot_chart():
+def build_blank_shot_chart():
     fig = go.Figure()
     fig_height = 600 * (470 + 2 * 10) / (500 + 2 * 10)
     fig.update_layout(width=10, height=fig_height)
@@ -38,6 +39,7 @@ def build_blanket_shot_chart():
     fig.update_layout(margin=dict(l=20, r=20, t=20, b=20),
                       paper_bgcolor="white",
                       plot_bgcolor="white",
+                      clickmode='event+select',
                       yaxis=dict(scaleanchor="x",
                                  scaleratio=1,
                                  showgrid=False,
@@ -142,7 +144,89 @@ def build_blanket_shot_chart():
                                   line=dict(color=main_line_col, width=1), 
                                   layer='below'),]
     )
+    
     return fig
+
+
+
+def get_nearest_spot(
+        x: float, 
+        y: float,
+        spots_df: pd.DataFrame = None,
+        is_free_throw: bool = False,
+        max_distance: float | None = None
+     ):
+    """
+    Return the best-matching spot for coordinate (x, y).
+
+    Parameters
+    - x, y: shot coordinates (same coordinate system as SPOTS.csv XSPOT/YSPOT)
+    - spots_df: optional pre-loaded DataFrame from load_spots(); if None, function will load DEFAULT_SPOTS_CSV
+    - is_free_throw: if True, return 'FREE_THROW1' regardless of x,y
+    - max_distance: optional numeric threshold (units same as XSPOT/YSPOT). If set and the
+      nearest spot is farther than max_distance, function returns None.
+
+    Returns
+    - dict with keys:
+      - spot: matched spot name (str) or None
+      - distance: Euclidean distance to matched centroid (float) or None
+      - points: POINTS value from spots file (int/float) or None
+      - opp_expected: OPP_EXPECTED value (float) or None
+    """
+    # Free throw short-circuit
+    if is_free_throw:
+        # Ensure we can still return metadata from dataframe if available
+        if spots_df is None:
+            spots_df = load_spots()
+        ft_row = spots_df[spots_df["SPOT"].str.strip('"') == "FREE_THROW1"]
+        if not ft_row.empty:
+            row = ft_row.iloc[0]
+            spots_json = dict(
+                spot="FREE_THROW1",
+                distance=0.0,
+                points=row.get("POINTS"),
+                opp_expected=row.get("OPP_EXPECTED")
+            )
+            return spots_json
+        else:
+            spots_json = dict(
+                    spot="FREE_THROW1",
+                    distance=0.0,
+                    points=None,
+                    opp_expected=None
+            )
+            return spots_json
+
+    # Load spots if not provided
+    if spots_df is None:
+        spots_df = load_spots()
+
+    # Compute Euclidean distances to each centroid
+    def euclid(ax, ay, bx, by):
+        return math.hypot(ax - bx, ay - by)
+
+    distances = spots_df.apply(lambda r: euclid(x, y, float(r["XSPOT"]), float(r["YSPOT"])), axis=1)
+    min_idx = distances.idxmin()
+    min_distance = float(distances.loc[min_idx])
+    matched = spots_df.loc[min_idx]
+
+    # If threshold is set and nearest is too far, return None
+    if (max_distance is not None) and (min_distance > max_distance):
+        return {"spot": None, "distance": min_distance, "points": None, "opp_expected": None}
+
+    # Return matched spot and metadata
+    if isinstance(matched["SPOT"], str):
+        spot_name = matched["SPOT"].strip().strip('"')
+    else:
+        spot_name = matched["SPOT"]
+    final_json = dict(
+            spot=spot_name,
+               distance=min_distance,
+               points=matched.get("POINTS"),
+               opp_expected=matched.get("OPP_EXPECTED")
+    )
+    return final_json
+
 
 def load_shot_chart_team(totals, team_selected):
     xlocs = totals['XSPOT']

@@ -1,11 +1,12 @@
 import streamlit as st
-from streamlit_drawable_canvas import st_canvas
+import sqlitecloud
 import pandas as pd
 from PIL import Image
 from py import utils, data_source, sql
 import time
 import numpy as np
-
+from plotly import graph_objs as go
+from streamlit_plotly_events import plotly_events
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
@@ -30,7 +31,10 @@ def load_data():
     pbp_data = data_source.run_query(
         sql=sql.get_play_sql(), connection=sql_lite_connect
     )
-    return pbp_data
+    shot_spots = data_source.run_query(
+        sql=sql.get_shot_spots_sql(), connection=sql_lite_connect
+    )
+    return pbp_data, shot_spots
 
 # ----------------------------------------------------------------------------
 @st.cache_data
@@ -116,7 +120,9 @@ def create_df(
         player_number,
         spot_val,
         shot_defense,
-        make_miss
+        make_miss,
+        spot_x,
+        spot_y
         ) -> pd.DataFrame:
     """
         Creates a pandas DataFrame with the given shot data.
@@ -135,10 +141,10 @@ def create_df(
              'SHOT_DEFENSE', 'MAKE_MISS'].
     """
     this_data = [
-        game_val_final, player_number, spot_val, shot_defense, make_miss
+        game_val_final, player_number, spot_val, shot_defense, make_miss, spot_x, spot_y
     ]
     col_names = [
-        'GAME_ID', 'PLAYER_ID', 'SHOT_SPOT', 'SHOT_DEFENSE', 'MAKE_MISS'
+        'GAME_ID', 'PLAYER_ID', 'SHOT_SPOT', 'SHOT_DEFENSE', 'MAKE_MISS', 'SPOT_X', 'SPOT_Y'
     ]
     my_df = pd.DataFrame(data=[this_data], columns=col_names)
     return my_df
@@ -150,7 +156,7 @@ password = st.text_input(label='Password', type='password')
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
     _shot_defenses = ['OPEN', 'GUARDED', 'HEAVILY_GUARDED']
     col1, col2 = st.columns(spec=2)
-    pbp_data = load_data()
+    pbp_data, shot_spots = load_data()
     games = (
         pbp_data.sort_values(by='SEASON', ascending=False).reset_index(drop=True)
     )
@@ -171,139 +177,155 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     game = get_selected_game(
         games_season=games_season, game_select=game_select
     )
-    shot_df = pd.DataFrame(columns=["x", "y", "result"], data=[[1, 1, 'Make']])
-    image = Image.open('SHOT_CHART.png')
-    #img_array = np.array(image)
-    #img_array = np.array(image)
-    if "clear_canvas" not in st.session_state:
-        st.session_state.clear_canvas = False
 
-    # Display court image
-    st.subheader("Click on the court to log a shot")
-    #st.image(img_array)
-    canvas_result = st_canvas(
-        fill_color="rgba(255, 165, 0, 0.3)",  # orange
-        stroke_width=1,
-        stroke_color="#000000",
-        background_image=image,  # halfcourt image
-        update_streamlit=True,
-        height = image.height,
-        width = image.width,
-        #height=600 * (470 + 2 * 10) / (500 + 2 * 10),
-        #width=700,
-        drawing_mode="point",
-        key="canvas",
-        initial_drawing=[] if st.session_state.clear_canvas else None
+
+    fig = utils.build_blank_shot_chart()
+
+    if "shots" not in st.session_state:
+        st.session_state.shots = []
+    # Add invisible scatter trace of capture points
+    @st.cache_data(show_spinner=False)
+    def make_grid(xmin, xmax, ymin, ymax, spacing):
+        xs = np.arange(xmin, xmax + 1, spacing)
+        ys = np.arange(ymin, ymax + 1, spacing)
+        xx, yy = np.meshgrid(xs, ys)
+        return xx.ravel().tolist(), yy.ravel().tolist()
+
+    # --- Chart ranges (match your utils court)
+    opacity = 1
+    spacing = 20
+    marker_size = 14
+    X_MIN, X_MAX = -250, 250
+    Y_MIN, Y_MAX = -50, 450
+
+    capture_x, capture_y = make_grid(X_MIN, X_MAX, Y_MIN, Y_MAX, spacing)
+
+    fig.update_layout(
+        xaxis=dict(range=[X_MIN, X_MAX], showgrid=False, zeroline=False),
+        yaxis=dict(range=[Y_MIN, Y_MAX], showgrid=False, zeroline=False, scaleanchor="x"),
+        width=700,
+        height=800,
+        margin=dict(l=20, r=20, t=20, b=20),
+        plot_bgcolor="white",
+        clickmode="event+select"
     )
-    st.write(canvas_result.json_data)
-    # Handle new clicks
-    if canvas_result.json_data['objects'] != []:
-        objects = canvas_result.json_data["objects"]
-        with st.form(key='Play Event', clear_on_submit=False):
-            game_val = game['GAME_LABEL'].values[0]
-            new_obj = objects[-1]
-            x, y = new_obj["left"], new_obj["top"]
-            st.write(x, y)
-            players_season = games_season.sort_values(by='NUMBER')
-            spots = games_season.sort_values(by=['POINTS', 'SPOT'])
-            unique_players = (
-                games_season.sort_values(by='NUMBER')['PLAYER_LABEL'].unique()
-            )
-            unique_spots = (
-                games_season.sort_values(by=['POINTS', 'SPOT'])['SPOT'].unique()
-            )
-            col1, col2 = st.columns(spec=2)
-            with col1:
-                player_val = st.radio(
-                label='Player', options=unique_players, horizontal=True
-                )
+    fig.add_trace(
+        go.Scatter(
+            x=capture_x,
+            y=capture_y,
+            mode="markers",
+            marker=dict(opacity=opacity, size=marker_size, color="white"),
+        )
+    )
 
-            with col2:
-                spot_val = st.radio(
-                label='Shot Spot', options=unique_spots, horizontal=True
-            )
-            st.divider()
-            col1, col2 = st.columns(spec=2)
+    clicked = plotly_events(fig, click_event=True, override_height=820, key="shot-capture")
+    if clicked:
+        ev = clicked[0]
+        x_click = ev.get('x')
+        y_click = ev.get('y')
+        shot_spot = utils.get_nearest_spot(x_click, y_click, shot_spots)
+        spot_val = shot_spot.get('spot')
+        if spot_val:
+            st.write(f'Adding shot at {spot_val}')
+            with st.form(key='shot_form', clear_on_submit=True):
+                game_val = game['GAME_LABEL'].values[0]
+                players_season = games_season.sort_values(by='NUMBER')
+                unique_players = (
+                    games_season.sort_values(by='NUMBER')['PLAYER_LABEL'].unique()
+                )
+                col1, col2, col3, col4 = st.columns(spec=4)
+                with col1:
+                    player_val = st.radio(
+                    label='Player', options=unique_players, horizontal=True
+                    )
 
-            with col1:
-                make_miss = st.radio(
-                label='Make/Miss', options=['Y', 'N'], horizontal=True
-            )
-            
-            with col2:
-                shot_defense = st.radio(
-                    label='Shot Defense', options=_shot_defenses, horizontal=True
-            )
-            add = st.form_submit_button(label='Add Play')
-            if add:
-                time.sleep(.5)
-                player_number, game_val_final = get_values_needed(
-                    game_val=game_val, game=game, player_val=player_val
+                with col2:
+                    free_throw = st.radio(
+                    label='Free Throw', options=['N', 'Y'], horizontal=True
                 )
-                player_number = int(player_number)
-                test_make = np.where(make_miss == 'Y', 'Make', 'Miss')
-                my_df = create_df(
-                    game_val_final=game_val_final,
-                    player_number=player_number,
-                    spot_val=spot_val,
-                    shot_defense=shot_defense,
-                    make_miss=make_miss
+                with col4:
+                    make_miss = st.radio(
+                    label='Make/Miss', options=['N', 'Y'], horizontal=True
                 )
-
-                all_data_game = games_season[games_season['GAME_ID'] == game_val_final]
-                if len(all_data_game) == 0:
-                    my_df['PLAY_NUM'] = 0
-                else:
-                    current_play = len(all_data_game)
-                    my_df['PLAY_NUM'] = current_play
-                #with sqlitecloud.connect(sql_lite_connect) as conn:
-                #    cursor = conn.cursor()
-                #    cursor.execute(
-                #        sql=sql.insert_plays_sql(),
-                #        parameters=(
-                #            str(game_val_final),
-                #            str(player_number),
-                #            str(spot_val),
-                #            str(shot_defense),
-                #            str(make_miss),
-                #            str(my_df['PLAY_NUM'].values[0])
-                #            )
-                #        )
-                #    conn.commit()
-                current_game = pd.concat(
-                    objs=[
-                        all_data_game.reset_index(drop=True), 
-                        my_df.reset_index(drop=True)
-                    ],
-                    ignore_index=True
+                
+                with col3:
+                    shot_defense = st.radio(
+                        label='Shot Defense', options=_shot_defenses, horizontal=True
                 )
-                current_game['ACTUAL_POINTS'] = np.where(
-                    current_game['MAKE_MISS'] == 'Y',
-                    current_game['POINTS'], 
-                    0
-                )
-                st.write(current_game)
-                my_len = len(current_game)
-                st.text(
-                    body=f'Submitted {test_make}\
-                        by player {player_number}\
-                        from spot {spot_val}\
-                        with defense {shot_defense}\
-                        for game {game_val_final}'
-                )
-                st.write(f'Added to DB, {my_len}\
-                        shots in DB for game {game_val_final}'
-                )
-                nda_points = current_game[
-                    current_game['NUMBER'] != '0'
-                ]
-                opp_points = current_game[
-                    current_game['NUMBER'] == '0'
-                ]
-                nda_points_val = nda_points.ACTUAL_POINTS.sum().astype(int)
-                opp_points_val = opp_points.ACTUAL_POINTS.sum().astype(int)
-                st.write(f'NDA Points: {nda_points_val}')
-                st.write(f'Opp Points: {opp_points_val}')
-
-
-
+                add = st.form_submit_button(label='Add Play')
+                if add:
+                    time.sleep(.5)
+                    player_number, game_val_final = get_values_needed(
+                        game_val=game_val, game=game, player_val=player_val
+                    )
+                    player_number = int(player_number)
+                    if free_throw == 'Y':
+                        spot_val = 'FREE_THROW1'
+                        x_click = 0
+                        y_click = 150
+                    test_make = np.where(make_miss == 'Y', 'Make', 'Miss')
+                    my_df = create_df(
+                        game_val_final=game_val_final,
+                        player_number=player_number,
+                        spot_val=spot_val,
+                        shot_defense=shot_defense,
+                        make_miss=make_miss,
+                        spot_x=x_click,
+                        spot_y=y_click
+                    )
+                    all_data_game = games_season[games_season['GAME_ID'] == game_val_final]
+                    if len(all_data_game) == 0:
+                        my_df['PLAY_NUM'] = 0
+                    else:
+                        current_play = len(all_data_game)
+                        my_df['PLAY_NUM'] = current_play
+                    with sqlitecloud.connect(sql_lite_connect) as conn:
+                        cursor = conn.cursor()
+                        cursor.execute(
+                            sql=sql.insert_plays_sql(),
+                            parameters=(
+                                str(game_val_final),
+                                str(player_number),
+                                str(spot_val),
+                                str(shot_defense),
+                                str(make_miss),
+                                str(my_df['PLAY_NUM'].values[0]),
+                                str(x_click),
+                                str(y_click)
+                                )
+                            )
+                        conn.commit()
+                    current_game = pd.concat(
+                        objs=[
+                            all_data_game.reset_index(drop=True), 
+                            my_df.reset_index(drop=True)
+                        ],
+                        ignore_index=True
+                    )
+                    current_game['ACTUAL_POINTS'] = np.where(
+                        current_game['MAKE_MISS'] == 'Y',
+                        current_game['POINTS'], 
+                        0
+                    )
+                    st.write(current_game)
+                    my_len = len(current_game)
+                    st.text(
+                        body=f'Submitted {test_make}\
+                            by player {player_number}\
+                            from spot {spot_val}\
+                            with defense {shot_defense}\
+                            for game {game_val_final}'
+                    )
+                    st.write(f'Added to DB, {my_len}\
+                            shots in DB for game {game_val_final}'
+                    )
+                    nda_points = current_game[
+                        current_game['NUMBER'] != '0'
+                    ]
+                    opp_points = current_game[
+                        current_game['NUMBER'] == '0'
+                    ]
+                    nda_points_val = nda_points.ACTUAL_POINTS.sum().astype(int)
+                    opp_points_val = opp_points.ACTUAL_POINTS.sum().astype(int)
+                    st.write(f'NDA Points: {nda_points_val}')
+                    st.write(f'Opp Points: {opp_points_val}')

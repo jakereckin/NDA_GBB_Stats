@@ -47,7 +47,16 @@ def insert_game_summary_sql():
     VALUES (?,? ,?,?,?,?,?,?,?,?,?,?,?,?)
     """
     return sql
-
+def get_shot_spots_sql():
+    sql = """
+    SELECT SPOT,
+           XSPOT,
+           YSPOT,
+           OPP_EXPECTED,
+           POINTS
+      FROM SPOTS
+    """
+    return sql
 # Add
 def insert_minutes_sql():
     sql = """
@@ -131,8 +140,10 @@ def insert_plays_sql():
                        SHOT_SPOT,
                        SHOT_DEFENSE,
                        MAKE_MISS,
-                       PLAY_NUM)
-    VALUES (?, ?, ?, ?, ?, ?)
+                       PLAY_NUM,
+                       SPOT_X,
+                       SPOT_Y)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """
     return sql
 
