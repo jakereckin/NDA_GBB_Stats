@@ -153,32 +153,30 @@ def create_df(
 st.set_page_config(layout="wide")
 # Load or create shot data
 left, center, right = st.columns(3)
-with center:
+with left:
     password = st.text_input(label='Password', type='password')
 if password == st.secrets['page_password']['PAGE_PASSWORD']:
     _shot_defenses = ['OPEN', 'GUARDED', 'HEAVILY_GUARDED']
-    left, center, right = st.columns(spec=[1, 2, 1])
     pbp_data, shot_spots = load_data()
     games = (
         pbp_data.sort_values(by='SEASON', ascending=False).reset_index(drop=True)
     )
     season_list = games['SEASON'].unique().tolist()
+    col1, col2 = st.columns(spec=2)
     with center:
-        col1, col2 = st.columns(spec=2)
-        with col1:
-            season = st.radio(
-                label='Select Season', options=season_list, horizontal=True
-            )
-        games_season = get_season_data(pbp_data=pbp_data, season=season)
-
-        game_list = games_season['GAME_LABEL'].unique().tolist()
-        game_list = game_list[::-1]
-
-        with col2:
-            game_select = st.selectbox(label='Select Game', options=game_list)
-        game = get_selected_game(
-            games_season=games_season, game_select=game_select
+        season = st.radio(
+            label='Select Season', options=season_list, horizontal=True
         )
+    games_season = get_season_data(pbp_data=pbp_data, season=season)
+
+    game_list = games_season['GAME_LABEL'].unique().tolist()
+    game_list = game_list[::-1]
+
+    with right:
+        game_select = st.selectbox(label='Select Game', options=game_list)
+    game = get_selected_game(
+        games_season=games_season, game_select=game_select
+    )
 
 
     fig = utils.build_blank_shot_chart()
