@@ -218,7 +218,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
         )
     )
 
-    clicked = plotly_events(fig, click_event=True, override_height=820, key="shot-capture")
+    clicked = plotly_events(fig, click_event=True, key="shot-capture")
     if clicked:
         ev = clicked[0]
         x_click = ev.get('x')
