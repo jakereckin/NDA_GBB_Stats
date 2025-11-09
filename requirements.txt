@@ -5,6 +5,7 @@ pandas==2.2.3
 Pillow==10.2.0
 plotly==5.24.1
 polars==0.18.15
+scikit_learn==1.6.1
 sqlitecloud==0.0.83
 streamlit==1.51.0
 streamlit_plotly_events==0.0.6
