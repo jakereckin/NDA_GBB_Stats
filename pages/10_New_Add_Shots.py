@@ -194,7 +194,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     # --- Chart ranges (match your utils court)
     opacity = 1
     spacing = 20
-    marker_size = 14
+    marker_size = 10
     X_MIN, X_MAX = -250, 250
     Y_MIN, Y_MAX = -50, 450
 
