@@ -230,7 +230,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             with col4:
                 st.write(f'Adding shot at {spot_val}')
                 with st.form(key='shot_form', clear_on_submit=True):
-                    font_size_px = 12
+                    font_size_px = 10
                     st.markdown(
                         f"""
                         <style>
