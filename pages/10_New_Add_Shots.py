@@ -230,6 +230,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             with col4:
                 st.write(f'Adding shot at {spot_val}')
                 with st.form(key='shot_form', clear_on_submit=True):
+                    st.markdown(":small[This is smaller text inside the form]")
                     game_val = game['GAME_LABEL'].values[0]
                     players_season = games_season.sort_values(by='NUMBER')
                     games_season['NUMBER_INT'] = games_season['NUMBER'].astype(int)
