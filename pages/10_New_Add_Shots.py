@@ -150,7 +150,7 @@ def create_df(
     return my_df
 
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 # Load or create shot data
 left, center, right = st.columns(3)
 with left:
