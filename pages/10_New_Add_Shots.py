@@ -230,32 +230,33 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
             with col4:
                 st.write(f'Adding shot at {spot_val}')
                 with st.form(key='shot_form', clear_on_submit=True):
+                    font_size_px = 12
                     st.markdown(
-                    f"""
-                    <style>
-                    /* target radio group labels and the label text inside radio options */
-                    div[role="radiogroup"] > label,
-                    div[role="radiogroup"] label span {{
-                        font-size: {12}px !important;
-                        line-height: 1.1 !important;
-                    }
+                        f"""
+                        <style>
+                        /* target radio group labels and the label text inside radio options */
+                        div[role="radiogroup"] > label,
+                        div[role="radiogroup"] label span {{
+                            font-size: {font_size_px}px !important;
+                            line-height: 1.1 !important;
+                        }}
 
-                    /* tighten spacing between radio options */
-                    div[role="radiogroup"] > label {{
-                        padding-top: 2px !important;
-                        padding-bottom: 2px !important;
-                        margin-bottom: 2px !important;
-                    }}
+                        /* tighten spacing between radio options */
+                        div[role="radiogroup"] > label {{
+                            padding-top: 2px !important;
+                            padding-bottom: 2px !important;
+                            margin-bottom: 2px !important;
+                        }}
 
-                    /* optional: shrink the radio bullet itself */
-                    div[role="radiogroup"] input[type="radio"] {{
-                        width: 14px;
-                        height: 14px;
-                    }}
-                    </style>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                        /* optional: shrink the radio bullet itself */
+                        div[role="radiogroup"] input[type="radio"] {{
+                            width: 14px;
+                            height: 14px;
+                        }}
+                        </style>
+                        """,
+                        unsafe_allow_html=True,
+                    )
                     game_val = game['GAME_LABEL'].values[0]
                     players_season = games_season.sort_values(by='NUMBER')
                     games_season['NUMBER_INT'] = games_season['NUMBER'].astype(int)
