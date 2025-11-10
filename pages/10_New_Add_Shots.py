@@ -203,7 +203,7 @@ if password == st.secrets['page_password']['PAGE_PASSWORD']:
     fig.update_layout(
         xaxis=dict(range=[X_MIN, X_MAX], showgrid=False, zeroline=False),
         yaxis=dict(range=[Y_MIN, Y_MAX], showgrid=False, zeroline=False, scaleanchor="x"),
-        width=200,
+        width=300,
         height=400,
         margin=dict(l=20, r=20, t=20, b=20),
         plot_bgcolor="white",
