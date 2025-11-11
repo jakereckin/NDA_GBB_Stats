@@ -6,7 +6,7 @@ import streamlit_authenticator as stauth
 pd.options.mode.chained_assignment = None
 
 st.set_page_config(page_title='NDA GBB Analytics')
-st.clear_cache()
+
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
@@ -46,6 +46,9 @@ if "authentication_status" not in st.session_state:
     st.session_state.PAGES = None
     st.session_state.pg = None
 
+def set_guest_false():
+    st.session_state['is_guest'] = False
+
 if st.session_state['authentication_status'] is None:
     st.markdown(
     body='<h1 style="text-align: center; color: blue;">Welcome to NDA GBB Analytics</h1>', 
@@ -83,6 +86,9 @@ if auth_status is True and not st.session_state.get("is_guest"):
 
 if auth_status is True:
     authenticator.logout("Logout", "sidebar", key="auth_logout_widget")
+
+if auth_status is False and st.session_state.get("is_guest") == True:
+    st.session_state['is_guest'] = False
 
 elif auth_status is False and not st.session_state.get("is_guest"):
     st.error("Username/password is incorrect")
