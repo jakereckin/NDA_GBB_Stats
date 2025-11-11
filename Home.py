@@ -56,6 +56,16 @@ if st.session_state['authentication_status'] is None:
     col1, col2, col3 = st.columns(3)
     with col2:
         st.image(image=image)
+
+    st.markdown("---")
+    col_left, col_right = st.columns([3, 1])
+    with col_left:
+        if st.button("View Analytics Only", key="guest_button"):
+            st.session_state["is_guest"] = True
+            st.session_state["auth_role"] = "guest"
+            st.session_state["auth_name"] = "Guest"
+            st.session_state["authentication_status"] = True
+            st.session_state['username'] = 'Guest'
     authenticator.login(
         location="main",
         key="auth_login_widget",
@@ -63,17 +73,6 @@ if st.session_state['authentication_status'] is None:
     )
 
 
-    st.markdown("---")
-    col_left, col_right = st.columns([3, 1])
-    with col_left:
-        st.write("Or view analytics only")
-    with col_right:
-        if st.button("View Analytics", key="guest_button"):
-            st.session_state["is_guest"] = True
-            st.session_state["auth_role"] = "guest"
-            st.session_state["auth_name"] = "Guest"
-            st.session_state["authentication_status"] = True
-            st.session_state['username'] = 'Guest'
 
 # Read authenticator results from session_state
 auth_status = st.session_state.get("authentication_status")
