@@ -59,16 +59,15 @@ if st.session_state['authentication_status'] is None:
 
 
     st.markdown("---")
-    col_left, col_middle, col_right = st.columns(3)
+    col_left, col_right = st.columns(2)
     with col_left:
         authenticator.login(
         location="main",
         key="auth_login_widget",
         fields={'Login': 'Admin Login', 'Form name':'Admin Login'}
     )
-    with col_middle:
-        st.write("Or view analytics only")
     with col_right:
+        st.write("Or view analytics only")
         if st.button("View Analytics", key="guest_button"):
             st.session_state["is_guest"] = True
             st.session_state["auth_role"] = "guest"
