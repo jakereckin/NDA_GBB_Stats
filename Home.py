@@ -56,16 +56,17 @@ if st.session_state['authentication_status'] is None:
     col1, col2, col3 = st.columns(3)
     with col2:
         st.image(image=image)
-    authenticator.login(
+
+
+    st.markdown("---")
+    col_left, col_middle, col_right = st.columns(3)
+    with col_left:
+        authenticator.login(
         location="main",
         key="auth_login_widget",
         fields={'Login': 'Admin Login', 'Form name':'Admin Login'}
     )
-
-
-    st.markdown("---")
-    col_left, col_right = st.columns([3, 1])
-    with col_left:
+    with col_middle:
         st.write("Or view analytics only")
     with col_right:
         if st.button("View Analytics", key="guest_button"):
