@@ -106,7 +106,6 @@ elif auth_status is False and not st.session_state.get("is_guest"):
 
 
 # Determine visible pages based on role / guest
-st.write(st.session_state.is_guest)
 if st.session_state.authentication_status == True:
     if st.session_state.is_guest == True:
         st.session_state.PAGES = {
