@@ -94,7 +94,7 @@ if (auth_status is True) & (auth_username == 'nda_admin'):
 if st.session_state.is_guest == True:
     guest_logout_button = st.sidebar.button('Logout', key='guest_logout')
     if guest_logout_button:
-        for key in ['name', 'username', 'authentication_status', 'email', 'roles']:
+        for key in ['name', 'username', 'authentication_status', 'email', 'roles', 'is_guest']:
             st.session_state.setdefault(key, None)
             st.session_state[key] = None
 
