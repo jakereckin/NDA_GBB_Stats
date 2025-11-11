@@ -56,29 +56,32 @@ if st.session_state['authentication_status'] is None:
     col1, col2, col3 = st.columns(3)
     with col2:
         st.image(image=image)
-    authenticator.login(location="main", key="auth_login_widget")
+
+    guest_view, login_view = st.columns(2)
+    with guest_view:
+        analytics_only = st.button(label='Click to view analytics', key='analytics_view_only')
+    with login_view:
+        admin_view = st.button(label='Click for Admin Login')
+
+    if login_view:
+        authenticator.login(location="main", key="auth_login_widget")
 
 
-    st.markdown("---")
-    col_left, col_right = st.columns([3, 1])
-    with col_left:
-        st.write("Or continue without signing in:")
-    with col_right:
-        if st.button("Continue as guest", key="guest_button"):
-            st.session_state["is_guest"] = True
-            st.session_state["auth_role"] = "guest"
-            st.session_state["auth_name"] = "Guest"
-            st.session_state["authentication_status"] = True
+    if guest_view:
+        st.session_state["is_guest"] = True
+        st.session_state["auth_role"] = "guest"
+        st.session_state["auth_name"] = "Guest"
+        st.session_state["authentication_status"] = True
 
 # Read authenticator results from session_state
 auth_status = st.session_state.get("authentication_status")
-auth_name = st.session_state.get("name")        # set by streamlit-authenticator
-auth_username = st.session_state.get("username")  # set by streamlit-authenticator
+auth_name = st.session_state.get("name")
+auth_username = st.session_state.get("username")
+is_guest = st.session_state.get('is_guest')
 
-if auth_status is False and st.session_state.get("is_guest") == True:
-    st.session_state['is_guest'] = False
+
     
-if auth_status is True and not st.session_state.get("is_guest"):
+if auth_status == True and is_guest == False:
     # map username -> roles using your config; example assumes roles in YAML as list
     st.session_state["auth_role"] = 'nda_admin'
     st.session_state["auth_name"] = auth_name
@@ -86,10 +89,10 @@ if auth_status is True and not st.session_state.get("is_guest"):
     st.session_state["is_guest"] = False
     # show logout (unique key)
 
-if (auth_status is True) & (auth_username == 'nda_admin'):
+if (auth_status == True) & (auth_username == 'nda_admin'):
     authenticator.logout("Logout", "sidebar", key="auth_logout_widget")
 
-if st.session_state.is_guest == True:
+if is_guest == True:
     guest_logout_button = st.sidebar.button('Logout', key='guest_logout')
     if guest_logout_button:
         for key in ['name', 'username', 'authentication_status', 'email', 'roles', 'is_guest']:
@@ -97,7 +100,7 @@ if st.session_state.is_guest == True:
             st.session_state[key] = None
         st.rerun()
 
-elif auth_status is False and not st.session_state.get("is_guest"):
+elif auth_status == False and is_guest == False:
     st.error("Username/password is incorrect")
 
 
