@@ -101,7 +101,7 @@ if st.session_state.authentication_status == True:
             st.Page('view_game_summary.py', title='Game Summary')
         ]
         }
-        st.session_state.pg = st.navigation(st.session_state.PAGES, position="top")
+        st.session_state.pg = st.navigation(st.session_state.PAGES)
         st.session_state.pg.run()
     elif st.session_state.auth_role == 'nda_admin':
         st.session_state.PAGES = {
@@ -120,7 +120,7 @@ if st.session_state.authentication_status == True:
             st.Page('view_game_summary.py', title='Game Summary')
         ]
         }
-        st.session_state.pg = st.navigation(st.session_state.PAGES, position="top")
+        st.session_state.pg = st.navigation(st.session_state.PAGES)
         st.session_state.pg.run()
 
 
