@@ -88,14 +88,18 @@ if auth_status is True and not st.session_state.get("is_guest"):
     st.session_state["is_guest"] = False
     # show logout (unique key)
 
-if auth_status is True:
-    authenticator.logout("Logout", "sidebar", key="auth_logout_widget", callback=set_guest_false())
+if (auth_status is True) & (auth_username == 'nda_admin'):
+    authenticator.logout("Logout", "sidebar", key="auth_logout_widget")
+
+if st.session_state.is_guest == True:
+    guest_logout_button = st.sidebar.button('Logout', key='guest_logout')
+    if guest_logout_button:
+        st.session_state.is_guest = False
+        st.session_state.authentication_status = False
 
 elif auth_status is False and not st.session_state.get("is_guest"):
     st.error("Username/password is incorrect")
 
-if auth_status == False:
-    st.session_state.is_guest = False
 
 
 
