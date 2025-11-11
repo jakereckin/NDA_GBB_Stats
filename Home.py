@@ -89,7 +89,7 @@ if auth_status is True and not st.session_state.get("is_guest"):
     # show logout (unique key)
 
 if auth_status is True:
-    authenticator.logout("Logout", "sidebar", key="auth_logout_widget", callback=set_guest_false)
+    authenticator.logout("Logout", "sidebar", key="auth_logout_widget")
 
 
 elif auth_status is False and not st.session_state.get("is_guest"):
