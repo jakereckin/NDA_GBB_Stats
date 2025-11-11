@@ -94,9 +94,9 @@ if (auth_status is True) & (auth_username == 'nda_admin'):
 if st.session_state.is_guest == True:
     guest_logout_button = st.sidebar.button('Logout', key='guest_logout')
     if guest_logout_button:
-        st.session_state.is_guest = False
-        st.session_state.authentication_status = False
-        st.rerun()
+        for key in ['name', 'username', 'authentication_status', 'email', 'roles']:
+            st.session_state.setdefault(key, None)
+            st.session_state[key] = None
 
 elif auth_status is False and not st.session_state.get("is_guest"):
     st.error("Username/password is incorrect")
