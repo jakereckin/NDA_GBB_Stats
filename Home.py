@@ -65,7 +65,7 @@ if st.session_state['authentication_status'] is None:
     with login_view:
         admin_view = st.button(label='Click for Admin Login')
 
-    if login_view:
+    if admin_view:
         authenticator.login(location="main", key="auth_login_widget")
 
 
