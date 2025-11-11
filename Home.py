@@ -96,6 +96,7 @@ if st.session_state.is_guest == True:
     if guest_logout_button:
         st.session_state.is_guest = False
         st.session_state.authentication_status = False
+        st.rerun()
 
 elif auth_status is False and not st.session_state.get("is_guest"):
     st.error("Username/password is incorrect")
