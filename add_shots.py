@@ -152,7 +152,7 @@ def create_df(
 
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 # Load or create shot data
-left, center, right = st.columns(3)
+left, right = st.columns(2)
 _shot_defenses = ["OPEN", "GUARDED", "HEAVILY_GUARDED"]
 pbp_data, shot_spots = load_data()
 games = pbp_data.sort_values(by="SEASON", ascending=False).reset_index(drop=True)
@@ -166,7 +166,7 @@ games_season = get_season_data(pbp_data=pbp_data, season=season)
 game_list = games_season["GAME_LABEL"].unique().tolist()[::-1]
 
 with right:
-    game_select = st.selectbox(label="Select Game", options=game_list)
+    game_select = st.selectbox(label="Select Game", options=game_list, width='stretch')
 
 game = get_selected_game(games_season=games_season, game_select=game_select)
 
