@@ -75,6 +75,7 @@ if st.session_state['authentication_status'] is None:
             st.session_state["auth_name"] = "Guest"
             st.session_state["authentication_status"] = True
             st.session_state['username'] = 'Guest'
+            st.session_state.auth_username = 'Guest'
 
 # Read authenticator results from session_state
 auth_status = st.session_state.get("authentication_status")
