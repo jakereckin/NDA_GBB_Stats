@@ -56,7 +56,7 @@ if st.session_state['authentication_status'] is None:
     col1, col2, col3 = st.columns(3)
     with col2:
         st.image(image=image)
-    authenticator.login(location="main", key="auth_login_widget")
+    authenticator.login(location="main", key="auth_login_widget", fields={'Login': 'Admin Login'})
 
 
     st.markdown("---")
