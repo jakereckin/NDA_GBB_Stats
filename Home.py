@@ -95,7 +95,7 @@ if st.session_state.is_guest == True:
         for key in ['name', 'username', 'authentication_status', 'email', 'roles', 'is_guest']:
             st.session_state.setdefault(key, None)
             st.session_state[key] = None
-            st.rerun()
+        st.rerun()
 
 elif auth_status is False and not st.session_state.get("is_guest"):
     st.error("Username/password is incorrect")
