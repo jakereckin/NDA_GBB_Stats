@@ -195,7 +195,7 @@ capture_x, capture_y = make_grid(X_MIN, X_MAX, Y_MIN, Y_MAX, spacing)
 fig.update_layout(
     xaxis=dict(range=[X_MIN, X_MAX], showgrid=False, zeroline=False),
     yaxis=dict(range=[Y_MIN, Y_MAX], showgrid=False, zeroline=False, scaleanchor="x"),
-    width=400,
+    width=350,
     height=400,
     margin=dict(l=20, r=20, t=20, b=20),
     plot_bgcolor="white",
@@ -232,3 +232,81 @@ if clicked:
 
                 player_val = st.radio(label="Player", options=unique_players, horizontal=True)
 
+                c2, c3, c4 = st.columns(3)
+                with c2:
+                    free_throw = st.radio(label="Free Throw", options=["N", "Y"], horizontal=True)
+                with c4:
+                    make_miss = st.radio(label="Make/Miss", options=["N", "Y"], horizontal=True)
+                with c3:
+                    shot_defense = st.radio(label="Shot Defense", options=_shot_defenses, horizontal=True)
+
+                add = st.form_submit_button(label="Add Play")
+                if add:
+                    time.sleep(0.5)
+                    player_number, game_val_final = get_values_needed(
+                        game_val=game_val, game=game, player_val=player_val
+                    )
+                    player_number = int(player_number)
+
+                    if free_throw == "Y":
+                        spot_val = "FREE_THROW1"
+                        x_click = 0
+                        y_click = 150
+
+                    test_make = "Make" if make_miss == "Y" else "Miss"
+
+                    my_df = create_df(
+                        game_val_final=game_val_final,
+                        player_number=player_number,
+                        spot_val=spot_val,
+                        shot_defense=shot_defense,
+                        make_miss=make_miss,
+                        spot_x=x_click,
+                        spot_y=y_click,
+                    )
+
+                    all_data_game = games_season[games_season["GAME_ID"] == game_val_final]
+                    if len(all_data_game) == 0:
+                        my_df["PLAY_NUM"] = 0
+                    else:
+                        current_play = len(all_data_game)
+                        my_df["PLAY_NUM"] = current_play
+
+                    with sqlitecloud.connect(sql_lite_connect) as conn:
+                        cursor = conn.cursor()
+                        cursor.execute(
+                            sql=sql.insert_plays_sql(),
+                            parameters=(
+                                str(game_val_final),
+                                str(player_number),
+                                str(spot_val),
+                                str(shot_defense),
+                                str(make_miss),
+                                str(my_df["PLAY_NUM"].values[0]),
+                                str(x_click),
+                                str(y_click),
+                            ),
+                        )
+                        conn.commit()
+
+                    current_game = pd.concat(
+                        objs=[all_data_game.reset_index(drop=True), my_df.reset_index(drop=True)],
+                        ignore_index=True,
+                    )
+                    current_game["ACTUAL_POINTS"] = np.where(
+                        current_game["MAKE_MISS"] == "Y", current_game["POINTS"], 0
+                    )
+
+                    st.write(current_game)
+                    my_len = len(current_game)
+                    st.text(
+                        f"Submitted {test_make} by player {player_number} from spot {spot_val} with defense {shot_defense} for game {game_val_final}"
+                    )
+                    st.write(f"Added to DB, {my_len} shots in DB for game {game_val_final}")
+
+                    nda_points = current_game[current_game["NUMBER"] != "0"]
+                    opp_points = current_game[current_game["NUMBER"] == "0"]
+                    nda_points_val = int(nda_points.ACTUAL_POINTS.sum())
+                    opp_points_val = int(opp_points.ACTUAL_POINTS.sum())
+                    st.write(f"NDA Points: {nda_points_val}")
+                    st.write(f"Opp Points: {opp_points_val}")
