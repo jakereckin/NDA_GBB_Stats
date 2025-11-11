@@ -159,7 +159,7 @@ games = pbp_data.sort_values(by="SEASON", ascending=False).reset_index(drop=True
 season_list = games["SEASON"].unique().tolist()
 
 col1, col2 = st.columns(2)
-with center:
+with left:
     season = st.radio(label="Select Season", options=season_list, horizontal=True)
 
 games_season = get_season_data(pbp_data=pbp_data, season=season)
