@@ -45,6 +45,7 @@ if "authentication_status" not in st.session_state:
     st.session_state["authentication_status"] = None
     st.session_state.PAGES = None
     st.session_state.pg = None
+    st.session_state.auth_username = None
 
 
 
