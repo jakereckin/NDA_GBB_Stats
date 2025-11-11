@@ -115,7 +115,7 @@ elif auth_status is False and not st.session_state.get("is_guest"):
 if st.session_state.authentication_status == True:
     if st.session_state.is_guest == True:
         st.session_state.PAGES = {
-        'Home': [st.Page('home_page.py', title='Home')],
+        'Home': [st.Page('home_page.py', title='Home', default=True)],
         'View Data': [
             st.Page('team_shot_chart.py', title='Team Shot Chart'),
             st.Page('player_shot_chart.py', title='Player Shot Chart'),
@@ -127,7 +127,7 @@ if st.session_state.authentication_status == True:
         st.session_state.pg.run()
     elif st.session_state.auth_role == 'nda_admin':
         st.session_state.PAGES = {
-        'Home': [st.Page('home_page.py', title='Home')],
+        'Home': [st.Page('home_page.py', title='Home', default=True)],
         'Add Data': [
             st.Page('add_shots.py', title='Add Shots'),
             st.Page('add_players.py', title='Add Players'),
