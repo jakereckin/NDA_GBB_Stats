@@ -46,6 +46,7 @@ if "authentication_status" not in st.session_state:
     st.session_state.PAGES = None
     st.session_state.pg = None
 
+
 def set_guest_false():
     st.session_state['is_guest'] = False
 
@@ -75,6 +76,9 @@ if st.session_state['authentication_status'] is None:
 auth_status = st.session_state.get("authentication_status")
 auth_name = st.session_state.get("name")        # set by streamlit-authenticator
 auth_username = st.session_state.get("username")  # set by streamlit-authenticator
+
+if auth_status is False and st.session_state.get("is_guest") == True:
+    st.session_state['is_guest'] = False
     
 if auth_status is True and not st.session_state.get("is_guest"):
     # map username -> roles using your config; example assumes roles in YAML as list
@@ -87,8 +91,6 @@ if auth_status is True and not st.session_state.get("is_guest"):
 if auth_status is True:
     authenticator.logout("Logout", "sidebar", key="auth_logout_widget")
 
-if auth_status is False and st.session_state.get("is_guest") == True:
-    st.session_state['is_guest'] = False
 
 elif auth_status is False and not st.session_state.get("is_guest"):
     st.error("Username/password is incorrect")
