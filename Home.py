@@ -91,6 +91,8 @@ if auth_status is True and not st.session_state.get("is_guest"):
 if auth_status is True:
     authenticator.logout("Logout", "sidebar", key="auth_logout_widget")
 
+if st.auth_status == False:
+    st.session_state.is_guest = False
 
 elif auth_status is False and not st.session_state.get("is_guest"):
     st.error("Username/password is incorrect")
