@@ -47,8 +47,6 @@ if "authentication_status" not in st.session_state:
     st.session_state.pg = None
 
 
-def set_guest_false():
-    st.session_state['is_guest'] = False
 
 if st.session_state['authentication_status'] is None:
     st.markdown(
@@ -97,6 +95,7 @@ if st.session_state.is_guest == True:
         for key in ['name', 'username', 'authentication_status', 'email', 'roles', 'is_guest']:
             st.session_state.setdefault(key, None)
             st.session_state[key] = None
+            st.rerun()
 
 elif auth_status is False and not st.session_state.get("is_guest"):
     st.error("Username/password is incorrect")
