@@ -195,7 +195,7 @@ capture_x, capture_y = make_grid(X_MIN, X_MAX, Y_MIN, Y_MAX, spacing)
 fig.update_layout(
     xaxis=dict(range=[X_MIN, X_MAX], showgrid=False, zeroline=False),
     yaxis=dict(range=[Y_MIN, Y_MAX], showgrid=False, zeroline=False, scaleanchor="x"),
-    width=350,
+    width=400,
     height=400,
     margin=dict(l=20, r=20, t=20, b=20),
     plot_bgcolor="white",
