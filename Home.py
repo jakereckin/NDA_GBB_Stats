@@ -89,7 +89,7 @@ if auth_status is True and not st.session_state.get("is_guest"):
     # show logout (unique key)
 
 if auth_status is True:
-    authenticator.logout("Logout", "sidebar", key="auth_logout_widget")
+    authenticator.logout("Logout", "sidebar", key="auth_logout_widget", callback=set_guest_false)
 
 
 elif auth_status is False and not st.session_state.get("is_guest"):
@@ -98,7 +98,7 @@ elif auth_status is False and not st.session_state.get("is_guest"):
 
 
 # Determine visible pages based on role / guest
-
+st.write(st.session_state.is_guest)
 if st.session_state.authentication_status == True:
     if st.session_state.is_guest == True:
         st.session_state.PAGES = {
