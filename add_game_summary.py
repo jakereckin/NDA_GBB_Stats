@@ -7,7 +7,9 @@ pd.options.mode.chained_assignment = None
 
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
-
+button = st.button(label='Home')
+if button:
+    st.switch_page('home_page.py')
 
 
 # ----------------------------------------------------------------------------
