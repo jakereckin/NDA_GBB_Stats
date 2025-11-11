@@ -74,10 +74,12 @@ if st.session_state['authentication_status'] is None:
         st.session_state["authentication_status"] = True
 
 # Read authenticator results from session_state
-auth_status = st.session_state.get("authentication_status")
-auth_name = st.session_state.get("name")
-auth_username = st.session_state.get("username")
-is_guest = st.session_state.get('is_guest')
+
+if st.session_state.authentication_status is not None:
+    auth_status = st.session_state.get("authentication_status")
+    auth_name = st.session_state.get("name")
+    auth_username = st.session_state.get("username")
+    is_guest = st.session_state.get('is_guest')
 
 
     
