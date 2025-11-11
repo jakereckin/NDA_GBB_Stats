@@ -54,20 +54,17 @@ if st.session_state['authentication_status'] is None:
     unsafe_allow_html=True
     )
     col1, col2, col3 = st.columns(3)
-    with col2:
+    with col1:
         st.image(image=image)
 
-
-    st.markdown("---")
-    col_left, col_right = st.columns(2)
-    with col_left:
+    with col3:
         authenticator.login(
         location="main",
         key="auth_login_widget",
         fields={'Login': 'Admin Login', 'Form name':'Admin Login'}
     )
-    with col_right:
-        st.write("Or view analytics only")
+    with col2:
+        st.write("Just view analytics only")
         if st.button("View Analytics", key="guest_button"):
             st.session_state["is_guest"] = True
             st.session_state["auth_role"] = "guest"
@@ -96,6 +93,7 @@ if (auth_status is True) & (auth_username == 'nda_admin'):
     authenticator.logout("Logout", "sidebar", key="auth_logout_widget")
 
 if st.session_state.is_guest == True:
+    st.sidebar.title('NDA Analytics')
     guest_logout_button = st.sidebar.button('Logout', key='guest_logout')
     if guest_logout_button:
         for key in ['name', 'username', 'authentication_status', 'email', 'roles', 'is_guest']:
@@ -114,7 +112,7 @@ elif auth_status is False and not st.session_state.get("is_guest"):
 if st.session_state.authentication_status == True:
     if st.session_state.is_guest == True:
         st.session_state.PAGES = {
-        'Home': [st.Page('home_page.py', title='Home', default=True)],
+        'Home': [st.Page('guest_home.py', title='Guest Home', default=True)],
         'View Data': [
             st.Page('team_shot_chart.py', title='Team Shot Chart'),
             st.Page('player_shot_chart.py', title='Player Shot Chart'),
@@ -126,7 +124,7 @@ if st.session_state.authentication_status == True:
         st.session_state.pg.run()
     elif st.session_state.auth_role == 'nda_admin':
         st.session_state.PAGES = {
-        'Home': [st.Page('home_page.py', title='Home', default=True)],
+        'Home': [st.Page('admin_home.py', title='Admin Home', default=True)],
         'Add Data': [
             st.Page('add_shots.py', title='Add Shots'),
             st.Page('add_players.py', title='Add Players'),

@@ -4,4 +4,4 @@ from py import sql, data_source
 from PIL import Image
 pd.options.mode.chained_assignment = None
 
-st.write(f'Welcome {st.session_state.auth_username}. Please select Page from Above to View')
+st.write(f'Select analytics on left to view.')
