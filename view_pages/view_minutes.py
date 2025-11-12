@@ -2,13 +2,32 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import ast
+import plotly.express as px
 import polars as pl
 from py import sql, data_source
 pd.options.mode.chained_assignment = None
 
 st.cache_resource.clear()
+st.set_page_config(layout='wide')
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
+
+_PLAYER_LINEUPS_MAP_NAMES = {
+    'TOTAL_MIN': 'Total Minutes Played',
+    'POITNS_SCORED_PER_GAME': 'Points Scored per Game',
+    'POINTS_PER_MINUTE': 'Points per Minute Played',
+    'OPP_POINTS_PER_MINUTE': 'Points Allowed per Minute Played',
+    'PLUS_MINUS_PER_MINUTE': 'Plus/Minus per Minute Played',
+    'GAME_COUNT': 'Games Played'
+}
+
+_PLAYER_MAP_NAMES = {
+    'GAME_COUNT': 'Games Played',
+    'POINTS_PER_MINUTE': 'Team Points while Playing per Minute',
+    'OPP_POINTS_PER_MINUTE': 'Points Allowed while Playing per Minute',
+    'PLUS_MINUS_PER_MINUTE': 'Plus/Minus per Minute Played',
+    'MINUTES_PER_GAME': 'Minutes per Game Played'
+}
 
 # ----------------------------------------------------------------------------
 @st.cache_data
@@ -79,6 +98,21 @@ def build_lineup_intervals(minutes_data, game_end_sec=36*60):
     )
     return clean_lineups
 
+def build_player_only(minute_data):
+    minute_data['SECONDS_PLAYED'] = (
+        minute_data['TIME_IN'] - minute_data['TIME_OUT']
+    )
+    minute_data['MIN_PLAYED'] = (
+        minute_data['SECONDS_PLAYED'] / 60
+    )
+    minute_data['POINTS_SCORED'] = (
+        minute_data['TEAM_POINT_OUT'] - minute_data['TEAM_POINT_IN']
+    )
+    minute_data['OPP_POINTS_SCORED'] = (
+        minute_data['OPP_POINT_OUT'] - minute_data['OPP_POINT_IN']
+    )
+    return minute_data
+
 def group_data(clean_lineups, game_dict):
     grouped_line_data = (
         clean_lineups.groupby(by=['LINEUP_KEY', 'GAME_ID'], as_index=False)
@@ -94,51 +128,29 @@ def get_game_player_info(minutes_data):
     player_info = minutes_data[['GAME_ID', 'PLAYER_ID', 'PLAYER_NAME']].drop_duplicates()
     return games_info, player_info
 
-minute_data = get_data()
-clean_lineups = build_lineup_intervals(minutes_data=minute_data)
-games_info, player_info = get_game_player_info(minutes_data=minute_data)
-games_info_dict = dict(zip(games_info['GAME_ID'], games_info['GAME_DATE']))
-grouped_lineups = group_data(clean_lineups=clean_lineups, game_dict=games_info_dict)
+def get_unique_lineups(grouped_lineups, player_info):
+    unique_player_lineups = {}
+    unique_lineups = grouped_lineups['LINEUP_KEY'].unique().tolist()
+    unique_lineups = [ast.literal_eval(lineup) for lineup in unique_lineups]
+    my_players = player_info['PLAYER_ID'].unique().tolist()
+    my_players = [int(player) for player in my_players]
+    for player in my_players:
+        player_lineups = []
+        for lineup in unique_lineups:
+            if player in lineup:
+                player_lineups.append(lineup)
+        unique_player_lineups[player] = player_lineups
+    return unique_player_lineups, my_players
 
-unique_player_lineups = {}
-unique_lineups = grouped_lineups['LINEUP_KEY'].unique().tolist()
-unique_lineups = [ast.literal_eval(lineup) for lineup in unique_lineups]
-my_players = player_info['PLAYER_ID'].unique().tolist()
-my_players = [int(player) for player in my_players]
-for player in my_players:
-    player_lineups = []
-    for lineup in unique_lineups:
-        if player in lineup:
-            player_lineups.append(lineup)
-    unique_player_lineups[player] = player_lineups
-
-select_player = st.selectbox(label='Select Player', options=my_players)
-if select_player:
-    that_player_lineups = unique_player_lineups.get(select_player)
-    df = pd.DataFrame(
-        data=that_player_lineups, 
-        columns=['PLAYER_1', 'PLAYER_2', 'PLAYER_3', 'PLAYER_4', 'PLAYER_5']
-    )
-    df['LINEUP_KEY'] = tuple(
-        zip(
-            df['PLAYER_1'], 
-            df['PLAYER_2'], 
-            df['PLAYER_3'], 
-            df['PLAYER_4'],
-            df['PLAYER_5']
-        )
-    )
-    df['LINEUP_KEY'] = df['LINEUP_KEY'].astype(str)
-    merged = pd.merge(df, grouped_lineups, on=['LINEUP_KEY'])
-    game_level = merged[[
-        'LINEUP_KEY', 'TOTAL_MIN', 'POINTS_SCORED', 'OPP_POINTS_SCORED', 'OPPONENT'
-    ]]
+def get_lineup_level_data(data):
     lineup_level = (
-        merged.groupby(by=['LINEUP_KEY'], as_index=False)
-              .agg(GAME_COUNT=('OPPONENT', 'count'),
-                   TOTAL_MIN=('TOTAL_MIN', 'sum'),
-                   POINTS_SCORED=('POINTS_SCORED', 'sum'),
-                   OPP_POINTS_SCORED=('OPP_POINTS_SCORED', 'sum'))
+        data.groupby(by=['LINEUP_KEY'], as_index=False)
+            .agg(
+                GAME_COUNT=('OPPONENT', 'count'),
+                TOTAL_MIN=('TOTAL_MIN', 'sum'),
+                POINTS_SCORED=('POINTS_SCORED', 'sum'),
+                OPP_POINTS_SCORED=('OPP_POINTS_SCORED', 'sum')
+            )
     )
     lineup_level['POINTS_SCORED_PER_GAME'] = (
         lineup_level['POINTS_SCORED'] / lineup_level['GAME_COUNT']
@@ -152,11 +164,185 @@ if select_player:
     lineup_level['PLUS_MINUS_PER_MINUTE'] = (
         lineup_level['POINTS_PER_MINUTE'] - lineup_level['OPP_POINTS_PER_MINUTE']
     )
-    lineup_level = lineup_level.sort_values(by=['PLUS_MINUS_PER_MINUTE'], ascending=False).reset_index(drop=True)
+    lineup_level = (
+        lineup_level.sort_values(by=['PLUS_MINUS_PER_MINUTE'], ascending=False)
+                    .reset_index(drop=True)
+    )
+    return lineup_level
 
-    min_threshold = st.number_input(label='Minimum minutes to consider', step=1)
+def get_player_level(data):
+    player_level = (
+        data.groupby(by=['PLAYER_NAME'], as_index=False)
+            .agg(
+                GAME_COUNT=('GAME_DATE', 'nunique'),
+                TOTAL_MIN=('MIN_PLAYED', 'sum'),
+                POINTS_SCORED=('POINTS_SCORED', 'sum'),
+                OPP_POINTS_SCORED=('OPP_POINTS_SCORED', 'sum')
+            )
+    )
+    player_level['POINTS_SCORED_PER_GAME'] = (
+        player_level['POINTS_SCORED'] / player_level['GAME_COUNT']
+    )
+    player_level['POINTS_PER_MINUTE'] = (
+        player_level['POINTS_SCORED'] / player_level['TOTAL_MIN']
+    )
+    player_level['OPP_POINTS_PER_MINUTE'] = (
+        player_level['OPP_POINTS_SCORED'] / player_level['TOTAL_MIN']
+    )
+    player_level['PLUS_MINUS_PER_MINUTE'] = (
+        player_level['POINTS_PER_MINUTE'] - player_level['OPP_POINTS_PER_MINUTE']
+    )
+    player_level['MINUTES_PER_GAME'] = (
+        player_level['TOTAL_MIN'] / player_level['GAME_COUNT']
+    )
+    player_level = (
+        player_level.sort_values(by=['PLUS_MINUS_PER_MINUTE'], ascending=False)
+                    .reset_index(drop=True)
+    )
+    return player_level
 
-    if min_threshold:
+
+minute_data = get_data()
+clean_lineups = build_lineup_intervals(minutes_data=minute_data)
+games_info, player_info = get_game_player_info(minutes_data=minute_data)
+games_info_dict = dict(zip(games_info['GAME_ID'], games_info['GAME_DATE']))
+grouped_lineups = group_data(clean_lineups=clean_lineups, game_dict=games_info_dict)
+unique_player_lineups, my_players = get_unique_lineups(grouped_lineups=grouped_lineups, player_info=player_info)
+
+col1, col2 = st.columns(2)
+view_analytics = st.selectbox(
+    label='Choose What Level of Analytics to View',
+    options=['Player Lineup', 'Overall Lineup', 'Player']
+)
+
+
+if view_analytics == 'Player Lineup':
+
+    player_col, min_col, stat_col = st.columns(3)
+    with player_col:
+        select_player = st.selectbox(label='Select Player', options=my_players)
+    with min_col:
+        min_threshold = st.number_input(label='Minimum minutes to consider', step=1, value=2)
+    if select_player:
+        that_player_lineups = unique_player_lineups.get(select_player)
+        df = pd.DataFrame(
+            data=that_player_lineups, 
+            columns=['PLAYER_1', 'PLAYER_2', 'PLAYER_3', 'PLAYER_4', 'PLAYER_5']
+        )
+        df['LINEUP_KEY'] = tuple(
+            zip(
+                df['PLAYER_1'], 
+                df['PLAYER_2'], 
+                df['PLAYER_3'], 
+                df['PLAYER_4'],
+                df['PLAYER_5']
+            )
+        )
+        df['LINEUP_KEY'] = df['LINEUP_KEY'].astype(str)
+        merged = pd.merge(df, grouped_lineups, on=['LINEUP_KEY'])
+        lineup_level = get_lineup_level_data(merged)
         lineup_level = lineup_level[lineup_level['TOTAL_MIN'] >= min_threshold]
-    st.write(lineup_level)
-    #st.write(that_player_lineups)
+        lineup_level = lineup_level.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
+        lineup_level['Lineup'] = lineup_level['LINEUP_KEY']
+        view_stats = [
+            'Plus/Minus per Minute Played', 'Games Played', 
+            'Total Minutes Played', 'Points per Minute Played',
+            'Points Allowed per Minute Played'
+        ]
+        with stat_col:
+            data = st.radio(
+                label='Select Stat', options=view_stats, horizontal=True
+            )
+        col1, col2 = st.columns(2)
+        if data:
+            with col1:
+                fig = px.bar(
+                    data_frame=lineup_level.round(3),
+                    x=data,
+                    y='Lineup',
+                    orientation='h',
+                    text=data,
+                    color_discrete_sequence=['green']
+                )
+                fig.update_traces(textposition='outside')
+                st.plotly_chart(figure_or_data=fig, width='stretch')
+            sorted_lineup = (
+                lineup_level.sort_values(by=[data], ascending=False)
+                            .reset_index(drop=True)
+            )
+            with col2:
+                st.dataframe(sorted_lineup[['Lineup', data]], hide_index=True)
+
+if view_analytics == 'Player':
+
+    player_data = build_player_only(minute_data=minute_data)
+    player_clean_data = get_player_level(player_data)
+    player_clean_data = player_clean_data.rename(columns=_PLAYER_MAP_NAMES)
+    player_clean_data['Name'] = player_clean_data['PLAYER_NAME']
+    view_stats = [
+        'Team Points while Playing per Minute', 'Points Allowed while Playing per Minute',
+        'Plus/Minus per Minute Played', 'Minutes per Game Played', 'Games Played'
+        ]
+    data = st.radio(
+        label='Select Stat', options=view_stats, horizontal=True
+    )
+    col1, col2 = st.columns(2)
+    if data:
+        with col1:
+            fig = px.bar(
+                data_frame=player_clean_data.round(3),
+                x=data,
+                y='Name',
+                orientation='h',
+                text=data,
+                color_discrete_sequence=['green']
+            )
+            fig.update_traces(textposition='outside')
+            st.plotly_chart(figure_or_data=fig, width='stretch')
+        sorted_lineup = (
+            player_clean_data.sort_values(by=[data], ascending=False)
+                        .reset_index(drop=True)
+        )
+        with col2:
+            st.dataframe(sorted_lineup[['Name', data]], hide_index=True)
+        #st.write(that_player_lineups)
+
+if view_analytics == 'Overall Lineup':
+    min_col, stat_col = st.columns(2)
+    with min_col:
+        min_threshold = st.number_input(label='Minimum minutes to consider', step=1, value=2)
+    lineup_level = get_lineup_level_data(grouped_lineups)
+    lineup_level = lineup_level[lineup_level['TOTAL_MIN'] >= min_threshold]
+    lineup_level = lineup_level.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
+    lineup_level['Lineup'] = lineup_level['LINEUP_KEY']
+    view_stats = [
+            'Plus/Minus per Minute Played', 'Games Played', 
+            'Total Minutes Played', 'Points per Minute Played',
+            'Points Allowed per Minute Played'
+    ]
+    with stat_col:
+        data = st.radio(
+            label='Select Stat', options=view_stats, horizontal=True
+        )
+    col1, col2 = st.columns(2)
+    if data:
+        with col1:
+            fig = px.bar(
+                    data_frame=lineup_level.round(3),
+                    x=data,
+                    y='Lineup',
+                    orientation='h',
+                    text=data,
+                    color_discrete_sequence=['green']
+            )
+            fig.update_traces(textposition='outside')
+            st.plotly_chart(figure_or_data=fig, width='stretch')
+        sorted_lineup = (
+                lineup_level.sort_values(by=[data], ascending=False)
+                            .reset_index(drop=True)
+        )
+        with col2:
+            st.dataframe(
+                data=sorted_lineup[['Lineup', data]],
+                hide_index=True,
+            )
