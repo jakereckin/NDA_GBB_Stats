@@ -117,7 +117,8 @@ if st.session_state.authentication_status == True:
             st.Page('team_shot_chart.py', title='Team Shot Chart'),
             st.Page('player_shot_chart.py', title='Player Shot Chart'),
             st.Page('view_expected_points.py', title='Expected Points'),
-            st.Page('view_game_summary.py', title='Game Summary')
+            st.Page('view_game_summary.py', title='Game Summary'),
+            st.Page('view_minutes.py', title='Lineups')
         ]
         }
         st.session_state.pg = st.navigation(st.session_state.PAGES)
@@ -136,7 +137,8 @@ if st.session_state.authentication_status == True:
             st.Page('team_shot_chart.py', title='Team Shot Chart'),
             st.Page('player_shot_chart.py', title='Player Shot Chart'),
             st.Page('view_expected_points.py', title='Expected Points'),
-            st.Page('view_game_summary.py', title='Game Summary')
+            st.Page('view_game_summary.py', title='Game Summary'),
+            st.Page('view_minutes.py', title='Lineups')
         ]
         }
         st.session_state.pg = st.navigation(st.session_state.PAGES)
