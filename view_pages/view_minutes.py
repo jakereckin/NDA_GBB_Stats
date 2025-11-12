@@ -201,18 +201,55 @@ def get_player_level(data):
     )
     return player_level
 
+def get_game_level(data):
+    game_level = (
+        data.groupby(by=['LINEUP_KEY', 'OPPONENT'], as_index=False)
+            .agg(
+                GAME_COUNT=('GAME_DATE', 'nunique'),
+                TOTAL_MIN=('MIN_PLAYED', 'sum'),
+                POINTS_SCORED=('POINTS_SCORED', 'sum'),
+                OPP_POINTS_SCORED=('OPP_POINTS_SCORED', 'sum')
+            )
+    )
+    game_level['POINTS_SCORED_PER_GAME'] = (
+        game_level['POINTS_SCORED'] / game_level['GAME_COUNT']
+    )
+    game_level['POINTS_PER_MINUTE'] = (
+        game_level['POINTS_SCORED'] / game_level['TOTAL_MIN']
+    )
+    game_level['OPP_POINTS_PER_MINUTE'] = (
+        game_level['OPP_POINTS_SCORED'] / game_level['TOTAL_MIN']
+    )
+    game_level['PLUS_MINUS_PER_MINUTE'] = (
+        game_level['POINTS_PER_MINUTE'] - game_level['OPP_POINTS_PER_MINUTE']
+    )
+    game_level['MINUTES_PER_GAME'] = (
+        game_level['TOTAL_MIN'] / game_level['GAME_COUNT']
+    )
+    game_level = (
+        game_level.sort_values(by=['PLUS_MINUS_PER_MINUTE'], ascending=False)
+                    .reset_index(drop=True)
+    )
+    return game_level
+
 
 minute_data = get_data()
+years = minute_data['SEASON'].drop_duplicates().tolist()
+select_season = st.radio('Select Season', options=years, horizontal=True)
+minute_data = minute_data[minute_data['SEASON'] == select_season]
 clean_lineups = build_lineup_intervals(minutes_data=minute_data)
 games_info, player_info = get_game_player_info(minutes_data=minute_data)
 games_info_dict = dict(zip(games_info['GAME_ID'], games_info['GAME_DATE']))
 grouped_lineups = group_data(clean_lineups=clean_lineups, game_dict=games_info_dict)
 unique_player_lineups, my_players = get_unique_lineups(grouped_lineups=grouped_lineups, player_info=player_info)
 
+
+
 col1, col2 = st.columns(2)
-view_analytics = st.selectbox(
+view_analytics = st.radio(
     label='Choose What Level of Analytics to View',
-    options=['Player Lineup', 'Overall Lineup', 'Player']
+    options=['Player Lineup', 'Overall Lineup', 'Player', 'Game'],
+    horizontal=True
 )
 
 
@@ -316,7 +353,7 @@ if view_analytics == 'Overall Lineup':
     lineup_level = lineup_level.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
     lineup_level['Lineup'] = lineup_level['LINEUP_KEY']
     view_stats = [
-            'Plus/Minus per Minute Played', 'Games Played', 
+            'Plus/Minus per Minute Played'
             'Total Minutes Played', 'Points per Minute Played',
             'Points Allowed per Minute Played'
     ]
@@ -346,3 +383,36 @@ if view_analytics == 'Overall Lineup':
                 data=sorted_lineup[['Lineup', data]],
                 hide_index=True,
             )
+
+if view_analytics == 'Game':
+
+    game_data = build_lineup_intervals(minute_data=minute_data)
+    game_clean_data = get_game_level(game_data)
+    player_clean_data = player_clean_data.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
+    player_clean_data['Name'] = player_clean_data['PLAYER_NAME']
+    view_stats = [
+        'Team Points while Playing per Minute', 'Points Allowed while Playing per Minute',
+        'Plus/Minus per Minute Played', 'Minutes per Game Played', 'Games Played'
+        ]
+    data = st.radio(
+        label='Select Stat', options=view_stats, horizontal=True
+    )
+    col1, col2 = st.columns(2)
+    if data:
+        with col1:
+            fig = px.bar(
+                data_frame=player_clean_data.round(3),
+                x=data,
+                y='Name',
+                orientation='h',
+                text=data,
+                color_discrete_sequence=['green']
+            )
+            fig.update_traces(textposition='outside')
+            st.plotly_chart(figure_or_data=fig, width='stretch')
+        sorted_lineup = (
+            player_clean_data.sort_values(by=[data], ascending=False)
+                        .reset_index(drop=True)
+        )
+        with col2:
+            st.dataframe(sorted_lineup[['Name', data]], hide_index=True)

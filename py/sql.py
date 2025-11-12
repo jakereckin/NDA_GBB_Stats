@@ -158,7 +158,8 @@ def view_minutes_sql():
                     MINUTES.OPP_POINT_IN,
                     MINUTES.OPP_POINT_OUT,
                     GAMES.OPPONENT || ' - ' || GAMES.DATE AS GAME_DATE,
-                    PLAYERS.FIRST_NAME || ' ' || PLAYERS.LAST_NAME AS PLAYER_NAME
+                    PLAYERS.FIRST_NAME || ' ' || PLAYERS.LAST_NAME AS PLAYER_NAME,
+                    GAMES.SEASON
       FROM MINUTES
       INNER JOIN GAMES
          ON GAMES.GAME_ID = MINUTES.GAME_ID
