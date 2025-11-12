@@ -4,6 +4,7 @@ from py import sql, data_source, utils as ut
 pd.options.mode.chained_assignment = None
 
 st.cache_data.clear()
+st.set_page_config(layout='wide')
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
@@ -98,6 +99,10 @@ if season:
           totals, totals_sorted = format_selected_games(this_game=this_game)
           top_five_spots = totals_sorted.head(5)
           fig = ut.load_shot_chart_team(totals=totals, team_selected=games_selected)
+          fig.update_layout(
+               width=500,
+               height=500
+          )
           st.markdown(
                body="<h1 style='text-align: center; color: black;'>Shot Chart</h1>", 
                unsafe_allow_html=True

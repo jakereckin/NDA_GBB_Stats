@@ -4,6 +4,7 @@ from py import sql, data_source, utils as ut
 pd.options.mode.chained_assignment = None
 
 st.cache_data.clear()
+st.set_page_config(layout='wide')
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
@@ -26,7 +27,7 @@ def format_visual_data(this_game):
      totals_sorted = totals_sorted[totals_sorted['ATTEMPTS'] > 1]
      totals_sorted = totals_sorted[[
           'SHOT_SPOT', 'MAKES', 'ATTEMPTS', 'MAKE_PERCENT',
-          'POINTS_PER_ATTEMPT', 'HG_PERCENT'
+          'POINTS_PER_ATTEMPT', 'HG_PERCENT', 'XSPOT', 'YSPOT'
      ]].round(3)
      return totals, totals_sorted
 
@@ -61,6 +62,10 @@ if season:
           totals, totals_sorted = format_visual_data(this_game=this_game)
           fig = ut.load_shot_chart_player(
                totals=totals, players_selected=players_selected
+          )
+          fig.update_layout(
+               width=500,
+               height=500
           )
           st.markdown(
                body=f"<h1 style='text-align: center; color: black;'>Shot Chart for {players_selected}</h1>", 
