@@ -105,40 +105,37 @@ elif auth_status is False and not st.session_state.get("is_guest"):
     st.error("Username/password is incorrect")
 
 
-
-
-
 # Determine visible pages based on role / guest
 if st.session_state.authentication_status == True:
     if st.session_state.is_guest == True:
         st.session_state.PAGES = {
-        'Home': [st.Page('guest_home.py', title='Guest Home', default=True)],
+        'Home': [st.Page('home_pages/guest_home.py', title='Guest Home', default=True)],
         'View Data': [
-            st.Page('team_shot_chart.py', title='Team Shot Chart'),
-            st.Page('player_shot_chart.py', title='Player Shot Chart'),
-            st.Page('view_expected_points.py', title='Expected Points'),
-            st.Page('view_game_summary.py', title='Game Summary'),
-            st.Page('view_minutes.py', title='Lineups')
+            st.Page('view_pages/team_shot_chart.py', title='Team Shot Chart'),
+            st.Page('view_pages/player_shot_chart.py', title='Player Shot Chart'),
+            st.Page('view_pages/view_expected_points.py', title='Expected Points'),
+            st.Page('view_pages/view_game_summary.py', title='Game Summary'),
+            st.Page('view_pages/view_minutes.py', title='Lineups')
         ]
         }
         st.session_state.pg = st.navigation(st.session_state.PAGES)
         st.session_state.pg.run()
     elif st.session_state.auth_role == 'nda_admin':
         st.session_state.PAGES = {
-        'Home': [st.Page('admin_home.py', title='Admin Home', default=True)],
+        'Home': [st.Page('home_pages/admin_home.py', title='Admin Home', default=True)],
         'Add Data': [
-            st.Page('add_shots.py', title='Add Shots'),
-            st.Page('add_players.py', title='Add Players'),
-            st.Page('add_minutes.py', title='Add Minutes'),
-            st.Page('add_games.py', title='Add Games'),
-            st.Page('add_game_summary.py', title='Add Game Summary'),
+            st.Page('add_pages/add_shots.py', title='Add Shots'),
+            st.Page('add_pages/add_players.py', title='Add Players'),
+            st.Page('add_pages/add_minutes.py', title='Add Minutes'),
+            st.Page('add_pages/add_games.py', title='Add Games'),
+            st.Page('add_pages/add_game_summary.py', title='Add Game Summary'),
         ],
         'View Data': [
-            st.Page('team_shot_chart.py', title='Team Shot Chart'),
-            st.Page('player_shot_chart.py', title='Player Shot Chart'),
-            st.Page('view_expected_points.py', title='Expected Points'),
-            st.Page('view_game_summary.py', title='Game Summary'),
-            st.Page('view_minutes.py', title='Lineups')
+            st.Page('view_pages/team_shot_chart.py', title='Team Shot Chart'),
+            st.Page('view_pages/player_shot_chart.py', title='Player Shot Chart'),
+            st.Page('view_pages/view_expected_points.py', title='Expected Points'),
+            st.Page('view_pages/view_game_summary.py', title='Game Summary'),
+            st.Page('view_pages/view_minutes.py', title='Lineups')
         ]
         }
         st.session_state.pg = st.navigation(st.session_state.PAGES)
