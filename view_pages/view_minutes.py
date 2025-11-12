@@ -90,6 +90,9 @@ def build_lineup_intervals(minutes_data, game_end_sec=36*60):
     clean_lineups['MIN_PLAYED'] = (
         clean_lineups['SECONDS_PLAYED'] / 60
     )
+    clean_lineups['MIN_PLAYED'] = np.where(
+        clean_lineups['MIN_PLAYED'] < 1, 1, clean_lineups['MIN_PLAYED']
+    )
     clean_lineups['POINTS_SCORED'] = (
         clean_lineups['SCORE_OUT'] - clean_lineups['SCORE_IN']
     )
@@ -205,14 +208,10 @@ def get_game_level(data):
     game_level = (
         data.groupby(by=['LINEUP_KEY', 'OPPONENT'], as_index=False)
             .agg(
-                GAME_COUNT=('GAME_DATE', 'nunique'),
-                TOTAL_MIN=('MIN_PLAYED', 'sum'),
+                TOTAL_MIN=('TOTAL_MIN', 'sum'),
                 POINTS_SCORED=('POINTS_SCORED', 'sum'),
                 OPP_POINTS_SCORED=('OPP_POINTS_SCORED', 'sum')
             )
-    )
-    game_level['POINTS_SCORED_PER_GAME'] = (
-        game_level['POINTS_SCORED'] / game_level['GAME_COUNT']
     )
     game_level['POINTS_PER_MINUTE'] = (
         game_level['POINTS_SCORED'] / game_level['TOTAL_MIN']
@@ -222,9 +221,6 @@ def get_game_level(data):
     )
     game_level['PLUS_MINUS_PER_MINUTE'] = (
         game_level['POINTS_PER_MINUTE'] - game_level['OPP_POINTS_PER_MINUTE']
-    )
-    game_level['MINUTES_PER_GAME'] = (
-        game_level['TOTAL_MIN'] / game_level['GAME_COUNT']
     )
     game_level = (
         game_level.sort_values(by=['PLUS_MINUS_PER_MINUTE'], ascending=False)
@@ -279,11 +275,14 @@ if view_analytics == 'Player Lineup':
         merged = pd.merge(df, grouped_lineups, on=['LINEUP_KEY'])
         lineup_level = get_lineup_level_data(merged)
         lineup_level = lineup_level[lineup_level['TOTAL_MIN'] >= min_threshold]
+        lineup_level['Minutes per Game'] = (
+            lineup_level['TOTAL_MIN'] / lineup_level['GAME_COUNT']
+        )
         lineup_level = lineup_level.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
         lineup_level['Lineup'] = lineup_level['LINEUP_KEY']
         view_stats = [
             'Plus/Minus per Minute Played', 'Games Played', 
-            'Total Minutes Played', 'Points per Minute Played',
+            'Points per Minute Played',
             'Points Allowed per Minute Played'
         ]
         with stat_col:
@@ -308,7 +307,7 @@ if view_analytics == 'Player Lineup':
                             .reset_index(drop=True)
             )
             with col2:
-                st.dataframe(sorted_lineup[['Lineup', data]], hide_index=True)
+                st.dataframe(sorted_lineup[['Lineup', data, 'Minutes per Game']], hide_index=True)
 
 if view_analytics == 'Player':
 
@@ -349,12 +348,15 @@ if view_analytics == 'Overall Lineup':
     with min_col:
         min_threshold = st.number_input(label='Minimum minutes to consider', step=1, value=2)
     lineup_level = get_lineup_level_data(grouped_lineups)
+    lineup_level['Minutes per Game'] = (
+        lineup_level['TOTAL_MIN'] / lineup_level['GAME_COUNT']
+    )
     lineup_level = lineup_level[lineup_level['TOTAL_MIN'] >= min_threshold]
     lineup_level = lineup_level.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
     lineup_level['Lineup'] = lineup_level['LINEUP_KEY']
     view_stats = [
-            'Plus/Minus per Minute Played'
-            'Total Minutes Played', 'Points per Minute Played',
+            'Plus/Minus per Minute Played',
+            'Points per Minute Played',
             'Points Allowed per Minute Played'
     ]
     with stat_col:
@@ -380,30 +382,41 @@ if view_analytics == 'Overall Lineup':
         )
         with col2:
             st.dataframe(
-                data=sorted_lineup[['Lineup', data]],
+                data=sorted_lineup[['Lineup', data, 'Minutes per Game']],
                 hide_index=True,
             )
 
 if view_analytics == 'Game':
 
-    game_data = build_lineup_intervals(minute_data=minute_data)
-    game_clean_data = get_game_level(game_data)
-    player_clean_data = player_clean_data.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
-    player_clean_data['Name'] = player_clean_data['PLAYER_NAME']
+    #game_data = build_lineup_intervals(minute_data)
+    game_clean_data = get_game_level(grouped_lineups)
+    game_clean_data['GAME_COUNT'] = 1
+    game_data = game_clean_data.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
+
+    game_data['Lineup'] = game_data['LINEUP_KEY']
+    games = game_data['OPPONENT'].unique().tolist()
+    col1, col2 = st.columns(2)
+    with col1:
+        game_select = st.selectbox(
+            label='Select Game', options=games
+        )
+    game_data = game_data[game_data['OPPONENT'] == game_select]
     view_stats = [
-        'Team Points while Playing per Minute', 'Points Allowed while Playing per Minute',
-        'Plus/Minus per Minute Played', 'Minutes per Game Played', 'Games Played'
+            'Plus/Minus per Minute Played',
+            'Points per Minute Played',
+            'Points Allowed per Minute Played'
         ]
-    data = st.radio(
-        label='Select Stat', options=view_stats, horizontal=True
-    )
+    with col2:
+        data = st.radio(
+            label='Select Stat', options=view_stats, horizontal=True
+        )
     col1, col2 = st.columns(2)
     if data:
         with col1:
             fig = px.bar(
-                data_frame=player_clean_data.round(3),
+                data_frame=game_data.round(3),
                 x=data,
-                y='Name',
+                y='Lineup',
                 orientation='h',
                 text=data,
                 color_discrete_sequence=['green']
@@ -411,8 +424,8 @@ if view_analytics == 'Game':
             fig.update_traces(textposition='outside')
             st.plotly_chart(figure_or_data=fig, width='stretch')
         sorted_lineup = (
-            player_clean_data.sort_values(by=[data], ascending=False)
+            game_data.sort_values(by=[data], ascending=False)
                         .reset_index(drop=True)
         )
         with col2:
-            st.dataframe(sorted_lineup[['Name', data]], hide_index=True)
+            st.dataframe(sorted_lineup[['Lineup', data, 'Total Minutes Played']], hide_index=True)
