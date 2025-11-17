@@ -22,6 +22,10 @@ selected_season = st.selectbox(
     placeholder='Enter Season',
     options=seasons
 )
+add_new_season = st.text_input('Or Add New Season')
+
+if add_new_season != '':
+    selected_season = add_new_season
 players = players[players['YEAR'] == selected_season]
 st.write(f'Players in DB for {selected_season}')
 st.dataframe(data=players, use_container_width=True)
