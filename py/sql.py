@@ -479,7 +479,7 @@ SELECT PLAYS.GAME_ID,
                 PLAYERS.NUMBER,
                 GAMES.OPPONENT 
                 || ' - '
-                || GAMES.DATE AS LABEL,
+                || GAMES.DATE AS LABEL, 
                 PLAYERS.FIRST_NAME
                 || ' ' 
                 || PLAYERS.LAST_NAME AS NAME,
