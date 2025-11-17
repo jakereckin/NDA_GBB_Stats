@@ -2,7 +2,7 @@ import sqlitecloud
 import pandas as pd
 
 
-def run_query(sql: str, connection: str, params=()) -> pd.DataFrame:
+def run_query(sql: str, connection: str, params=[]) -> pd.DataFrame:
     """
     Runs a SQL query on the given SQLite database connection.
 

@@ -93,14 +93,33 @@ def update_game_summary_sql():
     """
     return sql
 
+def get_player_game_sql():
+    sql = """
+    SELECT PLAYERS.NUMBER || ' - ' || PLAYERS.LAST_NAME AS PLAYER_LABEL,
+                GAMES.OPPONENT || ' - ' || GAMES.DATE AS GAME_LABEL,
+                PLAYERS.NUMBER,
+                PLAYERS.FIRST_NAME,
+                PLAYERS.LAST_NAME,
+                PLAYERS.YEAR,
+                GAMES.GAME_ID,
+                GAMES.OPPONENT,
+                GAMES.LOCATION,
+                GAMES.DATE,
+                GAMES.SEASON
+  FROM PLAYERS
+INNER JOIN GAMES
+  ON GAMES.SEASON = PLAYERS.YEAR
+    """
+    return sql
+
 def get_play_sql():
     sql = """
 SELECT SPOTS.SPOT,
                PLAYS.SHOT_DEFENSE,
                PLAYS.MAKE_MISS,
                PLAYS.PLAY_NUM,
-              SPOTS.XSPOT,
-              SPOTS.YSPOT,
+              COALESCE(PLAYS.SPOT_X, SPOTS.XSPOT) AS XSPOT,
+              COALESCE(PLAYS.SPOT_Y, SPOTS.YSPOT) AS YSPOT,
               SPOTS.OPP_EXPECTED,
               SPOTS.POINTS,
               GAMES.GAME_ID,
@@ -122,6 +141,7 @@ SELECT SPOTS.SPOT,
   INNER JOIN PLAYERS
   ON PLAYERS.NUMBER = PLAYS.PLAYER_ID
   AND GAMES.SEASON = PLAYERS.YEAR
+  WHERE GAMES.OPPONENT || ' - ' || GAMES.DATE = '?'
   """
     return sql
 
@@ -440,7 +460,7 @@ SELECT NAME,
 
 def get_play_by_play_sql():
     sql = """
-SELECT GAMES.GAME_ID,
+SELECT PLAYS.GAME_ID,
                 PLAYS.PLAYER_ID,
                 PLAYS.SHOT_SPOT,
                 PLAYS.SHOT_DEFENSE,
@@ -469,12 +489,12 @@ SELECT GAMES.GAME_ID,
                   ELSE 0
                 END AS MAKE,
                 1 AS ATTEMPT
-FROM GAMES
-LEFT JOIN PLAYS
-   ON GAMES.GAME_ID = PLAYS.GAME_ID
-LEFT JOIN SPOTS
+FROM PLAYS
+INNER JOIN SPOTS
   ON PLAYS.SHOT_SPOT = SPOTS.SPOT
-LEFT JOIN PLAYERS
+INNER JOIN GAMES
+  ON GAMES.GAME_ID = PLAYS.GAME_ID
+INNER JOIN PLAYERS
   ON PLAYERS.NUMBER = PLAYS.PLAYER_ID
 AND PLAYERS.YEAR = GAMES.SEASON
     """

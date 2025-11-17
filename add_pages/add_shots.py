@@ -28,18 +28,26 @@ def load_data():
             - spots (DataFrame): The spots data.
             - all_plays (DataFrame): All plays data.
     """
-    pbp_data = data_source.run_query(
-        sql=sql.get_play_sql(), connection=sql_lite_connect
-    )
     shot_spots = data_source.run_query(
         sql=sql.get_shot_spots_sql(), connection=sql_lite_connect
     )
-    return pbp_data, shot_spots
+    player_game = data_source.run_query(
+        sql=sql.get_player_game_sql(), connection=sql_lite_connect
+    )
+    return shot_spots, player_game
+
+# ----------------------------------------------------------------------------
+def load_pbp_data(game_id):
+    my_sql = sql.get_play_sql().replace('?', game_id)
+    pbp_data = data_source.run_query(
+        sql=my_sql, connection=sql_lite_connect
+    )
+    return pbp_data
 
 # ----------------------------------------------------------------------------
 @st.cache_data
 def get_season_data(
-    pbp_data: pd.DataFrame, season: int
+        player_game: pd.DataFrame, season: int
     ):
     """
     Extracts and processes game and player data for a specific season.
@@ -58,7 +66,7 @@ def get_season_data(
             - players_season (pd.DataFrame): Filtered player
                 data for the specified season.
     """
-    games_season = pbp_data[pbp_data['SEASON'] == season].copy()
+    games_season = player_game[player_game['SEASON'] == season].copy()
     games_season['DATE_DTTM'] = pd.to_datetime(games_season['DATE'])
     return games_season
 
@@ -144,7 +152,7 @@ def create_df(
         game_val_final, player_number, spot_val, shot_defense, make_miss, spot_x, spot_y
     ]
     col_names = [
-        'GAME_ID', 'PLAYER_ID', 'SHOT_SPOT', 'SHOT_DEFENSE', 'MAKE_MISS', 'SPOT_X', 'SPOT_Y'
+        'GAME_ID', 'NUMBER', 'SPOT', 'SHOT_DEFENSE', 'MAKE_MISS', 'XSPOT', 'YSPOT'
     ]
     my_df = pd.DataFrame(data=[this_data], columns=col_names)
     return my_df
@@ -154,15 +162,15 @@ st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 # Load or create shot data
 left, right = st.columns(2)
 _shot_defenses = ["OPEN", "GUARDED", "HEAVILY_GUARDED"]
-pbp_data, shot_spots = load_data()
-games = pbp_data.sort_values(by="SEASON", ascending=False).reset_index(drop=True)
+shot_spots, player_game = load_data()
+games = player_game.sort_values(by="SEASON", ascending=False).reset_index(drop=True)
 season_list = games["SEASON"].unique().tolist()
 
 col1, col2 = st.columns(2)
 with left:
     season = st.radio(label="Select Season", options=season_list, horizontal=True)
 
-games_season = get_season_data(pbp_data=pbp_data, season=season)
+games_season = get_season_data(player_game=games, season=season)
 game_list = games_season["GAME_LABEL"].unique().tolist()[::-1]
 
 with right:
@@ -223,13 +231,13 @@ if clicked:
     if spot_val:
         with col4:
             st.write(f"Adding shot at {spot_val}")
-            with st.form(key="shot_form", clear_on_submit=True):
+            with st.form(key="shot_form", clear_on_submit=False):
                 font_size_px = 10
                 game_val = game["GAME_LABEL"].values[0]
                 players_season = games_season.sort_values(by="NUMBER")
                 games_season["NUMBER_INT"] = games_season["NUMBER"].astype(int)
                 unique_players = games_season.sort_values(by="NUMBER_INT")["PLAYER_LABEL"].unique()
-
+                pbp_data = load_pbp_data(game_val)
                 player_val = st.radio(label="Player", options=unique_players, horizontal=True)
 
                 c2, c3, c4 = st.columns(3)
@@ -264,8 +272,9 @@ if clicked:
                         spot_x=x_click,
                         spot_y=y_click,
                     )
-
-                    all_data_game = games_season[games_season["GAME_ID"] == game_val_final]
+                    my_df = my_df.merge(shot_spots.drop(columns=['XSPOT', 'YSPOT']), on='SPOT')
+                    all_data_game = pbp_data
+                    #games_season[games_season["GAME_ID"] == game_val_final]
                     if len(all_data_game) == 0:
                         my_df["PLAY_NUM"] = 0
                     else:
@@ -296,17 +305,20 @@ if clicked:
                     current_game["ACTUAL_POINTS"] = np.where(
                         current_game["MAKE_MISS"] == "Y", current_game["POINTS"], 0
                     )
-
-                    st.write(current_game)
+                    current_game['NUMBER'] = current_game['NUMBER'].astype(int)
                     my_len = len(current_game)
                     st.text(
                         f"Submitted {test_make} by player {player_number} from spot {spot_val} with defense {shot_defense} for game {game_val_final}"
                     )
                     st.write(f"Added to DB, {my_len} shots in DB for game {game_val_final}")
 
-                    nda_points = current_game[current_game["NUMBER"] != "0"]
-                    opp_points = current_game[current_game["NUMBER"] == "0"]
+                    nda_points = current_game[current_game["NUMBER"] != 0]
+                    opp_points = current_game[current_game["NUMBER"] == 0]
                     nda_points_val = int(nda_points.ACTUAL_POINTS.sum())
                     opp_points_val = int(opp_points.ACTUAL_POINTS.sum())
                     st.write(f"NDA Points: {nda_points_val}")
                     st.write(f"Opp Points: {opp_points_val}")
+                    simple_data = current_game[['NUMBER', 'SPOT', 'SHOT_DEFENSE', 'MAKE_MISS', 'PLAY_NUM']]
+                    simple_data = simple_data.sort_values(by=['PLAY_NUM'], ascending=False).head(10)
+                    st.write(f'Previous 10 shots')
+                    st.dataframe(simple_data)
