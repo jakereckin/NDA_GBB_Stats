@@ -452,14 +452,12 @@ def run_simulations(tritons, opp, sims, standard_dev):
     while sim_count < sims:
         this_sim_nda = tritons
         this_sim_opp = opp
-        #this_sim_opp['SIMULATED_PERCENT'] = np.random.normal(
-        #    this_sim_opp['PROB'], standard_dev
-        #)
+        probs_opp = this_sim_opp["PROB"].to_numpy()
+        simulated_opp = np.random.normal(loc=probs_opp, scale=standard_dev)
+        probs_nda = this_sim_nda["PROB"].to_numpy()
+        simulated_nda = np.random.normal(loc=probs_nda, scale=standard_dev)
         this_sim_opp = this_sim_opp.with_columns(
-            SIMULATED_PERCENT=(
-                pl.col(name='PROB') + 
-                pl.lit(np.random.normal(loc=0, scale=standard_dev, size=len(this_sim_opp)))
-            )
+            pl.Series("SIMULATED_PERCENT", simulated_opp)
         )
         this_sim_opp = this_sim_opp.with_columns(
             SIMULATED_PERCENT=(
@@ -486,10 +484,7 @@ def run_simulations(tritons, opp, sims, standard_dev):
             )
         )
         this_sim_nda = this_sim_nda.with_columns(
-            SIMULATED_PERCENT=(
-                pl.col(name='PROB') + 
-                pl.lit(np.random.normal(loc=0, scale=standard_dev, size=len(this_sim_nda)))
-            )
+            pl.Series("SIMULATED_PERCENT", simulated_nda)
         )
         this_sim_nda = this_sim_nda.with_columns(
             SIMULATED_PERCENT=(
@@ -575,7 +570,7 @@ game_summary = (
                 .sort(by='SEASON2', descending=False)
 )
 
-season_list = game_summary.select('SEASON2').unique().to_series().to_list()
+season_list = player_data.select('SEASON').unique().to_series().to_list()
 season_list = sorted(season_list, key=lambda x: int(x), reverse=True)
 season = st.radio(label='Select Season', options=season_list, horizontal=True)
 if season:
@@ -755,7 +750,7 @@ if season:
                 label='Standard Deviation',
                 min_value=0.01,
                 max_value=1.0,
-                value=0.15
+                value=0.3
             )
 
         run_sim = st.button(label='Run Simulation')
@@ -824,6 +819,7 @@ if season:
                         )
             )
             all_sims = pl.concat([nda, opp])
+            all_sims = all_sims.to_pandas()
             fig = px.histogram(
                 data_frame=all_sims,
                 x='POINTS',
