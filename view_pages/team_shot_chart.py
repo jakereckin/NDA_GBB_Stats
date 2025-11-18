@@ -180,6 +180,11 @@ if season:
      pbp_opp = this_game_gpa[this_game_gpa['TEAM'] != 'NDA']
      pbp_nda_gpa = pbp_nda['GPA_SUM'].sum() / pbp_nda['ATTEMPTS'].sum()
      pbp_opp_gpa = pbp_opp['GPA_SUM'].sum() / pbp_opp['ATTEMPTS'].sum()
+     nda, opp = st.columns(2)
+     with nda:
+          st.metric(label='NDA Shot Selection GPA', value=pbp_nda_gpa.round(2))  
+     with opp:
+          st.metric(label='Opponents Shot Selection GPA', value=pbp_opp_gpa.round(2))
 
      select_team = st.radio(
           label='Select to View NDA or Opponent',
@@ -192,15 +197,13 @@ if season:
      # ----------------------------------------------------------------------------
      if games_selected:
           totals, totals_sorted = format_selected_games(this_game=this_game)
-          nda, opp = st.columns(2)
-          with nda:
-               st.metric(label='NDA Shot Selection GPA', value=pbp_nda_gpa.round(2))  
-          with opp:
-               st.metric(label='Opponents Shot Selection GPA', value=pbp_opp_gpa.round(2))
           fig = ut.load_shot_chart_team(totals=totals, team_selected=games_selected)
-          fig.update_layout(width=500, height=500)
+          fig.update_layout(
+               width=500,
+               height=500
+          )
           st.markdown(
-               body="<h1 style='text-align: center; color: black;'>Shot Chart</h1>", 
+               body=f"<h1 style='text-align: center; color: black;'>Shot Chart for {select_team}</h1>", 
                unsafe_allow_html=True
           )
           st.plotly_chart(figure_or_data=fig, width='stretch')
