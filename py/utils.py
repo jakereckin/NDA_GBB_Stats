@@ -106,19 +106,22 @@ def build_blank_shot_chart():
                                    y1=-12.5,
                                    line=dict(color="#ec7607", width=1),),
                               dict(type="path",
-                                   path=ellipse_arc(a=40,
-                                                    b=40, 
-                                                    start_angle=0, 
-                                                    end_angle=np.pi),
-                                   line=dict(color=main_line_col, 
-                                             width=1), 
+                                   path=ellipse_arc(
+                                       a=40, 
+                                       b=40,
+                                       start_angle=0,
+                                       end_angle=np.pi
+                                   ),
+                                   line=dict(color=main_line_col, width=1),
                                    layer='below'),
                               dict(type="path",
-                                   path=ellipse_arc(a=200.5, 
-                                                    b=200.5, 
-                                                    start_angle=0.0, 
-                                                    end_angle=np.pi - 0.0, 
-                                                    N=5000),
+                                   path=ellipse_arc(
+                                       a=200.5, 
+                                       b=200.5, 
+                                       start_angle=0.0, 
+                                       end_angle=np.pi - 0.0,
+                                       N=5000
+                                   ),
                                    line=dict(color=main_line_col, width=1),
                                    layer='below'),
                               dict(type="line", 
@@ -133,14 +136,16 @@ def build_blank_shot_chart():
                                    y0=-52.5, 
                                    x1=200.5, 
                                    y1=threept_break_y,
-                                   line=dict(color=three_line_col, width=1), 
+                                   line=dict(color=three_line_col, width=1),
                                    layer='below'),
                               dict(type="path",
-                                   path=ellipse_arc(y_center=417.5, 
-                                                    a=60, 
-                                                    b=60, 
-                                                    start_angle=-0, 
-                                                    end_angle=-np.pi),
+                                   path=ellipse_arc(
+                                       y_center=417.5, 
+                                       a=60, 
+                                       b=60, 
+                                       start_angle=-0, 
+                                       end_angle=-np.pi
+                                   ),
                                   line=dict(color=main_line_col, width=1), 
                                   layer='below'),]
     )
@@ -150,82 +155,106 @@ def build_blank_shot_chart():
 
 
 def get_nearest_spot(
-        x: float, 
+        x: float,
         y: float,
         spots_df: pd.DataFrame = None,
         is_free_throw: bool = False,
-        max_distance: float | None = None
+        max_distance: float | None = None,
      ):
     """
     Return the best-matching spot for coordinate (x, y).
-
-    Parameters
-    - x, y: shot coordinates (same coordinate system as SPOTS.csv XSPOT/YSPOT)
-    - spots_df: optional pre-loaded DataFrame from load_spots(); if None, function will load DEFAULT_SPOTS_CSV
-    - is_free_throw: if True, return 'FREE_THROW1' regardless of x,y
-    - max_distance: optional numeric threshold (units same as XSPOT/YSPOT). If set and the
-      nearest spot is farther than max_distance, function returns None.
-
-    Returns
-    - dict with keys:
-      - spot: matched spot name (str) or None
-      - distance: Euclidean distance to matched centroid (float) or None
-      - points: POINTS value from spots file (int/float) or None
-      - opp_expected: OPP_EXPECTED value (float) or None
     """
+    THREE_POINT_RADIUS = 200.5
     # Free throw short-circuit
     if is_free_throw:
-        # Ensure we can still return metadata from dataframe if available
         if spots_df is None:
             spots_df = load_spots()
-        ft_row = spots_df[spots_df["SPOT"].str.strip('"') == "FREE_THROW1"]
+        ft_row = spots_df[spots_df['SPOT'].str.strip('"') == 'FREE_THROW1']
         if not ft_row.empty:
             row = ft_row.iloc[0]
-            spots_json = dict(
-                spot="FREE_THROW1",
-                distance=0.0,
-                points=row.get("POINTS"),
-                opp_expected=row.get("OPP_EXPECTED")
-            )
-            return spots_json
+            json_spot = {
+                'spot': 'FREE_THROW1',
+                'distance': 0.0,
+                'points': row.get('POINTS'),
+                'opp_expected': row.get('OPP_EXPECTED')
+            }
+            return json_spot
         else:
-            spots_json = dict(
-                    spot="FREE_THROW1",
-                    distance=0.0,
-                    points=None,
-                    opp_expected=None
-            )
-            return spots_json
+          json_spot = {
+              'spot': 'FREE_THROW1',
+              'distance': 0.0,
+              'points': 1,
+              'opp_expected': 0.66
+          }
+          return json_spot
 
     # Load spots if not provided
     if spots_df is None:
         spots_df = load_spots()
 
-    # Compute Euclidean distances to each centroid
-    def euclid(ax, ay, bx, by):
-        return math.hypot(ax - bx, ay - by)
+    # Compute basket distance
+    basket_distance = math.hypot(x, y)
+    # If beyond 3pt line, restrict search to 3pt spots only
+    if basket_distance > THREE_POINT_RADIUS:
+        three_spots = spots_df[spots_df['POINTS'] == 3].copy()
+        if three_spots.empty:
+            json_spot = {
+               'spot': 'TK3',
+               'distance': basket_distance,
+               'points': 3,
+               'opp_expected': .66
+            }
+            return json_spot
 
-    distances = spots_df.apply(lambda r: euclid(x, y, float(r["XSPOT"]), float(r["YSPOT"])), axis=1)
-    min_idx = distances.idxmin()
-    min_distance = float(distances.loc[min_idx])
-    matched = spots_df.loc[min_idx]
+        dx = x - three_spots['XSPOT'].astype(float).to_numpy()
+        dy = y - three_spots['YSPOT'].astype(float).to_numpy()
+        distances = np.hypot(dx, dy)
 
-    # If threshold is set and nearest is too far, return None
+        min_idx = distances.argmin()
+        min_distance = float(distances[min_idx])
+        matched = three_spots.iloc[min_idx]
+        if isinstance(matched['SPOT'], str):
+            my_spot = matched['SPOT'].strip().strip('"')
+        else:
+            my_spot = matched['SPOT']
+        json_spot = {
+          'spot': my_spot,
+          'distance': min_distance,
+          'points': 3,
+          'opp_expected': matched.get('OPP_EXPECTED')
+        }
+        return json_spot
+
+    # Otherwise: normal nearest spot search
+    dx = x - spots_df['XSPOT'].astype(float).to_numpy()
+    dy = y - spots_df['YSPOT'].astype(float).to_numpy()
+    distances = np.hypot(dx, dy)
+
+    min_idx = distances.argmin()
+    min_distance = float(distances[min_idx])
+    matched = spots_df.iloc[min_idx]
+
     if (max_distance is not None) and (min_distance > max_distance):
-        return {"spot": None, "distance": min_distance, "points": None, "opp_expected": None}
-
-    # Return matched spot and metadata
-    if isinstance(matched["SPOT"], str):
-        spot_name = matched["SPOT"].strip().strip('"')
+        json_spot = {
+            'spot': 'TK3',
+            'distance': min_distance,
+            'points': 3,
+            'opp_expected': .66
+        }
+        return json_spot
+    
+    if isinstance(matched['SPOT'], str):
+        my_spot = matched['SPOT'].strip().strip('"')
     else:
-        spot_name = matched["SPOT"]
-    final_json = dict(
-            spot=spot_name,
-               distance=min_distance,
-               points=matched.get("POINTS"),
-               opp_expected=matched.get("OPP_EXPECTED")
-    )
-    return final_json
+        my_spot = matched['SPOT']
+
+    json_spot = {
+     'spot': my_spot,
+     'distance': min_distance,
+     'points': matched.get('POINTS'),
+     'opp_expected': matched.get('OPP_EXPECTED')
+    }
+    return json_spot
 
 
 def load_shot_chart_team(totals, team_selected):

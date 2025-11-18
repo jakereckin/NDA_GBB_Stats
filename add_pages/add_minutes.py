@@ -50,12 +50,12 @@ players, games = load_data()
 my_season_options = (
         games['SEASON'].sort_values(ascending=False).unique().tolist()
     )
-with st.form(key="minutes_form", clear_on_submit=False):
+with st.form(key='minutes_form', clear_on_submit=False):
     season_col, game_col = st.columns(2)
 
     with season_col:
         season = st.radio(
-            label="Select Season",
+            label='Select Season',
             options=my_season_options,
             horizontal=True,
         )
@@ -63,28 +63,34 @@ with st.form(key="minutes_form", clear_on_submit=False):
     games_season, players_season = get_season_data(
         games=games, players=players, season=season
     )
-    players_season = players_season[players_season["NUMBER"] != 0]
-    my_game_options = games_season["LABEL"].unique().tolist()
+    players_season = players_season[players_season['NUMBER'] != 0]
+    my_game_options = games_season['LABEL'].unique().tolist()
 
     with game_col:
-        game_select = st.selectbox(label="Select Game", options=my_game_options)
+        game_select = st.selectbox(
+            label='Select Game', options=my_game_options
+        )
 
-    this_game = get_selected_game(games_season=games_season, game_select=game_select)
-    player_values = players_season["NUMBER"].astype(int).sort_values().tolist()
-    game_list = this_game["GAME_ID"].unique().tolist()
+    this_game = get_selected_game(
+        games_season=games_season, game_select=game_select
+    )
+    player_values = (
+        players_season['NUMBER'].astype(int).sort_values().tolist()
+    )
+    game_list = this_game['GAME_ID'].unique().tolist()
 
     player_val = st.radio(
-        label="Select Player", options=player_values, horizontal=True
+        label='Select Player', options=player_values, horizontal=True
     )
 
     half_col, min_col, sec_col = st.columns(3)
     with half_col:
         half = st.radio(
-            label="Select Half Subbed In", options=[1, 2], horizontal=True
+            label='Select Half Subbed In', options=[1, 2], horizontal=True
         )
     with min_col:
         minutes = st.number_input(
-            label="Minutes Subbed In",
+            label='Minutes Subbed In',
             min_value=0,
             max_value=18,
             value=0,
@@ -92,7 +98,7 @@ with st.form(key="minutes_form", clear_on_submit=False):
         )
     with sec_col:
         seconds = st.number_input(
-            label="Seconds Subbed In",
+            label='Seconds Subbed In',
             min_value=0,
             max_value=59,
             value=0,
@@ -102,11 +108,11 @@ with st.form(key="minutes_form", clear_on_submit=False):
     second_half_col, second_min_col, second_sec_col = st.columns(3)
     with second_half_col:
         half_out = st.radio(
-            label="Select Half Subbed Out", options=[1, 2], horizontal=True
+            label='Select Half Subbed Out', options=[1, 2], horizontal=True
         )
     with second_min_col:
         minutes_out = st.number_input(
-            label="Minutes Subbed Out",
+            label='Minutes Subbed Out',
             min_value=0,
             max_value=18,
             value=0,
@@ -114,7 +120,7 @@ with st.form(key="minutes_form", clear_on_submit=False):
         )
     with second_sec_col:
         seconds_out = st.number_input(
-            label="Seconds Subbed Out",
+            label='Seconds Subbed Out',
             min_value=0,
             max_value=59,
             value=0,
@@ -125,19 +131,25 @@ with st.form(key="minutes_form", clear_on_submit=False):
     points_out_col, opp_points_out_col = st.columns(2)
     with points_in_col:
         points_in = st.number_input(
-            label="Team Points When Subbed In", min_value=0, value=0, step=1
+            label='Team Points When Subbed In', min_value=0, value=0, step=1
         )
     with points_out_col:
         points_out = st.number_input(
-            label="Team Points When Subbed Out", min_value=0, value=0, step=1
+            label='Team Points When Subbed Out', min_value=0, value=0, step=1
         )
     with opp_points_in_col:
         opp_points_in = st.number_input(
-            label="Opponent Points When Subbed In", min_value=0, value=0, step=1
+            label='Opponent Points When Subbed In',
+            min_value=0,
+            value=0,
+            step=1
         )
     with opp_points_out_col:
         opp_points_out = st.number_input(
-            label="Opponent Points When Subbed Out", min_value=0, value=0, step=1
+            label='Opponent Points When Subbed Out',
+            min_value=0,
+            value=0,
+            step=1
         )
 
     half_time = 18 * 60
@@ -153,7 +165,7 @@ with st.form(key="minutes_form", clear_on_submit=False):
         half_time_out = minutes_out * 60 + seconds_out
         time_out = half_time + half_time_out
 
-    add_minutes = st.form_submit_button(label="Add Minutes")
+    add_minutes = st.form_submit_button(label='Add Minutes')
     if add_minutes:
         with sqlitecloud.connect(sql_lite_connect) as conn:
             cursor = conn.cursor()
@@ -171,4 +183,4 @@ with st.form(key="minutes_form", clear_on_submit=False):
                 ),
             )
             conn.commit()
-        st.write("Minutes Added")
+        st.write('Minutes Added')

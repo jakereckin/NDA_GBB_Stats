@@ -15,7 +15,10 @@ def get_game_data():
      team_data = data_source.run_query(
         sql=sql.team_shot_chart_sql(), connection=sql_lite_connect
     )
-     return team_data
+     opp_data = data_source.run_query(
+          sql=sql.opp_shot_chart_sql(), connection=sql_lite_connect
+     )
+     return team_data, opp_data
 
 
 # ----------------------------------------------------------------------------
@@ -74,9 +77,10 @@ def format_selected_games(this_game):
      return totals, totals_sorted
 
 
-team_data = get_game_data()
+team_data, opp_data = get_game_data()
 
 team_data_filtered = filter_team_data(team_data=team_data)
+opp_data_filtered = filter_team_data(team_data=opp_data)
 
 season_list = team_data['SEASON'].sort_values().unique().tolist()
 
@@ -92,12 +96,21 @@ if season:
      this_game = get_selected_games(
           games_selected=games_selected, team_data_filtered=team_data_filtered
      )
+     this_game_opp = get_selected_games(
+          games_selected=games_selected, team_data_filtered=opp_data_filtered
+     )
 
+     select_team = st.radio(
+          label='Select to View NDA or Opponent',
+          options=['NDA', 'Opponent'],
+          horizontal=True
+     )
+     if select_team == 'Opponent':
+          this_game = this_game_opp
 
      # ----------------------------------------------------------------------------
      if games_selected:
           totals, totals_sorted = format_selected_games(this_game=this_game)
-          top_five_spots = totals_sorted.head(5)
           fig = ut.load_shot_chart_team(totals=totals, team_selected=games_selected)
           fig.update_layout(
                width=500,
@@ -107,11 +120,8 @@ if season:
                body="<h1 style='text-align: center; color: black;'>Shot Chart</h1>", 
                unsafe_allow_html=True
           )
-          st.plotly_chart(figure_or_data=fig, use_container_width=True)
+          st.plotly_chart(figure_or_data=fig, width='stretch')
           st.markdown(
                body="<h1 style='text-align: center; color: black;'>Top 5 Spots</h1>",
                unsafe_allow_html=True
-          )
-          st.dataframe(
-               data=top_five_spots, use_container_width=True, hide_index=True
           )

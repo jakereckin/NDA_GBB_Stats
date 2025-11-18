@@ -19,18 +19,18 @@ def load_data():
 
 # ----------------------------------------------------------------------------
 games = load_data()
-games = games.sort_values(by="SEASON", ascending=False).reset_index(drop=True)
-seasons = games["SEASON"].unique().tolist()
+games = games.sort_values(by='SEASON', ascending=False).reset_index(drop=True)
+seasons = games['SEASON'].unique().tolist()
 
 selected_season = st.radio(
-    label="Select Season",
+    label='Select Season',
     options=seasons,
     horizontal=True
 )
 
 games = (
-    games[games["SEASON"] == selected_season]
-    .sort_values(by="GAME_ID", ascending=True)
+    games[games['SEASON'] == selected_season]
+    .sort_values(by='GAME_ID', ascending=True)
     .reset_index(drop=True)
 )
 
@@ -47,32 +47,36 @@ if selected_season:
 
         with left_row_one:
             game_id = st.text_input(
-                label='Game ID', placeholder="Enter Game ID"
+                label='Game ID', placeholder='Enter Game ID'
             )
         with right_row_one:
             opponent = st.text_input(
-                label="Opponent", placeholder="Enter Opponent"
+                label='Opponent', placeholder='Enter Opponent'
             )
 
         with left_row_two:
             location = st.text_input(
-                label="Location", placeholder="Enter Home/Away/Neutral"
+                label='Location', placeholder='Enter Home/Away/Neutral'
             )
         
         with middle_row_two:
             date = st.text_input(
-                label="Date",
-                placeholder="Enter Date (MM/DD/YYYY)",
-                value=pd.to_datetime("today").strftime("%m/%d/%Y"),
+                label='Date',
+                placeholder='Enter Date (MM/DD/YYYY)',
+                value=pd.to_datetime('today').strftime('%m/%d/%Y'),
             )
         with right_row_two:
-            season = st.text_input(label="Season", placeholder="Enter Season", value=selected_season)
+            season = st.text_input(
+                label='Season',
+                placeholder='Enter Season',
+                value=selected_season
+            )
 
         save_col, delete_col = st.columns(2)
         with save_col:
-            save = st.form_submit_button(label="Add Game", key="add_game_btn")
+            save = st.form_submit_button(label='Add Game', key='add_game_btn')
         with delete_col:
-            delete = st.form_submit_button(label="Delete Game", key="delete_game_btn")
+            delete = st.form_submit_button(label='Delete Game', key='delete_game_btn')
 
         if save:
             with sqlitecloud.connect(sql_lite_connect) as conn:
@@ -88,20 +92,20 @@ if selected_season:
                     ),
                 )
                 conn.commit()
-            st.success("Game Added")
-            st.write(f"Added {opponent} to DB")
+            st.success('Game Added')
+            st.write(f'Added {opponent} to DB')
             time.sleep(0.5)
             st.experimental_rerun()
 
         if delete:
             with sqlitecloud.connect(sql_lite_connect) as conn:
                 cursor = conn.cursor()
-                st.write(f"Deleting Game {str(game_id)} from DB")
+                st.write(f'Deleting Game {str(game_id)} from DB')
                 cursor.execute(
                     sql=sql.delete_game_sql(),
                     parameters=(str(game_id),),
                 )
                 conn.commit()
-            st.success("Game Deleted")
+            st.success('Game Deleted')
             time.sleep(0.5)
             st.rerun()

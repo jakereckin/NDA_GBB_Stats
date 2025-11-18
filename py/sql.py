@@ -370,6 +370,102 @@ def team_shot_chart_sql():
     """
     return sql
 
+def opp_shot_chart_sql():
+    sql = """
+    WITH RAW_DATA AS (
+    SELECT PLAYS.GAME_ID,
+                PLAYS.PLAYER_ID,
+                PLAYS.SHOT_SPOT,
+                PLAYS.SHOT_DEFENSE,
+                PLAYS.MAKE_MISS,
+                PLAYS.PLAY_NUM,
+                COALESCE(PLAYS.SPOT_X, SPOTS.XSPOT) AS XSPOT,
+                COALESCE(PLAYS.SPOT_Y, SPOTS.YSPOT) AS YSPOT,
+                SPOTS.OPP_EXPECTED,
+                SPOTS.POINTS,
+                GAMES.OPPONENT,
+                GAMES.LOCATION,
+                GAMES.DATE,
+                GAMES.SEASON,
+                GAMES.OPPONENT || ' ' || GAMES.DATE AS GAME,
+                GAMES.OPPONENT || ' -  ' || GAMES.DATE AS U_ID,
+                CASE
+                        WHEN PLAYS.MAKE_MISS = 'Y'
+                            THEN 1
+                        ELSE 0
+                END AS MAKE,
+                CASE
+                        WHEN PLAYS.SHOT_DEFENSE = 'HEAVILY_GUARDED'
+                            THEN 1
+                        ELSE 0
+                END AS HEAVILY_GUARDED,
+                1 AS ATTEMPT
+    FROM PLAYS
+    INNER JOIN SPOTS
+    ON PLAYS.SHOT_SPOT = SPOTS.SPOT
+    INNER JOIN GAMES
+        ON GAMES.GAME_ID = PLAYS.GAME_ID
+    WHERE PLAYS.SHOT_SPOT != 'FREE_THROW1'
+    AND PLAYS.PLAYER_ID = '0'),
+
+    SUMMED_TABLE AS (
+    SELECT U_ID,
+                    XSPOT,
+                    YSPOT,
+                    SHOT_SPOT,
+                    POINTS,
+                    OPPONENT,
+                    LOCATION,
+                    DATE,
+                    SEASON,
+                    GAME_ID,
+                    SUM(MAKE) AS MAKES,
+                    SUM(HEAVILY_GUARDED) HEAVILY_GUARDED,
+                    SUM(ATTEMPT) AS ATTEMPTS
+        FROM RAW_DATA
+        GROUP BY U_ID,
+                    XSPOT,
+                    YSPOT,
+                    SHOT_SPOT,
+                    POINTS,
+                    OPPONENT,
+                    LOCATION,
+                    DATE,
+                    SEASON,
+                    GAME_ID)
+
+    SELECT U_ID,
+                    XSPOT,
+                    YSPOT,
+                    SHOT_SPOT,
+                    POINTS,
+                    OPPONENT,
+                    GAME_ID,
+                    LOCATION,
+                    DATE,
+                    SEASON,
+                    MAKES,
+                    HEAVILY_GUARDED,
+                    ATTEMPTS,
+                    CASE
+                            WHEN ATTEMPTS = 0
+                                THEN 0
+                        ELSE CAST(MAKES AS FLOAT) / CAST(ATTEMPTS AS FLOAT)
+                    END AS MAKE_PERCENT,
+                    CASE
+                            WHEN ATTEMPTS = 0
+                                THEN 0
+                        ELSE CAST(HEAVILY_GUARDED AS FLOAT) / CAST(ATTEMPTS AS FLOAT)
+                    END  HG_PERCENT,
+                    CASE
+                            WHEN ATTEMPTS = 0
+                                THEN 0
+                        ELSE CAST(POINTS * MAKES AS FLOAT) / CAST(ATTEMPTS AS FLOAT)
+                    END  AS POINTS_PER_ATTEMPT
+    FROM SUMMED_TABLE
+    """
+    return sql
+
 def player_shot_chart_sql():
     sql = """
     WITH RAW_DATA AS (
@@ -408,7 +504,7 @@ INNER JOIN PLAYERS
      ON PLAYERS.YEAR = GAMES.SEASON
   AND PLAYERS.NUMBER = PLAYS.PLAYER_ID
 WHERE PLAYS.SHOT_SPOT != 'FREE_THROW1'
-AND PLAYS.PLAYER_ID != '0'
+--AND PLAYS.PLAYER_ID != '0'
 AND PLAYERS.YEAR > 2023),
 
 SUMMED_TABLE AS (
@@ -457,6 +553,89 @@ SELECT NAME,
   
     """
     return sql
+
+def player_grouped_shot_chart_sql():
+    sql = """
+    WITH RAW_DATA AS (
+SELECT PLAYS.GAME_ID,
+               PLAYS.PLAYER_ID,
+              PLAYS.SHOT_SPOT,
+              PLAYS.SHOT_DEFENSE,
+              PLAYS.MAKE_MISS,
+              PLAYS.PLAY_NUM,
+              SPOTS.OPP_EXPECTED,
+              SPOTS.POINTS,
+              GAMES.OPPONENT,
+              GAMES.LOCATION,
+              GAMES.DATE,
+              GAMES.SEASON,
+              PLAYERS.FIRST_NAME || ' ' || PLAYERS.LAST_NAME AS NAME,
+              CASE
+                    WHEN PLAYS.MAKE_MISS = 'Y'
+                           THEN 1
+                    ELSE 0
+              END AS MAKE,
+              CASE
+                    WHEN PLAYS.SHOT_DEFENSE = 'HEAVILY_GUARDED'
+                           THEN 1
+                    ELSE 0
+              END AS HEAVILY_GUARDED,
+              1 AS ATTEMPT
+  FROM PLAYS
+  INNER JOIN SPOTS
+   ON PLAYS.SHOT_SPOT = SPOTS.SPOT
+INNER JOIN GAMES
+    ON GAMES.GAME_ID = PLAYS.GAME_ID
+INNER JOIN PLAYERS
+     ON PLAYERS.YEAR = GAMES.SEASON
+  AND PLAYERS.NUMBER = PLAYS.PLAYER_ID
+WHERE PLAYS.SHOT_SPOT != 'FREE_THROW1'
+--AND PLAYS.PLAYER_ID != '0'
+AND PLAYERS.YEAR > 2023),
+
+SUMMED_TABLE AS (
+  SELECT NAME,
+                
+                  SHOT_SPOT,
+                  POINTS,
+                  SEASON,
+                  SUM(MAKE) AS MAKES,
+                  SUM(HEAVILY_GUARDED) HEAVILY_GUARDED,
+                  SUM(ATTEMPT) AS ATTEMPTS
+    FROM RAW_DATA
+    GROUP BY NAME,
+                  SHOT_SPOT,
+                  POINTS,
+                  SEASON)
+
+SELECT NAME,
+                
+                  SHOT_SPOT,
+                  POINTS,
+                  SEASON,
+                  MAKES,
+                  HEAVILY_GUARDED,
+                  ATTEMPTS,
+                  CASE
+                        WHEN ATTEMPTS = 0
+                              THEN 0
+                       ELSE CAST(MAKES AS FLOAT) / CAST(ATTEMPTS AS FLOAT)
+                   END AS MAKE_PERCENT,
+                  CASE
+                        WHEN ATTEMPTS = 0
+                              THEN 0
+                       ELSE CAST(HEAVILY_GUARDED AS FLOAT) / CAST(ATTEMPTS AS FLOAT)
+                   END  HG_PERCENT,
+                  CASE
+                        WHEN ATTEMPTS = 0
+                              THEN 0
+                       ELSE CAST(POINTS * MAKES AS FLOAT) / CAST(ATTEMPTS AS FLOAT)
+                   END  AS POINTS_PER_ATTEMPT
+  FROM SUMMED_TABLE
+  
+    """
+    return sql
+
 
 def get_play_by_play_sql():
     sql = """
