@@ -95,7 +95,7 @@ if selected_season:
             st.success('Game Added')
             st.write(f'Added {opponent} to DB')
             time.sleep(0.5)
-            st.experimental_rerun()
+            st.rerun()
 
         if delete:
             with sqlitecloud.connect(sql_lite_connect) as conn:
