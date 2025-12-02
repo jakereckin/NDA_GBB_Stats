@@ -238,7 +238,7 @@ games_info, player_info = get_game_player_info(minutes_data=minute_data)
 games_info_dict = dict(zip(games_info['GAME_ID'], games_info['GAME_DATE']))
 grouped_lineups = group_data(clean_lineups=clean_lineups, game_dict=games_info_dict)
 unique_player_lineups, my_players = get_unique_lineups(grouped_lineups=grouped_lineups, player_info=player_info)
-player_map = dict(zip(player_info['PLAYER_ID'].astype(int), player_info['PLAYER_NAME']))
+player_map = dict(zip(player_info['PLAYER_NAME'], player_info['PLAYER_ID'].astype(int)))
 
 def lineup_ids_to_names(lineup_key):
     try:
@@ -265,7 +265,8 @@ if view_analytics == 'Player Lineup':
 
     player_col, min_col, stat_col = st.columns([1, 1, 2])
     with player_col:
-        select_player = st.selectbox(label='Select Player', options=my_players)
+        select_player = st.selectbox(label='Select Player', options=player_map.keys())
+        selected_player = my_players.get(select_player)
     with min_col:
         min_threshold = st.number_input(label='Minimum minutes to consider', step=1, value=2)
     if select_player:
