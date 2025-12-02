@@ -230,7 +230,7 @@ def get_game_level(data):
 
 
 minute_data = get_data()
-years = minute_data['SEASON'].sort_values().drop_duplicates().tolist()
+years = minute_data['SEASON'].sort_values(ascending=False).drop_duplicates().tolist()
 select_season = st.radio('Select Season', options=years, horizontal=True)
 minute_data = minute_data[minute_data['SEASON'] == select_season]
 clean_lineups = build_lineup_intervals(minutes_data=minute_data)
