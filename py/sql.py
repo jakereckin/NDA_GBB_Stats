@@ -280,7 +280,15 @@ def team_shot_chart_sql():
     SELECT PLAYS.GAME_ID,
                 PLAYS.PLAYER_ID,
                 PLAYS.SHOT_SPOT,
-                PLAYS.SHOT_DEFENSE,
+                CASE
+                  WHEN PLAYS.SHOT_DEFENSE = 'Open'
+                    THEN 'OPEN'
+                  WHEN PLAYS.SHOT_DEFENSE = 'Guarded'
+                    THEN 'GUARDED'
+                  WHEN PLAYS.SHOT_DEFENSE = 'Heavily Guarded'
+                    THEN 'HEAVILY_GUARDED'
+                  ELSE PLAYS.SHOT_DEFENSE
+                END AS SHOT_DEFENSE,
                 PLAYS.MAKE_MISS,
                 PLAYS.PLAY_NUM,
                 COALESCE(PLAYS.SPOT_X, SPOTS.XSPOT) AS XSPOT,
@@ -376,7 +384,15 @@ def opp_shot_chart_sql():
     SELECT PLAYS.GAME_ID,
                 PLAYS.PLAYER_ID,
                 PLAYS.SHOT_SPOT,
-                PLAYS.SHOT_DEFENSE,
+                CASE
+                  WHEN PLAYS.SHOT_DEFENSE = 'Open'
+                    THEN 'OPEN'
+                  WHEN PLAYS.SHOT_DEFENSE = 'Guarded'
+                    THEN 'GUARDED'
+                  WHEN PLAYS.SHOT_DEFENSE = 'Heavily Guarded'
+                    THEN 'HEAVILY_GUARDED'
+                  ELSE PLAYS.SHOT_DEFENSE
+                END AS SHOT_DEFENSE,
                 PLAYS.MAKE_MISS,
                 PLAYS.PLAY_NUM,
                 COALESCE(PLAYS.SPOT_X, SPOTS.XSPOT) AS XSPOT,
@@ -472,7 +488,15 @@ def player_shot_chart_sql():
 SELECT PLAYS.GAME_ID,
                PLAYS.PLAYER_ID,
               PLAYS.SHOT_SPOT,
-              PLAYS.SHOT_DEFENSE,
+                CASE
+                  WHEN PLAYS.SHOT_DEFENSE = 'Open'
+                    THEN 'OPEN'
+                  WHEN PLAYS.SHOT_DEFENSE = 'Guarded'
+                    THEN 'GUARDED'
+                  WHEN PLAYS.SHOT_DEFENSE = 'Heavily Guarded'
+                    THEN 'HEAVILY_GUARDED'
+                  ELSE PLAYS.SHOT_DEFENSE
+                END AS SHOT_DEFENSE,
               PLAYS.MAKE_MISS,
               PLAYS.PLAY_NUM,
               COALESCE(PLAYS.SPOT_X, SPOTS.XSPOT) AS XSPOT,
@@ -560,7 +584,15 @@ def player_grouped_shot_chart_sql():
 SELECT PLAYS.GAME_ID,
                PLAYS.PLAYER_ID,
               PLAYS.SHOT_SPOT,
-              PLAYS.SHOT_DEFENSE,
+                CASE
+                  WHEN PLAYS.SHOT_DEFENSE = 'Open'
+                    THEN 'OPEN'
+                  WHEN PLAYS.SHOT_DEFENSE = 'Guarded'
+                    THEN 'GUARDED'
+                  WHEN PLAYS.SHOT_DEFENSE = 'Heavily Guarded'
+                    THEN 'HEAVILY_GUARDED'
+                  ELSE PLAYS.SHOT_DEFENSE
+                END AS SHOT_DEFENSE,
               PLAYS.MAKE_MISS,
               PLAYS.PLAY_NUM,
               SPOTS.OPP_EXPECTED,
@@ -642,7 +674,15 @@ def get_play_by_play_sql():
 SELECT PLAYS.GAME_ID,
                 PLAYS.PLAYER_ID,
                 PLAYS.SHOT_SPOT,
-                PLAYS.SHOT_DEFENSE,
+                CASE
+                  WHEN PLAYS.SHOT_DEFENSE = 'Open'
+                    THEN 'OPEN'
+                  WHEN PLAYS.SHOT_DEFENSE = 'Guarded'
+                    THEN 'GUARDED'
+                  WHEN PLAYS.SHOT_DEFENSE = 'Heavily Guarded'
+                    THEN 'HEAVILY_GUARDED'
+                  ELSE PLAYS.SHOT_DEFENSE
+                END AS SHOT_DEFENSE,
                 PLAYS.MAKE_MISS,
                 PLAYS.PLAY_NUM,
                 SPOTS.XSPOT,

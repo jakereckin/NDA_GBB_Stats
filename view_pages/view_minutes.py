@@ -250,7 +250,7 @@ def lineup_ids_to_names(lineup_key):
         names = [player_map.get(int(pid), str(pid)) for pid in ids]
     except Exception:
         names = [player_map.get(pid, str(pid)) for pid in ids]
-    return tuple(names)
+    return tuple(zip(names))
 
 
 col1, col2 = st.columns(2)
@@ -263,7 +263,7 @@ view_analytics = st.radio(
 
 if view_analytics == 'Player Lineup':
 
-    player_col, min_col, stat_col = st.columns(3)
+    player_col, min_col, stat_col = st.columns([1, 1, 2])
     with player_col:
         select_player = st.selectbox(label='Select Player', options=my_players)
     with min_col:
@@ -291,9 +291,10 @@ if view_analytics == 'Player Lineup':
             lineup_level['TOTAL_MIN'] / lineup_level['GAME_COUNT']
         )
         lineup_level = lineup_level.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
+
         #lineup_level['Lineup'] = lineup_level['LINEUP_KEY']
         lineup_level['Lineup'] = lineup_level['LINEUP_KEY'].apply(lineup_ids_to_names)
-
+        lineup_level['Lineups'] = lineup_level['LINEUP_KEY']
         view_stats = [
             'Plus/Minus per Minute Played', 'Games Played', 
             'Points per Minute Played',
@@ -303,13 +304,13 @@ if view_analytics == 'Player Lineup':
             data = st.radio(
                 label='Select Stat', options=view_stats, horizontal=True
             )
-        col1, col2 = st.columns([3, 1])
+        col1, col2 = st.columns([3, 2])
         if data:
             with col1:
                 fig = px.bar(
                     data_frame=lineup_level.round(3),
                     x=data,
-                    y='Lineup',
+                    y='Lineups',
                     orientation='h',
                     text=data,
                     color_discrete_sequence=['green']
@@ -321,7 +322,7 @@ if view_analytics == 'Player Lineup':
                             .reset_index(drop=True)
             )
             with col2:
-                st.dataframe(sorted_lineup[['Lineup', data, 'Minutes per Game']], hide_index=True)
+                st.dataframe(sorted_lineup[['Lineups', data, 'Minutes per Game']], hide_index=True)
 
 if view_analytics == 'Player':
 
@@ -336,7 +337,7 @@ if view_analytics == 'Player':
     data = st.radio(
         label='Select Stat', options=view_stats, horizontal=True
     )
-    col1, col2 = st.columns(spec=[2,1])
+    col1, col2 = st.columns(spec=[3,2])
     if data:
         with col1:
             fig = px.bar(
@@ -354,11 +355,14 @@ if view_analytics == 'Player':
                         .reset_index(drop=True)
         )
         with col2:
-            st.dataframe(sorted_lineup[['Name', data]], hide_index=True, width='content')
-        #st.write(that_player_lineups)
+            st.dataframe(
+                data=sorted_lineup[['Name', data]].round(2), 
+                hide_index=True, 
+                width='content'
+            )
 
 if view_analytics == 'Overall Lineup':
-    min_col, stat_col = st.columns(2)
+    min_col, stat_col = st.columns([1, 2])
     with min_col:
         min_threshold = st.number_input(label='Minimum minutes to consider', step=1, value=2)
     lineup_level = get_lineup_level_data(grouped_lineups)
@@ -377,11 +381,11 @@ if view_analytics == 'Overall Lineup':
         data = st.radio(
             label='Select Stat', options=view_stats, horizontal=True
         )
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([3, 2])
     if data:
         with col1:
             fig = px.bar(
-                    data_frame=lineup_level.round(3),
+                    data_frame=lineup_level.round(2),
                     x=data,
                     y='Lineup',
                     orientation='h',
@@ -389,15 +393,16 @@ if view_analytics == 'Overall Lineup':
                     color_discrete_sequence=['green']
             )
             fig.update_traces(textposition='outside')
-            st.plotly_chart(figure_or_data=fig, width='stretch')
+            st.plotly_chart(figure_or_data=fig, width='content')
         sorted_lineup = (
                 lineup_level.sort_values(by=[data], ascending=False)
                             .reset_index(drop=True)
         )
         with col2:
             st.dataframe(
-                data=sorted_lineup[['Lineup', data, 'Minutes per Game']],
+                data=sorted_lineup[['Lineup', data, 'Minutes per Game']].round(2),
                 hide_index=True,
+                width='stretch'
             )
 
 if view_analytics == 'Game':
@@ -424,11 +429,11 @@ if view_analytics == 'Game':
         data = st.radio(
             label='Select Stat', options=view_stats, horizontal=True
         )
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([3, 2])
     if data:
         with col1:
             fig = px.bar(
-                data_frame=game_data.round(3),
+                data_frame=game_data.round(2),
                 x=data,
                 y='Lineup',
                 orientation='h',
@@ -442,4 +447,4 @@ if view_analytics == 'Game':
                         .reset_index(drop=True)
         )
         with col2:
-            st.dataframe(sorted_lineup[['Lineup', data, 'Total Minutes Played']], hide_index=True)
+            st.dataframe(sorted_lineup[['Lineup', data, 'Total Minutes Played']].round(2), hide_index=True)

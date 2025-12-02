@@ -21,6 +21,19 @@ def get_player_data():
      play_by_play = data_source.run_query(
           sql=sql.get_play_by_play_sql(), connection=sql_lite_connect
      )
+     
+     def map_shot_defense(x):
+          if x == 'Open':
+               return 'OPEN'
+          elif x == 'Guarded':
+               return 'GUARDED'
+          elif x == 'Heavily Guarded':
+               return 'HEAVILY_GUARDED'
+          else:
+               return x
+     play_by_play['SHOT_DEFENSE'] = (
+          play_by_play['SHOT_DEFENSE'].apply(map_shot_defense)
+     )
      #player_data = player_data[player_data['SEASON'] == season]
      return player_data, player_grouped_data, play_by_play
 
@@ -141,7 +154,7 @@ if season:
      )
      pbp_score = get_grades(pbp_grouped)
      pbp_gpa = pbp_score['GPA_SUM'].sum() / pbp_score['ATTEMPTS'].sum()
-     st.metric(label='Shot Selection GPA', value=pbp_gpa.round(2))
+     st.metric(label='Shot Selection GPA', value=pbp_gpa.round(3))
      if players_selected:
           totals, totals_sorted = format_visual_data(
                this_game=this_game, player_grouped_data=this_game_grouped
