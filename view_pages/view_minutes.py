@@ -322,7 +322,7 @@ if view_analytics == 'Player':
     data = st.radio(
         label='Select Stat', options=view_stats, horizontal=True
     )
-    col1, col2 = st.columns(spec=2, width=[3,1])
+    col1, col2 = st.columns(spec=2, width=['stretch', 'content'])
     if data:
         with col1:
             fig = px.bar(
