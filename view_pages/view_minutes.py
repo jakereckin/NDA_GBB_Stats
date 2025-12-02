@@ -340,7 +340,7 @@ if view_analytics == 'Player':
                         .reset_index(drop=True)
         )
         with col2:
-            st.dataframe(sorted_lineup[['Name', data]], hide_index=True)
+            st.dataframe(sorted_lineup[['Name', data]], hide_index=True, width='content')
         #st.write(that_player_lineups)
 
 if view_analytics == 'Overall Lineup':
