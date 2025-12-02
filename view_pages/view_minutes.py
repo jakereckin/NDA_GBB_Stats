@@ -238,7 +238,19 @@ games_info, player_info = get_game_player_info(minutes_data=minute_data)
 games_info_dict = dict(zip(games_info['GAME_ID'], games_info['GAME_DATE']))
 grouped_lineups = group_data(clean_lineups=clean_lineups, game_dict=games_info_dict)
 unique_player_lineups, my_players = get_unique_lineups(grouped_lineups=grouped_lineups, player_info=player_info)
+player_map = dict(zip(player_info['PLAYER_ID'].astype(int), player_info['PLAYER_NAME']))
 
+def lineup_ids_to_names(lineup_key):
+    try:
+        # lineup_key may be a stringified tuple like "(1, 2, 3, 4, 5)"
+        ids = ast.literal_eval(lineup_key) if isinstance(lineup_key, str) else lineup_key
+    except Exception:
+        return lineup_key
+    try:
+        names = [player_map.get(int(pid), str(pid)) for pid in ids]
+    except Exception:
+        names = [player_map.get(pid, str(pid)) for pid in ids]
+    return tuple(names)
 
 
 col1, col2 = st.columns(2)
@@ -279,7 +291,9 @@ if view_analytics == 'Player Lineup':
             lineup_level['TOTAL_MIN'] / lineup_level['GAME_COUNT']
         )
         lineup_level = lineup_level.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
-        lineup_level['Lineup'] = lineup_level['LINEUP_KEY']
+        #lineup_level['Lineup'] = lineup_level['LINEUP_KEY']
+        lineup_level['Lineup'] = lineup_level['LINEUP_KEY'].apply(lineup_ids_to_names)
+
         view_stats = [
             'Plus/Minus per Minute Played', 'Games Played', 
             'Points per Minute Played',
@@ -289,7 +303,7 @@ if view_analytics == 'Player Lineup':
             data = st.radio(
                 label='Select Stat', options=view_stats, horizontal=True
             )
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns([3, 1])
         if data:
             with col1:
                 fig = px.bar(
