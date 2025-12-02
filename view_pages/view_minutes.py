@@ -326,7 +326,7 @@ if view_analytics == 'Player':
     if data:
         with col1:
             fig = px.bar(
-                data_frame=player_clean_data.round(3),
+                data_frame=player_clean_data.round(2),
                 x=data,
                 y='Name',
                 orientation='h',
