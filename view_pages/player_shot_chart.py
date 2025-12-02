@@ -43,7 +43,7 @@ def format_visual_data(this_game, player_grouped_data):
      totals_sorted = player_grouped_data.sort_values(
           by=['POINTS_PER_ATTEMPT', 'ATTEMPTS'], ascending=False
      )
-     totals_sorted = totals_sorted[totals_sorted['ATTEMPTS'] > 1]
+     totals_sorted = totals_sorted[totals_sorted['ATTEMPTS'] >= 1]
      totals_sorted = totals_sorted[[
           'SHOT_SPOT', 'MAKES', 'ATTEMPTS', 'MAKE_PERCENT',
           'POINTS_PER_ATTEMPT', 'HG_PERCENT'
@@ -53,7 +53,7 @@ def format_visual_data(this_game, player_grouped_data):
 
 # ----------------------------------------------------------------------------
 @st.cache_data
-def filter_player_data(players_selected, player_data, player_grouped_data, pbp):
+def filter_player_data(players_selected, player_data, player_grouped_data, pbp, game=None):
      this_game = (
           player_data[player_data['NAME'] == players_selected]
                      .reset_index(drop=True)
@@ -62,6 +62,13 @@ def filter_player_data(players_selected, player_data, player_grouped_data, pbp):
           player_grouped_data[player_grouped_data['NAME'] == players_selected]
                              .reset_index(drop=True)
      )
+
+     if game is not None:
+          this_game = this_game[this_game['GAME'] == game].reset_index(drop=True)
+          this_game_grouped = (
+               this_game_grouped[this_game_grouped['GAME'] == game]
+               .reset_index(drop=True)
+          )
      pbp_grouped = (
           pbp[pbp['NAME'] == players_selected].reset_index(drop=True)
      )
@@ -132,40 +139,54 @@ def get_grades(pbp):
      return pbp_gpa
 
 
+shot_chart_col, others = st.columns([3, 1])
+
 players, player_grouped_data, pbp = get_player_data()
 players = players.sort_values(by='SEASON', ascending=False)
 season_list = players.SEASON.unique().tolist()
-season = st.radio(label='Select Season', options=season_list, horizontal=True)
 
-if season:
-     player_data = players[players['SEASON'] == season]
-     player_grouped_data = player_grouped_data[player_grouped_data['SEASON'] == season]
-     pbp_data = pbp[pbp['SEASON'] == season]
-     player_names = player_data['NAME'].unique()
+with others:
+     season = st.radio(label='Select Season', options=season_list, horizontal=True)
+     use_games = st.radio(label='Use Specific Game?', options=['No', 'Yes'], horizontal=True)
+
+if use_games == 'Yes':
+     games_in_season = players[players['SEASON'] == season]['GAME'].unique().tolist()
+     with others:
+          game = st.selectbox(label='Select Game', options=games_in_season)
+else:
+     game = None
+
+player_data = players[players['SEASON'] == season]
+player_grouped_data = player_grouped_data[player_grouped_data['SEASON'] == season]
+pbp_data = pbp[pbp['SEASON'] == season]
+player_names = player_data['NAME'].unique()
+with others:
      players_selected = st.radio(
-          label='Choose Player', options=player_names, horizontal=True
+         label='Choose Player', options=player_names, horizontal=True
      )
 
-     this_game, this_game_grouped, pbp_grouped = filter_player_data(
-          players_selected=players_selected,
-          player_data=player_data,
-          player_grouped_data=player_grouped_data,
-          pbp=pbp_data
-     )
-     pbp_score = get_grades(pbp_grouped)
-     pbp_gpa = pbp_score['GPA_SUM'].sum() / pbp_score['ATTEMPTS'].sum()
+this_game, this_game_grouped, pbp_grouped = filter_player_data(
+     players_selected=players_selected,
+     player_data=player_data,
+     player_grouped_data=player_grouped_data,
+     pbp=pbp_data,
+     game=game
+)
+pbp_score = get_grades(pbp_grouped)
+pbp_gpa = pbp_score['GPA_SUM'].sum() / pbp_score['ATTEMPTS'].sum()
+
+with others:
      st.metric(label='Shot Selection GPA', value=pbp_gpa.round(3))
-     if players_selected:
-          totals, totals_sorted = format_visual_data(
-               this_game=this_game, player_grouped_data=this_game_grouped
-          )
-          fig = ut.load_shot_chart_player(
-               totals=totals, players_selected=players_selected
-          )
-          fig.update_layout(
-               width=500,
-               height=500
-          )
+
+if players_selected:
+     totals, totals_sorted = format_visual_data(
+          this_game=this_game, player_grouped_data=this_game_grouped
+     )
+     fig = ut.load_shot_chart_player(
+          totals=totals, players_selected=players_selected
+     )
+     fig.update_layout(width=500, height=500)
+     with shot_chart_col:
           st.markdown(
                body=f"<h1 style='text-align: center; color: black;'>Shot Chart for {players_selected}</h1>",
                unsafe_allow_html=True
@@ -173,10 +194,10 @@ if season:
 
           st.plotly_chart(figure_or_data=fig, width='stretch')
 
-          st.markdown(
-               body=f"<h1 style='text-align: center; color: black;'>Top 5 Spots for {players_selected}</h1>", 
-               unsafe_allow_html=True
-          )
-          st.dataframe(
-               data=totals_sorted.head(5), width='stretch', hide_index=True
-          )
+     st.markdown(
+          body=f"<h1 style='text-align: center; color: black;'>Top 5 Spots for {players_selected}</h1>", 
+          unsafe_allow_html=True
+     )
+     st.dataframe(
+          data=totals_sorted.head(5), width='stretch', hide_index=True
+     )

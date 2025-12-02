@@ -505,6 +505,7 @@ SELECT PLAYS.GAME_ID,
               SPOTS.POINTS,
               GAMES.OPPONENT,
               GAMES.LOCATION,
+              GAMES.OPPONENT || ' ' || GAMES.DATE AS GAME,
               GAMES.DATE,
               GAMES.SEASON,
               PLAYERS.FIRST_NAME || ' ' || PLAYERS.LAST_NAME AS NAME,
@@ -538,6 +539,7 @@ SUMMED_TABLE AS (
                   SHOT_SPOT,
                   POINTS,
                   SEASON,
+                  GAME,
                   SUM(MAKE) AS MAKES,
                   SUM(HEAVILY_GUARDED) HEAVILY_GUARDED,
                   SUM(ATTEMPT) AS ATTEMPTS
@@ -547,6 +549,7 @@ SUMMED_TABLE AS (
                   YSPOT,
                   SHOT_SPOT,
                   POINTS,
+                  GAME,
                   SEASON)
 
 SELECT NAME,
@@ -555,6 +558,7 @@ SELECT NAME,
                   SHOT_SPOT,
                   POINTS,
                   SEASON,
+                  GAME,
                   MAKES,
                   HEAVILY_GUARDED,
                   ATTEMPTS,
@@ -602,6 +606,7 @@ SELECT PLAYS.GAME_ID,
               GAMES.DATE,
               GAMES.SEASON,
               PLAYERS.FIRST_NAME || ' ' || PLAYERS.LAST_NAME AS NAME,
+              GAMES.OPPONENT || ' ' || GAMES.DATE AS GAME,
               CASE
                     WHEN PLAYS.MAKE_MISS = 'Y'
                            THEN 1
@@ -631,6 +636,7 @@ SUMMED_TABLE AS (
                   SHOT_SPOT,
                   POINTS,
                   SEASON,
+                  GAME,
                   SUM(MAKE) AS MAKES,
                   SUM(HEAVILY_GUARDED) HEAVILY_GUARDED,
                   SUM(ATTEMPT) AS ATTEMPTS
@@ -638,7 +644,8 @@ SUMMED_TABLE AS (
     GROUP BY NAME,
                   SHOT_SPOT,
                   POINTS,
-                  SEASON)
+                  SEASON,
+                  GAME)
 
 SELECT NAME,
                 
@@ -648,6 +655,7 @@ SELECT NAME,
                   MAKES,
                   HEAVILY_GUARDED,
                   ATTEMPTS,
+                  GAME,
                   CASE
                         WHEN ATTEMPTS = 0
                               THEN 0

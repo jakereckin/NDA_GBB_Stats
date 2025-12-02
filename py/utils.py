@@ -224,6 +224,35 @@ def get_nearest_spot(
           'opp_expected': matched.get('OPP_EXPECTED')
         }
         return json_spot
+    
+    if basket_distance < THREE_POINT_RADIUS:
+          two_spots = spots_df[spots_df['POINTS'] == 2].copy()
+          if two_spots.empty:
+              json_spot = {
+                  'spot': 'RB2',
+                  'distance': basket_distance,
+                  'points': 2,
+                  'opp_expected': .45
+               }
+              return json_spot
+          dx = x - two_spots['XSPOT'].astype(float).to_numpy()
+          dy = y - two_spots['YSPOT'].astype(float).to_numpy()
+          distances = np.hypot(dx, dy)
+          min_idx = distances.argmin()
+          min_distance = float(distances[min_idx])
+          matched = two_spots.iloc[min_idx]
+          if isinstance(matched['SPOT'], str):
+              my_spot = matched['SPOT'].strip().strip('"')
+          else:
+              my_spot = matched['SPOT']
+          json_spot = {
+               'spot': my_spot,
+               'distance': min_distance,
+               'points': 2,
+               'opp_expected': matched.get('OPP_EXPECTED')
+          }
+          return json_spot
+
 
     # Otherwise: normal nearest spot search
     dx = x - spots_df['XSPOT'].astype(float).to_numpy()
@@ -262,15 +291,16 @@ def load_shot_chart_team(totals, team_selected):
     ylocs = totals['YSPOT']
     freq_by_hex = totals['ATTEMPTS']
     accs_by_hex = totals['POINTS_PER_ATTEMPT']
+    makes = totals['MAKES']
     spot = totals['SHOT_SPOT']
-    hg_percent = totals['HG_PERCENT'].round(3)
+    hg_percent = totals['MAKE_PERCENT'].round(3)
     marker_cmin = 0.0
     marker_cmax = 2
     ticktexts = [str(marker_cmin)+'-', "", str(marker_cmax)+'+']
     hexbin_text = [
         '<i>Points Per Attempt: </i>' + str(round(accs_by_hex[i], 1)) + '<BR>'
         '<i>Attempts: </i>' + str(round(freq_by_hex[i], 2)) + '<BR>'
-        '<i>Heavily Guarded %: </i>' + str(round(hg_percent[i], 4))
+        '<i>FG%: </i>' + str(round(hg_percent[i]* 100, 4)) + '%'
         for i in range(len(freq_by_hex))
     ]
     str_selected = ','.join(team_selected)
@@ -282,6 +312,7 @@ def load_shot_chart_team(totals, team_selected):
                              marker=dict(color=totals['POINTS_PER_ATTEMPT'],
                                          size=totals['ATTEMPTS'],
                                          sizemode='area', 
+                                         symbol='octagon',
                                          sizeref=2. * max(freq_by_hex) / (11. ** 3),
                                          sizemin=2.5,
                                          colorscale='RdBu',
@@ -432,54 +463,69 @@ def load_shot_chart_player(totals, players_selected):
     freq_by_hex = totals['ATTEMPTS']
     accs_by_hex = totals['POINTS_PER_ATTEMPT']
     spot = totals['SHOT_SPOT']
-    hg_percent = totals['HG_PERCENT'].round(3)
+    hg_percent = totals['MAKE_PERCENT'].round(3)
     marker_cmin = 0.0
     marker_cmax = 2
-    ticktexts = [str(marker_cmin)+'-', "", 
-                 str(marker_cmax)+'+'
+    ticktexts = [
+        str(marker_cmin)+'-', 
+        "", 
+        str(marker_cmax)+'+'
     ]
     hexbin_text = [
         '<i>Points Per Attempt: </i>' + str(round(accs_by_hex[i], 1)) + '<BR>'
         '<i>Attempts: </i>' + str(round(freq_by_hex[i], 2)) + '<BR>'
-        '<i>Heavily Guarded %: </i>' + str(round(hg_percent[i], 4))
+        '<i>FG%: </i>' + str(round(hg_percent[i] * 100, 4)) + '%'
         for i in range(len(freq_by_hex))
     ]
     str_selected = ','.join(players_selected)
+    symbols = []
+    for pct in hg_percent:
+        if pct > 0.5:
+            symbols.append('circle')
+        elif pct > 0.33:
+            symbols.append('hexagon')
+        else:
+            symbols.append('octagon')
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=xlocs, 
-                             y=ylocs, 
-                             mode='markers',
-                             name='markers',
-                             marker=dict(color=totals['POINTS_PER_ATTEMPT'],
-                                         size=totals['ATTEMPTS'],
-                                         sizemode='area', 
-                                         sizeref=2. * max(freq_by_hex) / (11. ** 3),
-                                         sizemin=2.5,
-                                         colorscale='RdBu',
-                                         reversescale=True,
-                                         colorbar=dict(thickness=15,
-                                                       x=0.84,
-                                                       y=0.87,
-                                                       yanchor='middle',
-                                                       len=0.2,
-                                                       title=dict(text="<B>Points Per Attempt</B>",
-                                                                  font=dict(size=11,
-                                                                            color='#4d4d4d'
-                                                                  ),
-                                                        ),
-                                                        tickvals=[marker_cmin, 
-                                                                  (marker_cmin + marker_cmax) / 2, 
-                                                                  marker_cmax],
-                                                        ticktext=ticktexts,
-                                                        tickfont=dict(size=11,
-                                                                      color='#4d4d4d'
-                                                        )
-                                         ),
-                                         cmin=marker_cmin, 
-                                         cmax=marker_cmax,
-                             ),
-                             text=hexbin_text,
-                             hoverinfo='text')
+    fig.add_trace(
+        go.Scatter(
+            x=xlocs, 
+            y=ylocs, 
+            mode='markers',
+            name='markers',
+            marker=dict(
+                color=totals['POINTS_PER_ATTEMPT'],
+                size=totals['ATTEMPTS'],
+                sizemode='area',
+                symbol='octagon',
+                sizeref=2. * max(freq_by_hex) / (11. ** 3),
+                sizemin=2.5,
+                colorscale='RdBu',
+                reversescale=True,
+                colorbar=dict(
+                    thickness=15,
+                    x=0.84,
+                    y=0.87,
+                    yanchor='middle',
+                    len=0.3,
+                    title=dict(
+                        text="<B>Points Per Attempt</B>",
+                        font=dict(size=11, color='#4d4d4d'),
+                    ),
+                    tickvals=[
+                        marker_cmin, 
+                        (marker_cmin + marker_cmax) / 2, 
+                        marker_cmax
+                    ],
+                    ticktext=ticktexts,
+                    tickfont=dict(size=11, color='#4d4d4d')
+                ),
+                cmin=marker_cmin, 
+                cmax=marker_cmax,
+            ),
+            text=hexbin_text,
+            hoverinfo='text'
+          )
     )
     fig_height = 600 * (470 + 2 * 10) / (500 + 2 * 10)
     fig.update_layout(width=10, height=fig_height)

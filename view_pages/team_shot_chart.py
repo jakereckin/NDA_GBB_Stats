@@ -155,16 +155,24 @@ team_data_filtered = filter_team_data(team_data=team_data)
 opp_data_filtered = filter_team_data(team_data=opp_data)
 pbp_data_filtered = filter_team_data(team_data=pbp_data)
 
-season_list = team_data['SEASON'].sort_values().unique().tolist()
+season_list = team_data['SEASON'].sort_values(ascending=False).unique().tolist()
 
-season = st.multiselect(label='Select Season', options=season_list)
-if season:
-     this_year = (
-          team_data_filtered[team_data_filtered['SEASON'].isin(values=season)]
+col1, col2 = st.columns([1, 2])
+with col1:
+     season = st.radio(label='Select Season', options=season_list, horizontal=True)
+
+this_year = (
+          team_data_filtered[team_data_filtered['SEASON'] == season]
                          .sort_values(by='GAME_ID')
+)
+games = this_year['U_ID'].unique()
+with col2:
+     games_selected = st.multiselect(
+          label='Choose Games',
+          options=reversed(games),
+          placeholder='Select one or more games to view shot chart'
      )
-     games = this_year['U_ID'].unique()
-     games_selected = st.multiselect(label='Choose Games', options=games)
+if games_selected:
 
      this_game = get_selected_games(
           games_selected=games_selected, team_data_filtered=team_data_filtered
@@ -180,17 +188,16 @@ if season:
      pbp_opp = this_game_gpa[this_game_gpa['TEAM'] != 'NDA']
      pbp_nda_gpa = pbp_nda['GPA_SUM'].sum() / pbp_nda['ATTEMPTS'].sum()
      pbp_opp_gpa = pbp_opp['GPA_SUM'].sum() / pbp_opp['ATTEMPTS'].sum()
-     nda, opp = st.columns(2)
-     with nda:
+     shot_chart, buttons= st.columns([2, 1])
+     with buttons:
+          select_team = st.radio(
+               label='Select to View NDA or Opponent',
+               options=['NDA', 'Opponent'],
+               horizontal=True
+          )
           st.metric(label='NDA Shot Selection GPA', value=pbp_nda_gpa.round(2))  
-     with opp:
           st.metric(label='Opponents Shot Selection GPA', value=pbp_opp_gpa.round(2))
 
-     select_team = st.radio(
-          label='Select to View NDA or Opponent',
-          options=['NDA', 'Opponent'],
-          horizontal=True
-     )
      if select_team == 'Opponent':
           this_game = this_game_opp
 
@@ -199,11 +206,12 @@ if season:
           totals, totals_sorted = format_selected_games(this_game=this_game)
           fig = ut.load_shot_chart_team(totals=totals, team_selected=games_selected)
           fig.update_layout(
-               width=500,
+               width=700,
                height=500
           )
-          st.markdown(
-               body=f"<h1 style='text-align: center; color: black;'>Shot Chart for {select_team}</h1>", 
-               unsafe_allow_html=True
-          )
-          st.plotly_chart(figure_or_data=fig, width='stretch')
+          with shot_chart:
+               st.markdown(
+                    body=f"<h1 style='text-align: center; color: black;'>Shot Chart for {select_team}</h1>", 
+                    unsafe_allow_html=True
+               )
+               st.plotly_chart(figure_or_data=fig, width='stretch', selection_mode='points')
