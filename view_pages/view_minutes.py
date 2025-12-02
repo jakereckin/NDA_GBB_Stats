@@ -266,11 +266,11 @@ if view_analytics == 'Player Lineup':
     player_col, min_col, stat_col = st.columns([1, 1, 2])
     with player_col:
         select_player = st.selectbox(label='Select Player', options=player_map.keys())
-        selected_player = my_players.get(select_player)
+        selected_player = player_map.get(select_player)
     with min_col:
         min_threshold = st.number_input(label='Minimum minutes to consider', step=1, value=2)
-    if select_player:
-        that_player_lineups = unique_player_lineups.get(select_player)
+    if selected_player:
+        that_player_lineups = unique_player_lineups.get(selected_player)
         df = pd.DataFrame(
             data=that_player_lineups, 
             columns=['PLAYER_1', 'PLAYER_2', 'PLAYER_3', 'PLAYER_4', 'PLAYER_5']
