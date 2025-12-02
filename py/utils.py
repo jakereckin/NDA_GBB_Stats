@@ -312,7 +312,7 @@ def load_shot_chart_team(totals, team_selected):
                              marker=dict(color=totals['POINTS_PER_ATTEMPT'],
                                          size=totals['ATTEMPTS'],
                                          sizemode='area', 
-                                         symbol='octagon',
+                                         symbol='octagon', 
                                          sizeref=2. * max(freq_by_hex) / (11. ** 3),
                                          sizemin=2.5,
                                          colorscale='RdBu',
