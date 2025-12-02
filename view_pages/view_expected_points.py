@@ -12,21 +12,21 @@ st.cache_resource.clear()
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
-effective_field_goal_description = """
+effective_field_goal_description = '''
 Effective FG% is a useful metric to understand shot selection.
 The formula is (2FGM + 1.5 * 3FGM) / FGA. This weights 3 point
 makes as more since they count for more points. In the NBA,
 87% of teams who win have a higher EFG%.
-"""
+'''
 
-expected_points_description = """
+expected_points_description = '''
 Expected points takes the point value for a shot multiplied by
 the percent chance of making that shot. The percent chance of making that
 shot is determined by a model that uses historical data to predict the
 liklihood of the shot being made.
 
 Example: 33% chance of making a 3 pointer is 0.33 * 3 = 1 expected point.
-"""
+'''
 # ----------------------------------------------------------------------------
 @st.cache_resource
 def load_data():
@@ -47,7 +47,7 @@ def format_data(
         game_summary_data: pl.DataFrame,
         selected_season: int
     ):
-    """
+    '''
     Format data to count makes and misses.
 
     Args:
@@ -66,7 +66,7 @@ def format_data(
                 selected columns from player_data.
             - game_summary (pd.DataFrame): DataFrame containin
                  merged game summary data.
-    """
+    '''
     #game_summary = game_summary_data[game_summary_data['YEAR'] == selected_season]
     #player_data = player_data[player_data['SEASON'] == selected_season]
     
@@ -93,7 +93,7 @@ def format_data(
 def get_games_data(
         player_data: pl.DataFrame, game_summary: pl.DataFrame, game: str
     ):
-    """
+    '''
     Get game data for the selected game.
 
     Args:
@@ -107,7 +107,7 @@ def get_games_data(
             data for the selected game.
         - game_data (pd.DataFrame): DataFrame containing sorted
             game summary data with a new 'DATE_DTTM' column.
-    """
+    '''
     #t_game = player_data[player_data['LABEL'] == game]
     #game_data = game_summary[game_summary['LABEL'] == game]
     t_game = player_data.filter(
@@ -131,7 +131,7 @@ def get_games_data(
 
 # ----------------------------------------------------------------------------
 def build_features(player_data):
-    """
+    '''
     Build features for basketball play events.
 
     Parameters:
@@ -173,7 +173,7 @@ def build_features(player_data):
     - LAST_ROLLING_POINTS_TEAM_NDA: Last rolling points for NDA team.
     - LAST_ROLLING_POINTS_TEAM_OPPONENT: Last rolling points for opponent team.
     - TEAM_SPREAD: Difference in rolling points between teams.
-    """
+    '''
     CODED_SHOT_DEFENSE = {
         'OPEN': 0,
         'GUARDED': 1,
@@ -318,8 +318,8 @@ def build_features(player_data):
             / pl.col(name='GAME_TEAM_ATTEMPTS')
         ),
         LAST_ROLLING_POINTS_TEAM_NDA=(
-            pl.when(pl.col("TEAM") == "NDA")
-            .then(pl.col("ROLLING_POINTS_TEAM").shift(1).over("GAME_ID"))
+            pl.when(pl.col('TEAM') == 'NDA')
+            .then(pl.col('ROLLING_POINTS_TEAM').shift(1).over('GAME_ID'))
             .otherwise(None)
         )
     )
@@ -330,8 +330,8 @@ def build_features(player_data):
             .fill_null(value=0)
         ),
         LAST_ROLLING_POINTS_TEAM_OPPONENT=(
-            pl.when(pl.col("TEAM") == "OPPONENT")
-            .then(pl.col("ROLLING_POINTS_TEAM").shift(1).over("GAME_ID"))
+            pl.when(pl.col('TEAM') == 'OPPONENT')
+            .then(pl.col('ROLLING_POINTS_TEAM').shift(1).over('GAME_ID'))
             .otherwise(None)
         )
     )
@@ -353,7 +353,7 @@ def build_features(player_data):
     return play_event_spot
 
 def apply_model(play_event_spot):
-    """
+    '''
     Apply a pre-trained model to predict the expected 
     points for a given play event spot.
 
@@ -387,7 +387,7 @@ def apply_model(play_event_spot):
         - 'EXPECTED_POINTS': The expected points calculated
             as the product of 'PROB' and 'POINTS'.
         - 'LABEL': A label combining the 'OPPONENT' and 'DATE' columns.
-    """
+    '''
     pipeline = joblib.load(filename='pipeline.pkl')
     model_columns = [
         'XSPOT', 'YSPOT',
@@ -435,7 +435,7 @@ def get_expected_points(play_event_spot, this_game):
 
 #-----------------------------------------------------------------------------
 def run_simulations(tritons, opp, sims, standard_dev):
-    """
+    '''
     for sim_count in range(sims):
     Parameters:
     tritons (DataFrame): DataFrame containing Tritons' game data.
@@ -445,19 +445,19 @@ def run_simulations(tritons, opp, sims, standard_dev):
 
     Returns:
     DataFrame: DataFrame containing the results of all simulations.
-    """
+    '''
     my_frame_list = []
     sim_count = 0
     my_bar = st.progress(0)
     while sim_count < sims:
         this_sim_nda = tritons
         this_sim_opp = opp
-        probs_opp = this_sim_opp["PROB"].to_numpy()
+        probs_opp = this_sim_opp['PROB'].to_numpy()
         simulated_opp = np.random.normal(loc=probs_opp, scale=standard_dev)
-        probs_nda = this_sim_nda["PROB"].to_numpy()
+        probs_nda = this_sim_nda['PROB'].to_numpy()
         simulated_nda = np.random.normal(loc=probs_nda, scale=standard_dev)
         this_sim_opp = this_sim_opp.with_columns(
-            pl.Series("SIMULATED_PERCENT", simulated_opp)
+            pl.Series('SIMULATED_PERCENT', simulated_opp)
         )
         this_sim_opp = this_sim_opp.with_columns(
             SIMULATED_PERCENT=(
@@ -484,7 +484,7 @@ def run_simulations(tritons, opp, sims, standard_dev):
             )
         )
         this_sim_nda = this_sim_nda.with_columns(
-            pl.Series("SIMULATED_PERCENT", simulated_nda)
+            pl.Series('SIMULATED_PERCENT', simulated_nda)
         )
         this_sim_nda = this_sim_nda.with_columns(
             SIMULATED_PERCENT=(
@@ -607,7 +607,7 @@ if season:
                 'LAST_ROLLING_POINTS_TEAM_OPPONENT': 'OPP_POINTS'
             }
         )
-        st.dataframe(data=last_20, use_container_width=True, hide_index=True)
+        st.dataframe(data=last_20, width='stretch', hide_index=True)
         # ========== EXPECTED TRITONS ==========
         tritons = this_game.filter(
             pl.col(name='TEAM') != 'OPPONENT'

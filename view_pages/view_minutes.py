@@ -308,7 +308,7 @@ if view_analytics == 'Player Lineup':
         if data:
             with col1:
                 fig = px.bar(
-                    data_frame=lineup_level.round(3),
+                    data_frame=lineup_level.round(2),
                     x=data,
                     y='Lineups',
                     orientation='h',
@@ -322,7 +322,7 @@ if view_analytics == 'Player Lineup':
                             .reset_index(drop=True)
             )
             with col2:
-                st.dataframe(sorted_lineup[['Lineups', data, 'Minutes per Game']], hide_index=True)
+                st.dataframe(sorted_lineup[['Lineups', data, 'Minutes per Game']].round(2), hide_index=True)
 
 if view_analytics == 'Player':
 
