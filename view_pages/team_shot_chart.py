@@ -66,7 +66,7 @@ def format_selected_games(this_game):
      totals_sorted = totals.sort_values(
           by=['POINTS_PER_ATTEMPT', 'ATTEMPTS'], ascending=False
      )
-     totals_sorted = totals_sorted[totals_sorted['ATTEMPTS'] > 1]
+     totals_sorted = totals_sorted[totals_sorted['ATTEMPTS'] >= 1]
      totals_sorted = (
           totals_sorted[[
                'SHOT_SPOT',
@@ -204,7 +204,35 @@ if games_selected:
      # ----------------------------------------------------------------------------
      if games_selected:
           totals, totals_sorted = format_selected_games(this_game=this_game)
-          fig = ut.load_shot_chart_team(totals=totals, team_selected=games_selected)
+          totals_sorted['VALUES'] = totals_sorted['SHOT_SPOT'].str[-1]
+          team_totals = (
+               totals_sorted.groupby(by='VALUES', as_index=False)
+                              .agg(TOTAL_MAKES=('MAKES', 'sum'),
+                                   TOTAL_ATTEMPTS=('ATTEMPTS', 'sum'))
+          )
+          twos = team_totals[team_totals['VALUES'] == '2']
+          threes = team_totals[team_totals['VALUES'] == '3']
+          fts = team_totals[team_totals['VALUES'] == '1']
+          totals = totals[totals['SHOT_SPOT'].str[-1] != '1'].reset_index(drop=True)
+          totals['HG_COUNT'] = totals['HG_PERCENT'] * totals['ATTEMPTS']
+          totals_new = totals.groupby(
+               by=['SHOT_SPOT', 'XSPOT', 'YSPOT'], as_index=False
+          ).agg(
+               MAKES=('MAKES', 'sum'),
+               ATTEMPTS=('ATTEMPTS', 'sum'),
+               MAKE_PERCENT=('MAKE_PERCENT', 'mean'),
+               HG_COUNT=('HG_COUNT', 'mean')
+          )
+          totals_new['POINTS'] = totals['SHOT_SPOT'].str[-1].astype(int)
+          totals_new['POINTS_PER_ATTEMPT'] = (
+               (totals_new['MAKES']*totals_new['POINTS']) / totals_new['ATTEMPTS']
+          ).round(3)  
+          with buttons:
+               st.write('### Shot Selection Totals')
+               st.write(f'Two Point Shots: {twos["TOTAL_MAKES"].sum()}/{twos["TOTAL_ATTEMPTS"].sum()}')
+               st.write(f'Three Point Shots: {threes["TOTAL_MAKES"].sum()}/{threes["TOTAL_ATTEMPTS"].sum()}')
+               st.write(f'Free Throws: {fts["TOTAL_MAKES"].sum()}/{fts["TOTAL_ATTEMPTS"].sum()}')
+          fig = ut.load_shot_chart_team(totals=totals_new, team_selected=games_selected)
           fig.update_layout(
                width=700,
                height=500

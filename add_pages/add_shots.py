@@ -68,6 +68,7 @@ def get_season_data(
     '''
     games_season = player_game[player_game['SEASON'] == season].copy()
     games_season['DATE_DTTM'] = pd.to_datetime(games_season['DATE'])
+    games_season = games_season.sort_values(by='DATE_DTTM')
     return games_season
 
 
@@ -409,14 +410,32 @@ if clicked:
                     opp_points_val = int(opp_points.ACTUAL_POINTS.sum())
                     st.write(f'NDA Points: {nda_points_val}')
                     st.write(f'Opp Points: {opp_points_val}')
-                    simple_data = current_game[[
-                        'NUMBER', 'SPOT', 'SHOT_DEFENSE',
-                        'MAKE_MISS', 'PLAY_NUM'
-                    ]]
-                    simple_data = (
-                        simple_data.sort_values(by=['PLAY_NUM'],
-                                                ascending=False)
-                                   .head(10)
+        simple_data = pbp_data.reset_index(drop=True)[[
+            'NUMBER', 'SPOT', 'SHOT_DEFENSE',
+            'MAKE_MISS', 'PLAY_NUM', 'GAME_ID'
+        ]]
+        simple_data = (
+            simple_data.sort_values(by=['PLAY_NUM'],
+                                    ascending=False)
+                       .head(30)
+        )
+        simple_data['DELETE'] = False
+        st.write(f'Previous 30 shots')
+        my_df = st.data_editor(simple_data, hide_index=True)
+        delete = st.button('Delete Selected Shots')
+        if delete:
+            selected_deletes = my_df[my_df['DELETE'] == True]
+            for index, row in selected_deletes.iterrows():
+                game_id = row['GAME_ID']
+                play_num = row['PLAY_NUM']
+                player_number = row['NUMBER']
+                with sqlitecloud.connect(sql_lite_connect) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        sql=sql.delete_shot(),
+                        parameters=(game_id, play_num, player_number),
                     )
-                    st.write(f'Previous 10 shots')
-                    st.dataframe(simple_data)
+                    conn.commit()
+            
+            st.write(f'Deleted {len(selected_deletes)} shots')
+            st.rerun()

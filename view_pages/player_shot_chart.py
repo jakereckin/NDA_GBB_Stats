@@ -182,8 +182,21 @@ if players_selected:
      totals, totals_sorted = format_visual_data(
           this_game=this_game, player_grouped_data=this_game_grouped
      )
+     totals['HG_COUNT'] = totals['HG_PERCENT'] * totals['ATTEMPTS']
+     totals_new = totals.groupby(
+          by=['NAME', 'SHOT_SPOT', 'XSPOT', 'YSPOT'], as_index=False
+     ).agg(
+          MAKES=('MAKES', 'sum'),
+          ATTEMPTS=('ATTEMPTS', 'sum'),
+          MAKE_PERCENT=('MAKE_PERCENT', 'mean'),
+          HG_COUNT=('HG_COUNT', 'mean')
+     )
+     totals_new['POINTS'] = totals['SHOT_SPOT'].str[-1].astype(int)
+     totals_new['POINTS_PER_ATTEMPT'] = (
+          (totals_new['MAKES']*totals_new['POINTS']) / totals_new['ATTEMPTS']
+     ).round(3)
      fig = ut.load_shot_chart_player(
-          totals=totals, players_selected=players_selected
+          totals=totals_new, players_selected=players_selected
      )
      fig.update_layout(width=500, height=500)
      with shot_chart_col:

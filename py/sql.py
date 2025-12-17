@@ -317,8 +317,7 @@ def team_shot_chart_sql():
     ON PLAYS.SHOT_SPOT = SPOTS.SPOT
     INNER JOIN GAMES
         ON GAMES.GAME_ID = PLAYS.GAME_ID
-    WHERE PLAYS.SHOT_SPOT != 'FREE_THROW1'
-    AND PLAYS.PLAYER_ID != '0'),
+    WHERE PLAYS.PLAYER_ID != '0'),
 
     SUMMED_TABLE AS (
     SELECT U_ID,
@@ -421,8 +420,7 @@ def opp_shot_chart_sql():
     ON PLAYS.SHOT_SPOT = SPOTS.SPOT
     INNER JOIN GAMES
         ON GAMES.GAME_ID = PLAYS.GAME_ID
-    WHERE PLAYS.SHOT_SPOT != 'FREE_THROW1'
-    AND PLAYS.PLAYER_ID = '0'),
+    WHERE PLAYS.PLAYER_ID = '0'),
 
     SUMMED_TABLE AS (
     SELECT U_ID,
@@ -724,5 +722,13 @@ INNER JOIN GAMES
 INNER JOIN PLAYERS
   ON PLAYERS.NUMBER = PLAYS.PLAYER_ID
 AND PLAYERS.YEAR = GAMES.SEASON
+    """
+    return sql
+
+
+def delete_shot():
+    sql = """
+    DELETE FROM PLAYS
+     WHERE GAME_ID = ? AND PLAY_NUM = ? AND PLAYER_ID = ?
     """
     return sql
