@@ -607,7 +607,6 @@ if season:
                 'LAST_ROLLING_POINTS_TEAM_OPPONENT': 'OPP_POINTS'
             }
         )
-        st.dataframe(data=last_20, width='stretch', hide_index=True)
         # ========== EXPECTED TRITONS ==========
         tritons = this_game.filter(
             pl.col(name='TEAM') != 'OPPONENT'
@@ -734,7 +733,7 @@ if season:
                 label=f'{opp_team_name} EFG%',
                 help=effective_field_goal_description
             )
-
+        st.dataframe(data=last_20, width='stretch', hide_index=True)
         sims, std = st.columns(spec=2)
 
         with sims:
