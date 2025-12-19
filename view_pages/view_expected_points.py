@@ -572,7 +572,9 @@ game_summary = (
 
 season_list = player_data.select('SEASON').unique().to_series().to_list()
 season_list = sorted(season_list, key=lambda x: int(x), reverse=True)
-season = st.radio(label='Select Season', options=season_list, horizontal=True)
+col1, col2 = st.columns(spec=2)
+with col1:
+    season = st.radio(label='Select Season', options=season_list, horizontal=True)
 if season:
     player_data, player_data2, game_summary = format_data(
         player_data=player_data, game_summary_data=game_summary, selected_season=season
@@ -581,7 +583,8 @@ if season:
 
     games_list = player_data.select('LABEL').unique().to_series().to_list()
     games_list = sorted(games_list, key=lambda x: pd.to_datetime(x.split(' - ')[1]))
-    game = st.selectbox(label='Select Game', options=games_list)
+    with col2:
+        game = st.selectbox(label='Select Game', options=games_list)
 
     if game != []:
         t_game, game_data = get_games_data(
