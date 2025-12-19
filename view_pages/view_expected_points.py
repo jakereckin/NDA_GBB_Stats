@@ -703,7 +703,7 @@ if season:
 
         with triton_actual:
             st.metric(
-                value=actual_fg.astype(int),
+                value=int(actual_fg),
                 label='Actual NDA Points',
                 delta=tritons_delta
             )
@@ -717,7 +717,7 @@ if season:
 
         with opp_actual:
             st.metric(
-                value=actual_fg_opp.astype(int),
+                value=int(actual_fg_opp),
                 label=f'Actual {opp_team_name} Points',
                 delta=opp_delta,
                 delta_color='inverse'
