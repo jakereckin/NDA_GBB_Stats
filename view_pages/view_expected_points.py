@@ -582,7 +582,7 @@ if season:
 
 
     games_list = player_data.select('LABEL').unique().to_series().to_list()
-    games_list = sorted(games_list, key=lambda x: pd.to_datetime(x.split(' - ')[1]))
+    games_list = sorted(games_list, key=lambda x: pd.to_datetime(x.split(' - ')[1]) ,reverse=True)
     with col2:
         game = st.selectbox(label='Select Game', options=games_list)
 
