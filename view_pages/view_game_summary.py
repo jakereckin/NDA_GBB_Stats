@@ -188,7 +188,7 @@ if season_list:
         st.text(body='Team Level Data')
         st.dataframe(
             data=team_data,
-            width=1000,
+            width='content',
             hide_index=True,
         )
 
