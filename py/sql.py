@@ -245,14 +245,14 @@ SELECT PLAYER_ID,
               TWO_FGM + THREE_FGM AS FGM,
               ((2*TWO_FGM) + (3*THREE_FGM) + FTM) AS POINTS,
              (((2*TWO_FGM) + (3*THREE_FGM) + FTM)
-              + (0.4*(TWO_FGA  + THREE_FGA))
+              + (0.4*(TWO_FGM  + THREE_FGM))
+              + (0.7*OFFENSIVE_REBOUNDS)
+              +(0.3*DEFENSIVE_REBOUNDS)
+              +(STEALS)
+              +(0.7*ASSISTS)
+             +(0.7*BLOCKS)
               - (0.7*(TWO_FGA+THREE_FGA))
               -(0.4*(FTA-FTM))
-              + (0.7*OFFENSIVE_REBOUNDS)
-              +(0.3*(DEFENSIVE_REBOUNDS))
-              +(STEALS)
-              +(0.7*(ASSISTS))
-             +(0.7*(BLOCKS))
               - (TURNOVER)) AS GAME_SCORE,
                 OPPONENT,
                 LOCATION,
