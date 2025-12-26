@@ -159,13 +159,14 @@ def get_game_player_details(team_data, game_summary_season, game):
 # ============================================================================
 game_summary = load_data()
 team_data = get_team_games(game_summary=game_summary)
-
+col1, col2 = st.columns([1, 2])
 team_data = team_data.to_pandas()
 
 season_list = game_summary['SEASON'].unique().tolist()
 season_list = sorted(season_list, reverse=True)
 
-season = st.multiselect(label='Select Season', options=season_list)
+with col1:
+    season = st.multiselect(label='Select Season', options=season_list)
 
 if season_list:
 
@@ -175,7 +176,8 @@ if season_list:
     games_list = game_summary_season['LABEL'].unique().tolist()
     games_list = sorted(games_list, reverse=True)
 
-    game = st.multiselect(label='Select Games', options=games_list)
+    with col2:
+        game = st.multiselect(label='Select Games', options=games_list)
 
     if game != []:
         team_data, player_level = get_game_player_details(
