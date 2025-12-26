@@ -163,6 +163,7 @@ team_data = get_team_games(game_summary=game_summary)
 team_data = team_data.to_pandas()
 
 season_list = game_summary['SEASON'].unique().tolist()
+season_list = sorted(season_list, reverse=True)
 
 season = st.multiselect(label='Select Season', options=season_list)
 
@@ -172,6 +173,7 @@ if season_list:
         game_summary=game_summary, season=season
     )
     games_list = game_summary_season['LABEL'].unique().tolist()
+    games_list = sorted(games_list, reverse=True)
 
     game = st.multiselect(label='Select Games', options=games_list)
 
@@ -183,7 +185,7 @@ if season_list:
         )
         st.text(body='Team Level Data')
         st.dataframe(
-            data=team_data, use_container_width=True, hide_index=True
+            data=team_data, width='stretch', hide_index=True
         )
 
         data = st.radio(
@@ -199,4 +201,4 @@ if season_list:
                 text=data,
                 color_discrete_sequence=['green']
             )
-            st.plotly_chart(figure_or_data=fig, use_container_width=True)
+            st.plotly_chart(figure_or_data=fig, width='stretch')
