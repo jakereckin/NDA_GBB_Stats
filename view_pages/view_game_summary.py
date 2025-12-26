@@ -139,7 +139,7 @@ def get_game_player_details(team_data, game_summary_season, game):
                 'POINTS': 'Points',
                 'GAME_SCORE': 'Game Score',
                 'POSSESSIONS': 'Possessions',
-                'TURNOVER_RATE': 'Turnover %'
+                'TURNOVER_RATE': 'TO %'
             }
         )
     player_level = player_level.rename(
@@ -186,8 +186,10 @@ if season_list:
             game=game
         )
         st.text(body='Team Level Data')
-        st.table(
-            data=team_data
+        st.dataframe(
+            data=team_data,
+            width='stretch',
+            hide_index=True,
         )
 
         data = st.radio(
