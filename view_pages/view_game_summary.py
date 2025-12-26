@@ -186,10 +186,8 @@ if season_list:
             game=game
         )
         st.text(body='Team Level Data')
-        st.dataframe(
-            data=team_data,
-            width='content',
-            hide_index=True,
+        st.table(
+            data=team_data
         )
 
         data = st.radio(
