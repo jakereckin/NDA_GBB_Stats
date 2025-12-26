@@ -174,7 +174,7 @@ if season_list:
         game_summary=game_summary, season=season
     )
     games_list = game_summary_season['LABEL'].unique().tolist()
-    games_list = sorted(games_list, reverse=True)
+    games_list = reversed(games_list)
 
     with col2:
         game = st.multiselect(label='Select Games', options=games_list)
