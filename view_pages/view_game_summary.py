@@ -197,7 +197,7 @@ if season_list:
             'PPA': st.column_config.NumberColumn(format="%.2f"),
             'EFG%': st.column_config.NumberColumn(format="%.1f%%"),
             'TO %': st.column_config.NumberColumn(format="%.1f%%"),
-        }
+        } 
         st.dataframe(
             data=team_data,
             width='stretch', 
