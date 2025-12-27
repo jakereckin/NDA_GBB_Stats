@@ -125,10 +125,10 @@ def get_game_player_details(team_data, game_summary_season, game):
     team_data = (
             team_data[list_of_stats]
                      .rename(columns={'LABEL': 'Opponent'})
-                     .round(decimals=2)
+                     .round(decimals=4)
     )
     player_level = final_data.groupby(by='NAME', as_index=False).sum()
-    player_level = apply_derived(data=player_level).round(decimals=2)
+    player_level = apply_derived(data=player_level).round(decimals=4)
     team_data = team_data.rename(
             columns={
                 'OFFENSIVE_EFFICENCY': 'OE',
@@ -159,7 +159,7 @@ def get_game_player_details(team_data, game_summary_season, game):
 # ============================================================================
 game_summary = load_data()
 team_data = get_team_games(game_summary=game_summary)
-col1, col2 = st.columns([1, 2])
+col1, col2 = st.columns([2, 4])
 team_data = team_data.to_pandas()
 
 season_list = game_summary['SEASON'].unique().tolist()
@@ -177,19 +177,32 @@ if season_list:
     games_list = reversed(games_list)
 
     with col2:
-        game = st.multiselect(label='Select Games', options=games_list)
-
-    if game != []:
+        st.session_state.game = st.multiselect(label='Select Games', options=games_list)
+    
+    if st.session_state.game != []:
         team_data, player_level = get_game_player_details(
             team_data=team_data,
             game_summary_season=game_summary_season,
-            game=game
+            game=st.session_state.game
         )
         st.text(body='Team Level Data')
+        team_data['EFG%'] = team_data['EFG%'] * 100
+        team_data['TO %'] = team_data['TO %'] * 100
+        column_config = {
+            "Opponent": st.column_config.Column(width=125),
+            'OE': st.column_config.NumberColumn(format="%.2f"),
+            '2 PPA': st.column_config.NumberColumn(format="%.2f"),
+            '3 PPA': st.column_config.NumberColumn(format="%.2f"),
+            'Possessions': st.column_config.NumberColumn(format="%.0f"),
+            'PPA': st.column_config.NumberColumn(format="%.2f"),
+            'EFG%': st.column_config.NumberColumn(format="%.1f%%"),
+            'TO %': st.column_config.NumberColumn(format="%.1f%%"),
+        }
         st.dataframe(
             data=team_data,
             width='stretch', 
             hide_index=True,
+            column_config=column_config
         )
 
         data = st.radio(
