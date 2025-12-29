@@ -74,7 +74,8 @@ def format_selected_games(this_game):
                'ATTEMPTS',
                'MAKE_PERCENT', 
                'POINTS_PER_ATTEMPT',
-               'HG_PERCENT'
+               'HG_PERCENT',
+               'PAINT_TOUCH'
                ]]
                .round(3)
      )
@@ -148,6 +149,80 @@ def get_grades(pbp):
      pbp_gpa['AVG_GPA'] = pbp_gpa['GPA_SUM'] / pbp_gpa[f'ATTEMPTS']
      return pbp_gpa
 
+# ----------------------------------------------------------------------------
+@st.cache_data
+def split_grades(this_game_gpa):
+     pbp_nda = this_game_gpa[this_game_gpa['TEAM'] == 'NDA']
+     pbp_opp = this_game_gpa[this_game_gpa['TEAM'] != 'NDA']
+     pbp_nda_gpa = pbp_nda['GPA_SUM'].sum() / pbp_nda['ATTEMPTS'].sum()
+     pbp_opp_gpa = pbp_opp['GPA_SUM'].sum() / pbp_opp['ATTEMPTS'].sum()
+     return pbp_nda_gpa, pbp_opp_gpa
+
+# ----------------------------------------------------------------------------
+@st.cache_data
+def get_shot_data(totals_sorted):
+     totals_sorted['VALUES'] = totals_sorted['SHOT_SPOT'].str[-1]
+     team_totals = (
+               totals_sorted.groupby(
+                              by=['VALUES', 'PAINT_TOUCH'],
+                              as_index=False
+                            )
+                            .agg(TOTAL_MAKES=('MAKES', 'sum'),
+                                 TOTAL_ATTEMPTS=('ATTEMPTS', 'sum'))
+     )
+     twos = team_totals[team_totals['VALUES'] == '2']
+     threes = team_totals[team_totals['VALUES'] == '3']
+     three_pt = threes[threes['PAINT_TOUCH'] == 'Y']
+     three_no_pt = threes[threes['PAINT_TOUCH'] == 'N']
+     total_threes = (
+               three_pt['TOTAL_ATTEMPTS'].sum() 
+               + three_no_pt['TOTAL_ATTEMPTS'].sum()
+     )
+     twos_makes = twos['TOTAL_MAKES'].sum()
+     twos_attempts = twos['TOTAL_ATTEMPTS'].sum()
+     three_pt_makes = three_pt['TOTAL_MAKES'].sum()
+     three_pt_attempts = three_pt['TOTAL_ATTEMPTS'].sum()
+     three_no_pt_makes = three_no_pt['TOTAL_MAKES'].sum()
+     three_no_pt_attempts = three_no_pt['TOTAL_ATTEMPTS'].sum()
+     three_total_makes = threes['TOTAL_MAKES'].sum()
+     three_total_attempts = threes['TOTAL_ATTEMPTS'].sum()
+     if total_threes > 0:
+          three_pt_percent = (
+               three_pt['TOTAL_ATTEMPTS'].sum() / total_threes
+          )
+     else:
+          three_pt_percent = 0
+     fts = team_totals[team_totals['VALUES'] == '1']
+     fts_attempts = fts['TOTAL_ATTEMPTS'].sum()
+     fts_makes = fts['TOTAL_MAKES'].sum()
+     return (twos_makes, twos_attempts, three_pt_makes, three_pt_attempts,
+             three_no_pt_makes, three_no_pt_attempts,
+             three_total_makes, three_total_attempts,
+             three_pt_percent, fts_makes, fts_attempts)
+
+# ----------------------------------------------------------------------------
+@st.cache_data
+def clean_team_totals(totals):
+     totals = (
+          totals[totals['SHOT_SPOT'].str[-1] != '1']
+                .reset_index(drop=True)
+     )
+     totals['HG_COUNT'] = totals['HG_PERCENT'] * totals['ATTEMPTS']
+     totals_new = (
+          totals.groupby(by=['SHOT_SPOT', 'XSPOT', 'YSPOT'],
+                         as_index=False)
+                .agg(
+                     MAKES=('MAKES', 'sum'),
+                     ATTEMPTS=('ATTEMPTS', 'sum'),
+                     MAKE_PERCENT=('MAKE_PERCENT', 'mean'),
+                     HG_COUNT=('HG_COUNT', 'mean'))
+     )
+     totals_new['POINTS'] = totals['SHOT_SPOT'].str[-1].astype(int)
+     totals_new['POINTS_PER_ATTEMPT'] = (
+          (totals_new['MAKES']*totals_new['POINTS']) 
+          / totals_new['ATTEMPTS']
+     ).round(3)
+     return totals_new
 
 team_data, opp_data, pbp_data = get_game_data()
 
@@ -155,11 +230,15 @@ team_data_filtered = filter_team_data(team_data=team_data)
 opp_data_filtered = filter_team_data(team_data=opp_data)
 pbp_data_filtered = filter_team_data(team_data=pbp_data)
 
-season_list = team_data['SEASON'].sort_values(ascending=False).unique().tolist()
+season_list = (
+     team_data['SEASON'].sort_values(ascending=False).unique().tolist()
+)
 
 col1, col2 = st.columns([1, 2])
 with col1:
-     season = st.radio(label='Select Season', options=season_list, horizontal=True)
+     season = st.radio(
+          label='Select Season', options=season_list, horizontal=True
+     )
 
 this_year = (
           team_data_filtered[team_data_filtered['SEASON'] == season]
@@ -184,10 +263,7 @@ if games_selected:
           games_selected=games_selected, team_data_filtered=pbp_data_filtered
      )
      this_game_gpa = get_grades(this_game_pbp)
-     pbp_nda = this_game_gpa[this_game_gpa['TEAM'] == 'NDA']
-     pbp_opp = this_game_gpa[this_game_gpa['TEAM'] != 'NDA']
-     pbp_nda_gpa = pbp_nda['GPA_SUM'].sum() / pbp_nda['ATTEMPTS'].sum()
-     pbp_opp_gpa = pbp_opp['GPA_SUM'].sum() / pbp_opp['ATTEMPTS'].sum()
+     pbp_nda_gpa, pbp_opp_gpa = split_grades(this_game_gpa)
      shot_chart, buttons= st.columns([2, 1])
      with buttons:
           select_team = st.radio(
@@ -195,8 +271,14 @@ if games_selected:
                options=['NDA', 'Opponent'],
                horizontal=True
           )
-          st.metric(label='NDA Shot Selection GPA', value=pbp_nda_gpa.round(2))  
-          st.metric(label='Opponents Shot Selection GPA', value=pbp_opp_gpa.round(2))
+          st.metric(
+               label='NDA Shot Selection GPA',
+               value=pbp_nda_gpa.round(2)
+          )  
+          st.metric(
+               label='Opponents Shot Selection GPA',
+               value=pbp_opp_gpa.round(2)
+          )
 
      if select_team == 'Opponent':
           this_game = this_game_opp
@@ -204,34 +286,21 @@ if games_selected:
      # ----------------------------------------------------------------------------
      if games_selected:
           totals, totals_sorted = format_selected_games(this_game=this_game)
-          totals_sorted['VALUES'] = totals_sorted['SHOT_SPOT'].str[-1]
-          team_totals = (
-               totals_sorted.groupby(by='VALUES', as_index=False)
-                              .agg(TOTAL_MAKES=('MAKES', 'sum'),
-                                   TOTAL_ATTEMPTS=('ATTEMPTS', 'sum'))
+          (twos_makes, twos_attempts, three_pt_makes, three_pt_attempts,
+           three_no_pt_makes, three_no_pt_attempts,
+           three_total_makes, three_total_attempts,
+           three_pt_percent, fts_makes, fts_attempts) = get_shot_data(
+               totals_sorted=totals_sorted
           )
-          twos = team_totals[team_totals['VALUES'] == '2']
-          threes = team_totals[team_totals['VALUES'] == '3']
-          fts = team_totals[team_totals['VALUES'] == '1']
-          totals = totals[totals['SHOT_SPOT'].str[-1] != '1'].reset_index(drop=True)
-          totals['HG_COUNT'] = totals['HG_PERCENT'] * totals['ATTEMPTS']
-          totals_new = totals.groupby(
-               by=['SHOT_SPOT', 'XSPOT', 'YSPOT'], as_index=False
-          ).agg(
-               MAKES=('MAKES', 'sum'),
-               ATTEMPTS=('ATTEMPTS', 'sum'),
-               MAKE_PERCENT=('MAKE_PERCENT', 'mean'),
-               HG_COUNT=('HG_COUNT', 'mean')
-          )
-          totals_new['POINTS'] = totals['SHOT_SPOT'].str[-1].astype(int)
-          totals_new['POINTS_PER_ATTEMPT'] = (
-               (totals_new['MAKES']*totals_new['POINTS']) / totals_new['ATTEMPTS']
-          ).round(3)  
+          totals_new = clean_team_totals(totals=totals)
           with buttons:
                st.write('### Shot Selection Totals')
-               st.write(f'Two Point Shots: {twos["TOTAL_MAKES"].sum()}/{twos["TOTAL_ATTEMPTS"].sum()}')
-               st.write(f'Three Point Shots: {threes["TOTAL_MAKES"].sum()}/{threes["TOTAL_ATTEMPTS"].sum()}')
-               st.write(f'Free Throws: {fts["TOTAL_MAKES"].sum()}/{fts["TOTAL_ATTEMPTS"].sum()}')
+               st.write(f'Two Point Shots: {twos_makes}/{twos_attempts}')
+               st.write(f'Three Point Shots with PT: {three_pt_makes}/{three_pt_attempts}')
+               st.write(f'Three Point Shots without PT: {three_no_pt_makes}/{three_no_pt_attempts}')
+               st.write(f'Total Three Point Shots: {three_total_makes}/{three_total_attempts}')
+               st.write(f'Three PT Percentage of Total Threes: {three_pt_percent.round(3)*100}%')
+               st.write(f'Free Throws: {fts_makes}/{fts_attempts}')
           fig = ut.load_shot_chart_team(totals=totals_new, team_selected=games_selected)
           fig.update_layout(
                width=700,

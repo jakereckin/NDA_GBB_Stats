@@ -132,7 +132,8 @@ def create_df(
         shot_defense,
         make_miss,
         spot_x,
-        spot_y
+        spot_y,
+        paint_touch
         ) -> pd.DataFrame:
     '''
         Creates a pandas DataFrame with the given shot data.
@@ -157,7 +158,8 @@ def create_df(
         shot_defense, 
         make_miss, 
         spot_x, 
-        spot_y
+        spot_y,
+        paint_touch
     ]
     col_names = [
         'GAME_ID',
@@ -166,7 +168,8 @@ def create_df(
         'SHOT_DEFENSE',
         'MAKE_MISS',
         'XSPOT',
-        'YSPOT'
+        'YSPOT',
+        'PAINT_TOUCH'
     ]
     my_df = pd.DataFrame(data=[this_data], columns=col_names)
     return my_df
@@ -297,7 +300,7 @@ if clicked:
                     label='Player', options=unique_players, horizontal=True
                 )
 
-                c2, c3, c4 = st.columns(3)
+                c2, c3, c4, c5 = st.columns(4)
                 with c4:
                     free_throw = st.radio(
                         label='Free Throw',
@@ -322,6 +325,12 @@ if clicked:
                         'GUAURDED'
                     else:
                         'HEAVILY_GUARDED'
+                with c5:
+                    paint_touch = st.radio(
+                        label='Paint Touch',
+                        options=['N', 'Y'],
+                        horizontal=True
+                    )
 
                 add = st.form_submit_button(label='Add Play')
                 if add:
@@ -345,6 +354,7 @@ if clicked:
                         make_miss=make_miss,
                         spot_x=x_click,
                         spot_y=y_click,
+                        paint_touch=paint_touch
                     )
                     my_df = my_df.merge(
                         right=shot_spots.drop(columns=['XSPOT', 'YSPOT']),
@@ -359,6 +369,7 @@ if clicked:
                         my_df['PLAY_NUM'] = current_play
 
                     with sqlitecloud.connect(sql_lite_connect) as conn:
+                        st.write(sql.insert_plays_sql())
                         cursor = conn.cursor()
                         cursor.execute(
                             sql=sql.insert_plays_sql(),
@@ -371,6 +382,7 @@ if clicked:
                                 str(my_df['PLAY_NUM'].values[0]),
                                 str(x_click),
                                 str(y_click),
+                                str(paint_touch)
                             ),
                         )
                         conn.commit()

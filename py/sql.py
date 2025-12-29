@@ -162,8 +162,9 @@ def insert_plays_sql():
                        MAKE_MISS,
                        PLAY_NUM,
                        SPOT_X,
-                       SPOT_Y)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                       SPOT_Y,
+                       PAINT_TOUCH)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     return sql
 
@@ -291,6 +292,7 @@ def team_shot_chart_sql():
                 END AS SHOT_DEFENSE,
                 PLAYS.MAKE_MISS,
                 PLAYS.PLAY_NUM,
+                COALESCE(PLAYS.PAINT_TOUCH, 'N') AS PAINT_TOUCH,
                 COALESCE(PLAYS.SPOT_X, SPOTS.XSPOT) AS XSPOT,
                 COALESCE(PLAYS.SPOT_Y, SPOTS.YSPOT) AS YSPOT,
                 SPOTS.OPP_EXPECTED,
@@ -330,6 +332,7 @@ def team_shot_chart_sql():
                     DATE,
                     SEASON,
                     GAME_ID,
+                    PAINT_TOUCH,
                     SUM(MAKE) AS MAKES,
                     SUM(HEAVILY_GUARDED) HEAVILY_GUARDED,
                     SUM(ATTEMPT) AS ATTEMPTS
@@ -343,7 +346,8 @@ def team_shot_chart_sql():
                     LOCATION,
                     DATE,
                     SEASON,
-                    GAME_ID)
+                    GAME_ID,
+                    PAINT_TOUCH)
 
     SELECT U_ID,
                     XSPOT,
@@ -358,6 +362,7 @@ def team_shot_chart_sql():
                     MAKES,
                     HEAVILY_GUARDED,
                     ATTEMPTS,
+                    PAINT_TOUCH,
                     CASE
                             WHEN ATTEMPTS = 0
                                 THEN 0
@@ -394,6 +399,7 @@ def opp_shot_chart_sql():
                 END AS SHOT_DEFENSE,
                 PLAYS.MAKE_MISS,
                 PLAYS.PLAY_NUM,
+                COALESCE(PLAYS.PAINT_TOUCH, 'N') AS PAINT_TOUCH,
                 COALESCE(PLAYS.SPOT_X, SPOTS.XSPOT) AS XSPOT,
                 COALESCE(PLAYS.SPOT_Y, SPOTS.YSPOT) AS YSPOT,
                 SPOTS.OPP_EXPECTED,
@@ -433,6 +439,7 @@ def opp_shot_chart_sql():
                     DATE,
                     SEASON,
                     GAME_ID,
+                    PAINT_TOUCH,
                     SUM(MAKE) AS MAKES,
                     SUM(HEAVILY_GUARDED) HEAVILY_GUARDED,
                     SUM(ATTEMPT) AS ATTEMPTS
@@ -446,7 +453,8 @@ def opp_shot_chart_sql():
                     LOCATION,
                     DATE,
                     SEASON,
-                    GAME_ID)
+                    GAME_ID,
+                    PAINT_TOUCH)
 
     SELECT U_ID,
                     XSPOT,
@@ -461,6 +469,7 @@ def opp_shot_chart_sql():
                     MAKES,
                     HEAVILY_GUARDED,
                     ATTEMPTS,
+                    PAINT_TOUCH,
                     CASE
                             WHEN ATTEMPTS = 0
                                 THEN 0
