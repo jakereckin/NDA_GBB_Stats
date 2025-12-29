@@ -369,7 +369,6 @@ if clicked:
                         my_df['PLAY_NUM'] = current_play
 
                     with sqlitecloud.connect(sql_lite_connect) as conn:
-                        st.write(sql.insert_plays_sql())
                         cursor = conn.cursor()
                         cursor.execute(
                             sql=sql.insert_plays_sql(),
@@ -420,7 +419,7 @@ if clicked:
                     opp_points = current_game[current_game['NUMBER'] == 0]
                     nda_points_val = int(nda_points.ACTUAL_POINTS.sum())
                     opp_points_val = int(opp_points.ACTUAL_POINTS.sum())
-                    st.write(f'NDA Points: {nda_points_val}')
+                    st.write(f'NDA Points: {nda_points_val}') 
                     st.write(f'Opp Points: {opp_points_val}')
         simple_data = pbp_data.reset_index(drop=True)[[
             'NUMBER', 'SPOT', 'SHOT_DEFENSE',
