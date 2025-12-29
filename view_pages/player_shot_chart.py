@@ -194,7 +194,7 @@ if players_selected:
      totals_new['POINTS'] = totals['SHOT_SPOT'].str[-1].astype(int)
      totals_new['POINTS_PER_ATTEMPT'] = (
           (totals_new['MAKES']*totals_new['POINTS']) / totals_new['ATTEMPTS']
-     ).round(3)
+     ).round(3) 
      fig = ut.load_shot_chart_player(
           totals=totals_new, players_selected=players_selected
      )
