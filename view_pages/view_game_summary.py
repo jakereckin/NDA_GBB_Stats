@@ -115,7 +115,7 @@ def apply_derived(data):
 # ----------------------------------------------------------------------------
 def game_seasons(game_summary, season):
     game_summary_season = (
-        game_summary[game_summary['SEASON'].isin(values=season)]
+        game_summary[game_summary['SEASON'] == season]
                     .sort_values(by='GAME_ID')
     )
     return game_summary_season
@@ -132,8 +132,13 @@ def get_game_player_details(team_data, game_summary_season, game):
                      .rename(columns={'LABEL': 'Opponent'})
                      .round(decimals=4)
     )
+    game_len = game_summary_season['GAME_ID'].nunique()
     player_level = final_data.groupby(by='NAME', as_index=False).sum()
+    player_season_avg = game_summary_season.groupby(by='NAME', as_index=False).sum()
     player_level = apply_derived(data=player_level).round(decimals=4)
+    player_season_avg = apply_derived(data=player_season_avg).round(decimals=4)
+    player_season_avg['GAME_LEN'] = game_len
+    player_season_avg['GAME_SCORE'] = player_season_avg['GAME_SCORE'] / player_season_avg['GAME_LEN']
     team_data = team_data.rename(
             columns={
                 'OFFENSIVE_EFFICENCY': 'OE',
@@ -161,7 +166,19 @@ def get_game_player_details(team_data, game_summary_season, game):
                 'GAME_SCORE': 'Game Score'
             }
     )
-    return team_data, player_level
+    player_season_avg = player_season_avg.rename(
+            columns={
+                'OFFENSIVE_EFFICENCY': 'OE',
+                'EFG%': 'EFG %',
+                'TRUE_SHOOTING_PERCENTAGE': 'TS %',
+                '2PPA': '2 PPA',
+                '3PPA': '3 PPA',
+                'PPA': 'PPA',
+                'POINTS': 'Points',
+                'GAME_SCORE': 'Game Score'
+            }
+    )
+    return team_data, player_level, player_season_avg
 
 
 # ============================================================================
@@ -174,7 +191,7 @@ season_list = game_summary['SEASON'].unique().tolist()
 season_list = sorted(season_list, reverse=True)
 
 with col1:
-    season = st.multiselect(label='Select Season', options=season_list)
+    season = st.radio(label='Select Season', options=season_list, horizontal=True)
 
 if season_list:
 
@@ -188,7 +205,7 @@ if season_list:
         st.session_state.game = st.multiselect(label='Select Games', options=games_list)
     
     if st.session_state.game != []:
-        team_data, player_level = get_game_player_details(
+        team_data, player_level, player_season_avg = get_game_player_details(
             team_data=team_data,
             game_summary_season=game_summary_season,
             game=st.session_state.game
@@ -208,7 +225,10 @@ if season_list:
             'TO %': st.column_config.NumberColumn(format="%.1f%%"),
             'TS %': st.column_config.NumberColumn(format="%.1f%%"),
             'PPP': st.column_config.NumberColumn(format="%.2f")
-        } 
+        }
+        team_data['DATE'] = team_data['Opponent'].apply(lambda x: x.split(' - ')[1])
+        team_data = team_data.sort_values(by='DATE', ascending=False).reset_index(drop=True)
+        team_data = team_data.drop(columns=['DATE'])
         st.dataframe(
             data=team_data,
             width='stretch', 
@@ -221,13 +241,29 @@ if season_list:
         )
         player_level['EFG %'] = player_level['EFG %'] * 100
         player_level['TS %'] = player_level['TS %'] * 100
+        player_level['TYPE'] = 'Selected Games'
+        player_season_avg_show = player_season_avg[other_stats].round(3)
+        player_season_avg_show['NAME'] = player_season_avg['NAME']
+        player_season_avg_show['EFG %'] = player_season_avg_show['EFG %'] * 100
+        player_season_avg_show['TS %'] = player_season_avg_show['TS %'] * 100
+        player_season_avg_show['TYPE'] = 'Season Average'
+        player_level = pd.concat([player_level, player_season_avg_show], ignore_index=True)
+        
         if data:
+            
             fig = px.bar(
-                data_frame=player_level.round(3),
+                data_frame=player_level.round(1),
                 x=data,
                 y='NAME',
                 orientation='h',
                 text=data,
-                color_discrete_sequence=['green']
+                color_discrete_sequence=['green', 'blue'],
+                color='TYPE'
+            )
+            fig.update_layout(
+                xaxis_title=data,
+                yaxis_title='Player Name',
+                width=800,
+                height=600
             )
             st.plotly_chart(figure_or_data=fig, width='stretch')
