@@ -10,7 +10,8 @@ st.cache_resource.clear()
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 list_of_stats = [
     'LABEL', 'OFFENSIVE_EFFICENCY', 'EFG%', '2PPA', '3PPA',
-    'PPA', 'POINTS', 'POSSESSIONS', 'GAME_SCORE', 'TURNOVER_RATE'
+    'PPA', 'POINTS', 'POSSESSIONS', 'GAME_SCORE', 'TURNOVER_RATE',
+    'POINTS_PER_POSSESSION'
 ]
 other_stats = [
     'OE', 'EFG%', '2 PPA', '3 PPA', 'PPA', 'Points',
