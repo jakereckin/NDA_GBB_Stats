@@ -14,7 +14,7 @@ list_of_stats = [
     'GAME_SCORE', 'TURNOVER_RATE', 'POINTS_PER_POSSESSION'
 ]
 other_stats = [
-    'OE', 'EFG%', 'TS%', '2 PPA', '3 PPA', 'PPA', 'Points',
+    'OE', 'EFG %', 'TS %', '2 PPA', '3 PPA', 'PPA', 'Points',
     'Game Score'
 ]
 
