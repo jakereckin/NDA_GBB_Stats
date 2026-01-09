@@ -255,7 +255,8 @@ player_ids = player_info['PLAYER_ID'].astype(int).drop_duplicates().tolist()
 with players:
     select_players = st.multiselect('Select Players to View', options=player_ids)
 
-these_players = lineup_analysis[lineup_analysis['LINEUP_KEY'].apply(lambda x: any(int(player) in ast.literal_eval(x) for player in select_players))]
+lineup_analysis["LINEUP_SET"] = lineup_analysis["LINEUP_KEY"].apply(lambda x: set(ast.literal_eval(x)))
+these_players = lineup_analysis[ lineup_analysis["LINEUP_SET"].apply(lambda s: set(select_players).issubset(s)) ]
 # Sort to ensure correct ordering
 df = these_players.sort_values(["GAME_ID", "RANK"])
 
