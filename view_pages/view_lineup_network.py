@@ -6,6 +6,7 @@ import plotly.express as px
 import polars as pl
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as pe
 from py import sql, data_source
 pd.options.mode.chained_assignment = None
 
@@ -260,51 +261,67 @@ these_players = lineup_analysis[ lineup_analysis["LINEUP_SET"].apply(lambda s: s
 # Sort to ensure correct ordering
 df = these_players.sort_values(["GAME_ID", "RANK"])
 
-# Identify first lineups (RANK == 1 for each game)
-first_lineups = set(df[df["RANK"] == 1]["LINEUP_KEY"])
+# --- STEP 1: Build transitions BEFORE filtering ---
 
-# Create directed graph
+# Build graph
 G = nx.DiGraph()
 
-# Add nodes for each unique lineup
+# Add all nodes first
 for lineup in df["LINEUP_KEY"].unique():
     G.add_node(lineup)
 
-# Add edges: lineup(rank n) → lineup(rank n+1) within same GAME_ID
+# Add edges based on sequential RANK within GAME_ID
 for game_id, group in df.groupby("GAME_ID"):
     group = group.sort_values("RANK")
-    prev_lineup = None
 
-    for _, row in group.iterrows():
-        current = row["LINEUP_KEY"]
+    # Create next-rank mapping
+    group["NEXT_LINEUP"] = group["LINEUP_KEY"].shift(-1)
 
-        if prev_lineup is not None:
-            if G.has_edge(prev_lineup, current):
-                G[prev_lineup][current]["weight"] += 1
-            else:
-                G.add_edge(prev_lineup, current, weight=1)
+    # Only valid transitions
+    transitions = group.dropna(subset=["NEXT_LINEUP"])
 
-        prev_lineup = current
+    for _, row in transitions.iterrows():
+        u = row["LINEUP_KEY"]
+        v = row["NEXT_LINEUP"]
 
-# Draw the graph
-plt.figure(figsize=(50, 25))
-pos = nx.spring_layout(G, k=0.8, seed=42)
+        if u == v:
+            continue  # prevent self-loops
 
-weights = [G[u][v]["weight"] for u, v in G.edges()]
+        if G.has_edge(u, v):
+            G[u][v]["weight"] += 1
+        else:
+            G.add_edge(u, v, weight=1)
 
-# Compute PM/min
-df['PLUS_MINUS'] = df['POINTS_SCORED'] - df['OPP_POINTS_SCORED']
+# --- STEP 2: Apply filtering AFTER transitions are built ---
+
+if select_players:
+    valid_nodes = set(
+        df[df["LINEUP_SET"].apply(lambda s: set(select_players).issubset(s))]["LINEUP_KEY"]
+    )
+
+    # Remove nodes not matching filter
+    nodes_to_remove = [n for n in G.nodes() if n not in valid_nodes]
+    G.remove_nodes_from(nodes_to_remove)
+
+# --- STEP 3: Compute PM/min only for remaining nodes ---
+
+df["PLUS_MINUS"] = df["POINTS_SCORED"] - df["OPP_POINTS_SCORED"]
 df["PM_PER_MIN"] = df["PLUS_MINUS"] / df["MIN_PLAYED"]
+
 pm_map = df.groupby("LINEUP_KEY")["PM_PER_MIN"].mean().to_dict()
 
-# Color by PM/min
+# --- DRAW GRAPH ---
+
+fig = plt.figure(figsize=(50, 25))
+pos = nx.spring_layout(G, k=2, seed=13)
+
+weights = [G[u][v]["weight"] for u, v in G.edges()]
 node_colors = ["red" if pm_map.get(n, 0) < 0 else "green" for n in G.nodes()]
 
 nx.draw_networkx_nodes(G, pos, node_size=900, node_color=node_colors)
 nx.draw_networkx_edges(G, pos, width=weights, arrowsize=20, arrowstyle="-|>")
 
-# Manual label drawing with stroke
-import matplotlib.patheffects as pe
+# Labels with stroke
 for node, (x, y) in pos.items():
     plt.text(
         x, y,
@@ -316,6 +333,7 @@ for node, (x, y) in pos.items():
         path_effects=[pe.withStroke(linewidth=3, foreground="white")]
     )
 
-plt.title("Lineup Transition Graph (Colored by Plus-Minus per Minute)", fontsize=24)
+plt.title("Lineup Transition Graph (Filtered AFTER Rank Sequencing)", fontsize=24)
 plt.axis("off")
-st.pyplot(plt.gcf())
+
+st.pyplot(fig)
