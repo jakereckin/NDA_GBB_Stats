@@ -223,7 +223,7 @@ if season_list:
         player_level['TS %'] = player_level['TS %'] * 100
         if data:
             fig = px.bar(
-                data_frame=player_level,
+                data_frame=player_level.round(3),
                 x=data,
                 y='NAME',
                 orientation='h',
