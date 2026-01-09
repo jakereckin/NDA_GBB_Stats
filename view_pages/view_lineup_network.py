@@ -333,7 +333,7 @@ for node, (x, y) in pos.items():
         path_effects=[pe.withStroke(linewidth=3, foreground="white")]
     )
 
-plt.title("Lineup Transition Graph (Filtered AFTER Rank Sequencing)", fontsize=24)
+plt.title("Lineup Transition Graph", fontsize=24)
 plt.axis("off")
 
 st.pyplot(fig)
