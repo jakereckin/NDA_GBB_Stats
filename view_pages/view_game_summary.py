@@ -219,7 +219,9 @@ if season_list:
         data = st.radio(
             label='Select Stat', options=other_stats, horizontal=True
         )
-
+        player_level['EFG%'] = player_level['EFG%'] * 100
+        player_level['TO %'] = player_level['TO %'] * 100
+        player_level['TS %'] = player_level['TS %'] * 100
         if data:
             fig = px.bar(
                 data_frame=player_level,
