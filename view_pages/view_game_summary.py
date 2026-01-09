@@ -9,9 +9,9 @@ st.cache_resource.clear()
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 list_of_stats = [
-    'LABEL', 'OFFENSIVE_EFFICENCY', 'EFG%', '2PPA', '3PPA',
-    'PPA', 'POINTS', 'POSSESSIONS', 'GAME_SCORE', 'TURNOVER_RATE',
-    'POINTS_PER_POSSESSION', 'TRUE_SHOOTING_PERCENTAGE'
+    'LABEL', 'OFFENSIVE_EFFICENCY', 'EFG%', 'TRUE_SHOOTING_PERCENTAGE', 
+    '2PPA', '3PPA', 'PPA', 'POINTS', 'POSSESSIONS', 
+    'GAME_SCORE', 'TURNOVER_RATE', 'POINTS_PER_POSSESSION'
 ]
 other_stats = [
     'OE', 'EFG%', 'TS%', '2 PPA', '3 PPA', 'PPA', 'Points',
@@ -196,6 +196,7 @@ if season_list:
         st.text(body='Team Level Data')
         team_data['EFG%'] = team_data['EFG%'] * 100
         team_data['TO %'] = team_data['TO %'] * 100
+        team_data['TS %'] = team_data['TS %'] * 100
         column_config = {
             "Opponent": st.column_config.Column(width=125),
             'OE': st.column_config.NumberColumn(format="%.2f"),
