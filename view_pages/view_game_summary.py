@@ -59,11 +59,9 @@ def apply_derived(data):
             pl.col(name='TWO_FGM') + (1.5*pl.col(name='THREE_FGM'))
         ),
         POSSESSIONS=(
-            .96 
-            * (pl.col(name='FGA') 
+            (pl.col(name='FGA')-pl.col(name='OFFENSIVE_REBOUNDS'))
                + pl.col(name='TURNOVER') 
-               + (.44 * pl.col(name='FTA')) 
-               - pl.col(name='OFFENSIVE_REBOUNDS'))
+               + (.44 * pl.col(name='FTA'))
         )
     )
     data = data.with_columns(
@@ -102,7 +100,10 @@ def apply_derived(data):
     data = data.with_columns(
         EFF_POINTS=(
             pl.col(name='POINTS') * pl.col(name='OFFENSIVE_EFFICENCY')
-        )
+        ),
+        POINTS_PER_POSSESSION=(
+            pl.col(name='POINTS') / pl.col(name='POSSESSIONS')
+        ),
     )
     data = data.to_pandas()
     return data
@@ -139,7 +140,8 @@ def get_game_player_details(team_data, game_summary_season, game):
                 'POINTS': 'Points',
                 'GAME_SCORE': 'Game Score',
                 'POSSESSIONS': 'Possessions',
-                'TURNOVER_RATE': 'TO %'
+                'TURNOVER_RATE': 'TO %',
+                'POINTS_PER_POSSESSION': 'PPP'
             }
         )
     player_level = player_level.rename(
@@ -197,6 +199,7 @@ if season_list:
             'PPA': st.column_config.NumberColumn(format="%.2f"),
             'EFG%': st.column_config.NumberColumn(format="%.1f%%"),
             'TO %': st.column_config.NumberColumn(format="%.1f%%"),
+            'PPP': st.column_config.NumberColumn(format="%.2f")
         } 
         st.dataframe(
             data=team_data,
