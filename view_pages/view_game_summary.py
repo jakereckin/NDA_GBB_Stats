@@ -137,7 +137,7 @@ def get_game_player_details(team_data, game_summary_season, game):
     team_data = team_data.rename(
             columns={
                 'OFFENSIVE_EFFICENCY': 'OE',
-                'EFG%': 'EFG%',
+                'EFG%': 'EFG %',
                 '2PPA': '2 PPA',
                 '3PPA': '3 PPA',
                 'PPA': 'PPA',
@@ -152,8 +152,8 @@ def get_game_player_details(team_data, game_summary_season, game):
     player_level = player_level.rename(
             columns={
                 'OFFENSIVE_EFFICENCY': 'OE',
-                'EFG%': 'EFG%',
-                'TRUE_SHOOTING_PERCENTAGE': 'TS%',
+                'EFG%': 'EFG %',
+                'TRUE_SHOOTING_PERCENTAGE': 'TS %',
                 '2PPA': '2 PPA',
                 '3PPA': '3 PPA',
                 'PPA': 'PPA',
@@ -194,7 +194,7 @@ if season_list:
             game=st.session_state.game
         )
         st.text(body='Team Level Data')
-        team_data['EFG%'] = team_data['EFG%'] * 100
+        team_data['EFG %'] = team_data['EFG %'] * 100
         team_data['TO %'] = team_data['TO %'] * 100
         team_data['TS %'] = team_data['TS %'] * 100
         column_config = {
@@ -204,7 +204,7 @@ if season_list:
             '3 PPA': st.column_config.NumberColumn(format="%.2f"),
             'Possessions': st.column_config.NumberColumn(format="%.0f"),
             'PPA': st.column_config.NumberColumn(format="%.2f"),
-            'EFG%': st.column_config.NumberColumn(format="%.1f%%"),
+            'EFG %': st.column_config.NumberColumn(format="%.1f%%"),
             'TO %': st.column_config.NumberColumn(format="%.1f%%"),
             'TS %': st.column_config.NumberColumn(format="%.1f%%"),
             'PPP': st.column_config.NumberColumn(format="%.2f")
@@ -219,8 +219,7 @@ if season_list:
         data = st.radio(
             label='Select Stat', options=other_stats, horizontal=True
         )
-        player_level['EFG%'] = player_level['EFG%'] * 100
-        player_level['TO %'] = player_level['TO %'] * 100
+        player_level['EFG %'] = player_level['EFG %'] * 100
         player_level['TS %'] = player_level['TS %'] * 100
         if data:
             fig = px.bar(
