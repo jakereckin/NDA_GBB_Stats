@@ -11,10 +11,10 @@ sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 list_of_stats = [
     'LABEL', 'OFFENSIVE_EFFICENCY', 'EFG%', '2PPA', '3PPA',
     'PPA', 'POINTS', 'POSSESSIONS', 'GAME_SCORE', 'TURNOVER_RATE',
-    'POINTS_PER_POSSESSION'
+    'POINTS_PER_POSSESSION', 'TRUE_SHOOTING_PERCENTAGE'
 ]
 other_stats = [
-    'OE', 'EFG%', '2 PPA', '3 PPA', 'PPA', 'Points',
+    'OE', 'EFG%', 'TS%', '2 PPA', '3 PPA', 'PPA', 'Points',
     'Game Score'
 ]
 
@@ -105,6 +105,9 @@ def apply_derived(data):
         POINTS_PER_POSSESSION=(
             pl.col(name='POINTS') / pl.col(name='POSSESSIONS')
         ),
+        TRUE_SHOOTING_PERCENTAGE=(
+            pl.col(name='POINTS') / (2 * (pl.col(name='FGA') + (.44 * pl.col(name='FTA'))))
+        )
     )
     data = data.to_pandas()
     return data
@@ -142,6 +145,7 @@ def get_game_player_details(team_data, game_summary_season, game):
                 'GAME_SCORE': 'Game Score',
                 'POSSESSIONS': 'Possessions',
                 'TURNOVER_RATE': 'TO %',
+                'TRUE_SHOOTING_PERCENTAGE': 'TS %',
                 'POINTS_PER_POSSESSION': 'PPP'
             }
         )
@@ -149,6 +153,7 @@ def get_game_player_details(team_data, game_summary_season, game):
             columns={
                 'OFFENSIVE_EFFICENCY': 'OE',
                 'EFG%': 'EFG%',
+                'TRUE_SHOOTING_PERCENTAGE': 'TS%',
                 '2PPA': '2 PPA',
                 '3PPA': '3 PPA',
                 'PPA': 'PPA',
@@ -200,6 +205,7 @@ if season_list:
             'PPA': st.column_config.NumberColumn(format="%.2f"),
             'EFG%': st.column_config.NumberColumn(format="%.1f%%"),
             'TO %': st.column_config.NumberColumn(format="%.1f%%"),
+            'TS %': st.column_config.NumberColumn(format="%.1f%%"),
             'PPP': st.column_config.NumberColumn(format="%.2f")
         } 
         st.dataframe(
