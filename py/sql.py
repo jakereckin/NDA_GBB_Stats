@@ -228,50 +228,74 @@ def delete_game_sql():
 
 def get_game_summary_sql():
     sql = """
-SELECT PLAYER_ID,
-               GAME_SUMMARY.GAME_ID,
-               TWO_FGM,
-              TWO_FGA,
-              THREE_FGM,
-              THREE_FGA,
-              FTM,
-              FTA,
-              OFFENSIVE_REBOUNDS,
-              DEFENSIVE_REBOUNDS,
-              ASSISTS,
-              STEALS,
-              BLOCKS,
-              TURNOVER,
-              TWO_FGA  + THREE_FGA AS FGA,
-              TWO_FGM + THREE_FGM AS FGM,
-              ((2*TWO_FGM) + (3*THREE_FGM) + FTM) AS POINTS,
-             (((2*TWO_FGM) + (3*THREE_FGM) + FTM)
-              + (0.4*(TWO_FGM  + THREE_FGM))
-              + (0.7*OFFENSIVE_REBOUNDS)
-              +(0.3*DEFENSIVE_REBOUNDS)
-              +(STEALS)
-              +(0.7*ASSISTS)
-             +(0.7*BLOCKS)
-              - (0.7*(TWO_FGA+THREE_FGA))
-              -(0.4*(FTA-FTM))
-              - (TURNOVER)) AS GAME_SCORE,
-                OPPONENT,
-                LOCATION,
-                DATE,
-                SEASON,
-                OPPONENT || '  -  ' || DATE AS LABEL,
-               NUMBER,
-           FIRST_NAME,
-           LAST_NAME,
-           YEAR,
-           FIRST_NAME || ' ' || LAST_NAME AS NAME
-  FROM GAME_SUMMARY
-  INNER JOIN GAMES
-    ON GAMES.GAME_ID = GAME_SUMMARY.GAME_ID
-  INNER JOIN PLAYERS
-    ON PLAYERS.NUMBER = GAME_SUMMARY.PLAYER_ID
-    AND PLAYERS.YEAR = GAMES.SEASON
-  AND PLAYERS.NUMBER != '0'
+          WITH AVG_MINUTES AS (
+              SELECT MINUTES_PLAYED.PLAYER_ID,
+                              AVG(MINUTES_PLAYED.MINUTES_PLAYED) AS AVG_MIN_PLAYED,
+                              PLAYERS.YEAR
+                    FROM MINUTES_PLAYED
+                    INNER JOIN GAMES
+                      ON GAMES.GAME_ID = MINUTES_PLAYED.GAME_ID
+                    INNER JOIN PLAYERS
+                      ON PLAYERS.NUMBER = MINUTES_PLAYED.PLAYER_ID
+                      AND PLAYERS.YEAR = GAMES.SEASON
+                  GROUP BY MINUTES_PLAYED.PLAYER_ID, PLAYERS.YEAR
+          )
+
+          SELECT GAME_SUMMARY.PLAYER_ID,
+                 GAME_SUMMARY.GAME_ID,
+                 GAME_SUMMARY.TWO_FGM,
+                 GAME_SUMMARY.TWO_FGA,
+                 GAME_SUMMARY.THREE_FGM,
+                 GAME_SUMMARY.THREE_FGA,
+                 GAME_SUMMARY.FTM,
+                 GAME_SUMMARY.FTA,
+                 GAME_SUMMARY.OFFENSIVE_REBOUNDS,
+                 GAME_SUMMARY.DEFENSIVE_REBOUNDS,
+                 GAME_SUMMARY.ASSISTS,
+                 GAME_SUMMARY.STEALS,
+                 GAME_SUMMARY.BLOCKS,
+                 GAME_SUMMARY.TURNOVER,
+                 GAME_SUMMARY.TWO_FGA  
+                 + GAME_SUMMARY.THREE_FGA AS FGA,
+                 GAME_SUMMARY.TWO_FGM 
+                 + GAME_SUMMARY.THREE_FGM AS FGM,
+                 ((2*GAME_SUMMARY.TWO_FGM) 
+                 + (3*GAME_SUMMARY.THREE_FGM) 
+                 + GAME_SUMMARY.FTM) AS POINTS,
+                 (((2*GAME_SUMMARY.TWO_FGM) + (3*GAME_SUMMARY.THREE_FGM) + FTM) -- Points
+                  + (0.4*(GAME_SUMMARY.TWO_FGM  + GAME_SUMMARY.THREE_FGM)) --  + .4*FGM
+                  - (0.7*(GAME_SUMMARY.TWO_FGA+GAME_SUMMARY.THREE_FGA)) -- -.7*FGA
+                  - (0.4*(GAME_SUMMARY.FTA-FTM)) -- -.4*FTs missed
+                  + (0.7*GAME_SUMMARY.OFFENSIVE_REBOUNDS) -- +.7*ORB
+                  + (0.3*GAME_SUMMARY.DEFENSIVE_REBOUNDS) -- +.3*DRB
+                  + GAME_SUMMARY.STEALS -- + Steals
+                  + (0.7*GAME_SUMMARY.ASSISTS) -- + .7*Assists
+                  + (0.7*GAME_SUMMARY.BLOCKS) -- + .7*Blocks
+                   - GAME_SUMMARY.TURNOVER)  AS GAME_SCORE, -- -TOs
+                   GAMES.OPPONENT,
+                   GAMES.LOCATION,
+                   GAMES.DATE,
+                   GAMES.SEASON,
+                   GAMES.OPPONENT || '  -  ' || GAMES.DATE AS LABEL,
+                   PLAYERS.NUMBER,
+                   PLAYERS.FIRST_NAME,
+                   PLAYERS.LAST_NAME,
+                   PLAYERS.YEAR,
+                   PLAYERS.FIRST_NAME || ' ' || PLAYERS.LAST_NAME AS NAME,
+                   COALESCE(MINUTES_PLAYED.MINUTES_PLAYED, AVG_MINUTES.AVG_MIN_PLAYED, 0) AS MINUTES_PLAYED
+            FROM GAME_SUMMARY
+            INNER JOIN GAMES
+              ON GAMES.GAME_ID = GAME_SUMMARY.GAME_ID
+            INNER JOIN PLAYERS
+              ON PLAYERS.NUMBER = GAME_SUMMARY.PLAYER_ID
+              AND PLAYERS.YEAR = GAMES.SEASON
+            AND PLAYERS.NUMBER != '0'
+          LEFT JOIN MINUTES_PLAYED
+              ON GAMES.GAME_ID = MINUTES_PLAYED.GAME_ID
+              AND PLAYERS.NUMBER = MINUTES_PLAYED.PLAYER_ID
+          LEFT JOIN AVG_MINUTES
+            ON AVG_MINUTES.PLAYER_ID = GAME_SUMMARY.PLAYER_ID
+            AND AVG_MINUTES.YEAR = PLAYERS.YEAR
     """
     return sql
 
