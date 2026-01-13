@@ -6,16 +6,18 @@ from py import sql, data_source
 pd.options.mode.chained_assignment = None
 
 st.cache_resource.clear()
-
+st.set_page_config(layout='wide')
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 list_of_stats = [
-    'LABEL', 'OFFENSIVE_EFFICENCY', 'EFG%', 'TRUE_SHOOTING_PERCENTAGE', 
-    '2PPA', '3PPA', 'PPA', 'POINTS', 'POSSESSIONS', 
-    'GAME_SCORE', 'TURNOVER_RATE', 'POINTS_PER_POSSESSION'
+    'LABEL', 'EFG%', 'TURNOVER_RATE', 'PPA', 
+    'POINTS_PER_POSSESSION', 'FREE_THROW_RATE', 'TRUE_SHOOTING_PERCENTAGE',
+    'POSSESSIONS', 'OFFENSIVE_EFFICENCY', 
+    '2PPA', '3PPA', 'POINTS',
+    'GAME_SCORE'
 ]
 other_stats = [
     'OE', 'EFG %', 'TS %', '2 PPA', '3 PPA', 'PPA', 'Points',
-    'Game Score'
+    'Game Score', 'Minutes', 'FTR'
 ]
 
 # ----------------------------------------------------------------------------
@@ -46,6 +48,7 @@ def apply_derived(data):
         TOTAL_POINTS_SCORED=(
             pl.col(name='TWO_POINTS_SCORED') 
             + pl.col(name='THREE_POINTS_SCORED')
+            + pl.col(name='FTM')
         ),
         OE_NUM=(
             pl.col(name='FGM') + pl.col(name='ASSISTS')
@@ -106,7 +109,19 @@ def apply_derived(data):
             pl.col(name='POINTS') / pl.col(name='POSSESSIONS')
         ),
         TRUE_SHOOTING_PERCENTAGE=(
-            pl.col(name='POINTS') / (2 * (pl.col(name='FGA') + (.44 * pl.col(name='FTA'))))
+            pl.when(condition=pl.col(name='FGA') + (.44 * pl.col(name='FTA')) > 0)
+              .then(statement=pl.col(name='POINTS') / (2 * (pl.col(name='FGA') + (.44 * pl.col(name='FTA')))))
+              .otherwise(statement=0)
+              .alias(name='TS %')
+        ),
+        FREE_THROW_RATE=(
+            pl.when(condition=pl.col(name='FGA') > 0)
+                .then(statement=pl.col(name='FTA') / pl.col(name='FGA'))
+                .otherwise(statement=0)
+                .alias(name='FTR')
+        ),
+        POSSESSIONS_PER_MINUTE=(
+            pl.col('POSSESSIONS') / 36
         )
     )
     data = data.to_pandas()
@@ -151,9 +166,11 @@ def get_game_player_details(team_data, game_summary_season, game):
                 'POSSESSIONS': 'Possessions',
                 'TURNOVER_RATE': 'TO %',
                 'TRUE_SHOOTING_PERCENTAGE': 'TS %',
-                'POINTS_PER_POSSESSION': 'PPP'
+                'POINTS_PER_POSSESSION': 'PPP',
+                'FREE_THROW_RATE': 'FTR'
             }
         )
+        
     player_level = player_level.rename(
             columns={
                 'OFFENSIVE_EFFICENCY': 'OE',
@@ -163,7 +180,9 @@ def get_game_player_details(team_data, game_summary_season, game):
                 '3PPA': '3 PPA',
                 'PPA': 'PPA',
                 'POINTS': 'Points',
-                'GAME_SCORE': 'Game Score'
+                'GAME_SCORE': 'Game Score',
+                'MINUTES_PLAYED': 'Minutes',
+                'FREE_THROW_RATE': 'FTR'
             }
     )
     player_season_avg = player_season_avg.rename(
@@ -175,18 +194,56 @@ def get_game_player_details(team_data, game_summary_season, game):
                 '3PPA': '3 PPA',
                 'PPA': 'PPA',
                 'POINTS': 'Points',
-                'GAME_SCORE': 'Game Score'
+                'GAME_SCORE': 'Game Score',
+                'MINUTES_PLAYED': 'Minutes',
+                'FREE_THROW_RATE': 'FTR'
             }
     )
     return team_data, player_level, player_season_avg
 
+def clean_frames(team_data, player_level, player_season_avg, other_stats):
+    team_data['EFG %'] = team_data['EFG %'] * 100
+    team_data['TO %'] = team_data['TO %'] * 100
+    team_data['TS %'] = team_data['TS %'] * 100
+    team_data['FTR'] = team_data['FTR'] * 100
+    column_config = {
+            "Opponent": st.column_config.Column(width=125),
+            'OE': st.column_config.NumberColumn(format="%.2f", width=None),
+            '2 PPA': st.column_config.NumberColumn(format="%.2f", width=None),
+            '3 PPA': st.column_config.NumberColumn(format="%.2f", width=None),
+            'Possessions': st.column_config.NumberColumn(format="%.0f", width=None),
+            'PPA': st.column_config.NumberColumn(format="%.2f", width=None),
+            'EFG %': st.column_config.NumberColumn(format="%.1f%%", width=None),
+            'TO %': st.column_config.NumberColumn(format="%.1f%%", width=None),
+            'TS %': st.column_config.NumberColumn(format="%.1f%%", width=None),
+            'PPP': st.column_config.NumberColumn(format="%.2f", width=None),
+            'FTR': st.column_config.NumberColumn(format="%.1f%%", width=None),
+            'NAME': st.column_config.Column(width=125),
+            'Minutes': st.column_config.NumberColumn(format="%.0f", width=None),
+    }
+    team_data['DATE'] = team_data['Opponent'].apply(lambda x: x.split(' - ')[1])
+    team_data = team_data.sort_values(by='DATE', ascending=False).reset_index(drop=True)
+    team_data = team_data.drop(columns=['DATE'])
+
+    player_level['EFG %'] = player_level['EFG %'] * 100
+    player_level['TS %'] = player_level['TS %'] * 100
+    player_level['FTR'] = player_level['FTR'] * 100
+    player_level['TYPE'] = 'Selected Games'
+    player_season_avg_show = player_season_avg[other_stats].round(3)
+    player_season_avg_show['NAME'] = player_season_avg['NAME']
+    player_season_avg_show['EFG %'] = player_season_avg_show['EFG %'] * 100
+    player_season_avg_show['TS %'] = player_season_avg_show['TS %'] * 100
+    player_season_avg_show['FTR'] = player_season_avg_show['FTR'] * 100
+    player_season_avg_show['TYPE'] = 'Season Average'
+    player_level = pd.concat([player_level, player_season_avg_show], ignore_index=True)
+    return team_data, player_level, column_config
+        
 
 # ============================================================================
 game_summary = load_data()
 team_data = get_team_games(game_summary=game_summary)
-col1, col2 = st.columns([2, 4])
+col1, col2, col3 = st.columns([2, 4, 2])
 team_data = team_data.to_pandas()
-
 season_list = game_summary['SEASON'].unique().tolist()
 season_list = sorted(season_list, reverse=True)
 
@@ -205,65 +262,76 @@ if season_list:
         st.session_state.game = st.multiselect(label='Select Games', options=games_list)
     
     if st.session_state.game != []:
+        with col3:
+            level_view = st.radio(
+                label='Select View',
+                options=['Team Level', 'Player Level', 'Both'],
+                horizontal=True
+            )
         team_data, player_level, player_season_avg = get_game_player_details(
             team_data=team_data,
             game_summary_season=game_summary_season,
             game=st.session_state.game
         )
-        st.text(body='Team Level Data')
-        team_data['EFG %'] = team_data['EFG %'] * 100
-        team_data['TO %'] = team_data['TO %'] * 100
-        team_data['TS %'] = team_data['TS %'] * 100
-        column_config = {
-            "Opponent": st.column_config.Column(width=125),
-            'OE': st.column_config.NumberColumn(format="%.2f"),
-            '2 PPA': st.column_config.NumberColumn(format="%.2f"),
-            '3 PPA': st.column_config.NumberColumn(format="%.2f"),
-            'Possessions': st.column_config.NumberColumn(format="%.0f"),
-            'PPA': st.column_config.NumberColumn(format="%.2f"),
-            'EFG %': st.column_config.NumberColumn(format="%.1f%%"),
-            'TO %': st.column_config.NumberColumn(format="%.1f%%"),
-            'TS %': st.column_config.NumberColumn(format="%.1f%%"),
-            'PPP': st.column_config.NumberColumn(format="%.2f")
-        }
-        team_data['DATE'] = team_data['Opponent'].apply(lambda x: x.split(' - ')[1])
-        team_data = team_data.sort_values(by='DATE', ascending=False).reset_index(drop=True)
-        team_data = team_data.drop(columns=['DATE'])
-        st.dataframe(
-            data=team_data,
-            width='stretch', 
-            hide_index=True,
-            column_config=column_config
+        team_data_clean, player_level, column_config = clean_frames(
+            team_data=team_data,
+            player_level=player_level,
+            player_season_avg=player_season_avg,
+            other_stats=other_stats
         )
-
-        data = st.radio(
-            label='Select Stat', options=other_stats, horizontal=True
-        )
-        player_level['EFG %'] = player_level['EFG %'] * 100
-        player_level['TS %'] = player_level['TS %'] * 100
-        player_level['TYPE'] = 'Selected Games'
-        player_season_avg_show = player_season_avg[other_stats].round(3)
-        player_season_avg_show['NAME'] = player_season_avg['NAME']
-        player_season_avg_show['EFG %'] = player_season_avg_show['EFG %'] * 100
-        player_season_avg_show['TS %'] = player_season_avg_show['TS %'] * 100
-        player_season_avg_show['TYPE'] = 'Season Average'
-        player_level = pd.concat([player_level, player_season_avg_show], ignore_index=True)
-        
-        if data:
-            
-            fig = px.bar(
-                data_frame=player_level.round(1),
-                x=data,
-                y='NAME',
-                orientation='h',
-                text=data,
-                color_discrete_sequence=['green', 'blue'],
-                color='TYPE'
+        player_level_show = player_level[['NAME', 'TYPE'] + other_stats]
+        player_level_show = player_level_show[player_level_show['TYPE'] == 'Selected Games']
+        player_level_show = player_level_show.drop(columns=['TYPE']).sort_values(by=['Game Score'], ascending=False)
+        if level_view == 'Team Level':
+            st.text(body='Team Level Data')
+            st.dataframe(
+                data=team_data_clean,
+                width='stretch', 
+                hide_index=True,
+                column_config=column_config
             )
-            fig.update_layout(
-                xaxis_title=data,
-                yaxis_title='Player Name',
-                width=800,
-                height=600
+        elif level_view == 'Player Level':
+            st.text(body='Player Level Data')
+            st.dataframe(
+                data=player_level_show,
+                width='stretch', 
+                hide_index=True,
+                column_config=column_config
             )
-            st.plotly_chart(figure_or_data=fig, width='stretch')
+        elif level_view == 'Both':
+            st.text(body='Team Level Data')
+            st.dataframe(
+                data=team_data_clean,
+                width='stretch', 
+                hide_index=True,
+                column_config=column_config
+            )
+            st.text(body='Player Level Data')
+            st.dataframe(
+                data=player_level_show,
+                width='stretch', 
+                hide_index=True,
+                column_config=column_config
+            )
+        if level_view in ['Team Level']:
+            data = st.radio(
+                label='Select Stat', options=other_stats, horizontal=True
+            )
+            if data:
+                
+                fig = px.bar(
+                    data_frame=player_level.round(1),
+                    x=data,
+                    y='NAME',
+                    orientation='h',
+                    text=data,
+                    color_discrete_sequence=['green', 'blue'],
+                    color='TYPE'
+                )
+                fig.update_layout(
+                    xaxis_title=data,
+                    yaxis_title='Player Name',
+                    width=800,
+                    height=600
+                )
+                st.plotly_chart(figure_or_data=fig, width='stretch')
