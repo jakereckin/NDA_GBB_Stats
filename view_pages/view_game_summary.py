@@ -50,6 +50,10 @@ def apply_derived(data):
             + pl.col(name='THREE_POINTS_SCORED')
             + pl.col(name='FTM')
         ),
+        FIELD_POINTS_SCORED=(
+            pl.col(name='TWO_POINTS_SCORED')
+            + pl.col(name='THREE_POINTS_SCORED')
+        ),
         OE_NUM=(
             pl.col(name='FGM') + pl.col(name='ASSISTS')
         ),
@@ -85,7 +89,7 @@ def apply_derived(data):
           .otherwise(statement=0)
           .alias(name='3PPA'),
         pl.when(condition=pl.col(name='FGA') > 0)
-          .then(statement=pl.col(name='TOTAL_POINTS_SCORED') 
+          .then(statement=pl.col(name='FIELD_POINTS_SCORED') 
                 / pl.col(name='FGA'))
           .otherwise(statement=0)
           .alias(name='PPA'),
