@@ -395,8 +395,8 @@ def apply_model(play_event_spot):
         'XSPOT', 'YSPOT',
         'SPOT_TOTAL_MAKES', 
         'INTIAL_PERCENTAGE',
-        'SHOT_DEFENSE_CODED', 'MAKE', 'ROLLING_PERCENT',
-        'GAME_ID',  'INIT_EXPECTED',
+        'SHOT_DEFENSE_CODED', 'ROLLING_PERCENT',
+         'INIT_EXPECTED',
         'HOME_FLAG',  'OPP_EXPECTED',
         'LAST_ROLLING_POINTS_TEAM_OPPONENT', 'TEAM_SPREAD', 'LAST_ROLLING_POINTS_TEAM_NDA'
     ]
