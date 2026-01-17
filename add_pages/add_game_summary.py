@@ -103,6 +103,7 @@ if len(this_player_val) == 0:
         0,
         0,
         0,
+        0,
         0
     ]
     columns = [
