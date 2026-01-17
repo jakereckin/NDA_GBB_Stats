@@ -147,15 +147,46 @@ def get_grades(pbp):
              .agg(GPA_SUM=('GPA', 'sum'),
                   ATTEMPTS=('ATTEMPT', 'sum'))
      )
-     player_data = pbp.groupby(by=['PLAYER_ID', 'POINTS'], as_index=False).agg(
-          ATTEMPTS=('ATTEMPT', 'sum'),
-          MAKES=('MAKE', 'sum')
+     player_data = (
+          pbp.groupby(by=['PLAYER_ID', 'POINTS'], as_index=False)
+             .agg(ATTEMPTS=('ATTEMPT', 'sum'), MAKES=('MAKE', 'sum'))
      )
-     player_twos = player_data[player_data['POINTS'] == 2].rename(columns={'ATTEMPTS': 'TWOS_ATTEMPTS', 'MAKES': 'TWOS_MAKES'})
-     player_threes = player_data[player_data['POINTS'] == 3].rename(columns={'ATTEMPTS': 'THREES_ATTEMPTS', 'MAKES': 'THREES_MAKES'})
-     player_fts = player_data[player_data['POINTS'] == 1].rename(columns={'ATTEMPTS': 'FTS_ATTEMPTS', 'MAKES': 'FTS_MAKES'})
-     player_data = player_twos.merge(player_threes, on='PLAYER_ID', how='outer').merge(player_fts, on='PLAYER_ID', how='outer').fillna(0)
-     
+     player_twos = (
+          player_data[player_data['POINTS'] == 2]
+                     .rename(
+                          columns={
+                               'ATTEMPTS': 'TWOS_ATTEMPTS', 
+                               'MAKES': 'TWOS_MAKES'
+                          }
+                     )
+                     .drop(columns=['POINTS'])
+     )
+     player_threes = (
+          player_data[player_data['POINTS'] == 3]
+                     .rename(
+                          columns={
+                               'ATTEMPTS': 'THREES_ATTEMPTS',
+                               'MAKES': 'THREES_MAKES'
+                         }
+                     )
+                     .drop(columns=['POINTS'])
+     )
+     player_fts = (
+          player_data[player_data['POINTS'] == 1]
+                     .rename(
+                          columns={
+                               'ATTEMPTS': 'FTS_ATTEMPTS',
+                               'MAKES': 'FTS_MAKES'
+                         }
+                     )
+                     .drop(columns=['POINTS'])
+     )
+     player_data = (
+          player_twos.merge(player_threes, on='PLAYER_ID', how='outer')
+                     .merge(player_fts, on='PLAYER_ID', how='outer')
+                     .fillna(0)
+     )
+
      pbp_gpa['AVG_GPA'] = pbp_gpa['GPA_SUM'] / pbp_gpa[f'ATTEMPTS']
      return pbp_gpa, player_data
 
