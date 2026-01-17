@@ -88,7 +88,7 @@ def update_game_summary_sql():
            ASSISTS = ?,
            STEALS = ?,
            BLOCKS = ?,
-           TURNOVER = ?
+           TURNOVER = ?,
            FOULS = ?
         WHERE PLAYER_ID = ?
             AND GAME_ID = ?
