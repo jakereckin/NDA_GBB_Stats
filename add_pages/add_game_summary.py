@@ -108,7 +108,8 @@ if len(this_player_val) == 0:
     columns = [
         'PLAYER_ID', 'GAME_ID', 'TWO_FGM', 'TWO_FGA', 'THREE_FGM',
         'THREE_FGA', 'FTM', 'FTA', 'OFFENSIVE_REBOUNDS',
-        'DEFENSIVE_REBOUNDS', 'ASSISTS', 'STEALS', 'BLOCKS', 'TURNOVER'
+        'DEFENSIVE_REBOUNDS', 'ASSISTS', 'STEALS', 'BLOCKS', 'TURNOVER',
+        'FOULS'
     ]
     this_player_val = pd.DataFrame(data=[data], columns=columns)
     this_player_val = this_player_val.assign(
@@ -125,7 +126,8 @@ if len(this_player_val) == 0:
         ASSISTS=0,
         STEALS=0,
         BLOCKS=0,
-        TURNOVER=0
+        TURNOVER=0,
+        FOULS=0
     )
 
 with st.form(key='Game Data', clear_on_submit=False):
@@ -134,7 +136,7 @@ with st.form(key='Game Data', clear_on_submit=False):
     ft_one, ft_two = st.columns(spec=2)
     reb_one, reb_two = st.columns(spec=2)
     ast_one, stl_one = st.columns(spec=2)
-    blk_two, turn = st.columns(spec=2)
+    blk_two, turn, fouls = st.columns(spec=3)
 
     with two_one:
         two_fgm = st.number_input(
@@ -220,6 +222,13 @@ with st.form(key='Game Data', clear_on_submit=False):
             max_value=100,
             value=this_player_val['TURNOVER'].values[0].astype(int)
         )
+    with fouls:
+        fouls_val = st.number_input(
+            label='Fouls',
+            min_value=0,
+            max_value=5,
+            value=this_player_val['FOULS'].values[0].astype(int)
+        )
     save = st.form_submit_button(label='Save')
     if save:
         my_id = (
@@ -258,13 +267,13 @@ with st.form(key='Game Data', clear_on_submit=False):
                         str(assists),
                         str(steals),
                         str(blocks),
-                        str(turnover)
+                        str(turnover),
+                        str(fouls_val)
                     )
                 )
                 conn.commit()
         else:
             with sqlitecloud.connect(sql_lite_connect) as conn:
-                st.write('HERE')
                 cursor = conn.cursor()
                 cursor.execute(
                     sql=sql.update_game_summary_sql(),
@@ -281,6 +290,7 @@ with st.form(key='Game Data', clear_on_submit=False):
                         str(steals),
                         str(blocks),
                         str(turnover),
+                        str(fouls_val),
                         str(player_val),
                         str(this_game['GAME_ID'].astype(int).values[0])
                     )

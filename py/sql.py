@@ -43,8 +43,9 @@ def insert_game_summary_sql():
                               ASSISTS,
                               STEALS,
                               BLOCKS,
-                              TURNOVER)
-    VALUES (?,? ,?,?,?,?,?,?,?,?,?,?,?,?)
+                              TURNOVER,
+                              FOULS)
+    VALUES (?,? ,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """
     return sql
 def get_shot_spots_sql():
@@ -88,6 +89,7 @@ def update_game_summary_sql():
            STEALS = ?,
            BLOCKS = ?,
            TURNOVER = ?
+           FOULS = ?
         WHERE PLAYER_ID = ?
             AND GAME_ID = ?
     """
@@ -271,6 +273,7 @@ def get_game_summary_sql():
                   + GAME_SUMMARY.STEALS -- + Steals
                   + (0.7*GAME_SUMMARY.ASSISTS) -- + .7*Assists
                   + (0.7*GAME_SUMMARY.BLOCKS) -- + .7*Blocks
+                  - (0.4*(COALESCE(GAME_SUMMARY.FOULS, 0))) -- -.4*Fouls
                    - GAME_SUMMARY.TURNOVER)  AS GAME_SCORE, -- -TOs
                    GAMES.OPPONENT,
                    GAMES.LOCATION,
