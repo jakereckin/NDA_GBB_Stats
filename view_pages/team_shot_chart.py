@@ -149,7 +149,11 @@ def get_grades(pbp):
      )
      player_data = (
           pbp.groupby(by=['PLAYER_ID', 'POINTS'], as_index=False)
-             .agg(ATTEMPTS=('ATTEMPT', 'sum'), MAKES=('MAKE', 'sum'))
+             .agg(MAKES=('MAKE', 'sum'), ATTEMPTS=('ATTEMPT', 'sum'))
+             .rename(columns={'PLAYER_ID': 'Number'})
+     )
+     player_data['Number'] = np.where(
+          player_data['Number'] == '0', 'Opponent', player_data['Number']
      )
      player_twos = (
           player_data[player_data['POINTS'] == 2]
