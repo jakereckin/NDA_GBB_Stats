@@ -257,7 +257,7 @@ def get_game_summary_sql():
                  GAME_SUMMARY.STEALS,
                  GAME_SUMMARY.BLOCKS,
                  GAME_SUMMARY.TURNOVER,
-                 GAME_SUMMARY.FOULS,
+                 COALESCE(GAME_SUMMARY.FOULS, 0) AS FOULS,
                  GAME_SUMMARY.TWO_FGA  
                  + GAME_SUMMARY.THREE_FGA AS FGA,
                  GAME_SUMMARY.TWO_FGM 
