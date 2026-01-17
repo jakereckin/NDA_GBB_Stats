@@ -338,15 +338,18 @@ if games_selected:
            three_pt_percent, fts_makes, fts_attempts) = get_shot_data(
                totals_sorted=totals_sorted
           )
+          twos_percent = (twos_makes / twos_attempts) * 100 if twos_attempts > 0 else 0
+          threes_percent = (three_total_makes / three_total_attempts) * 100 if three_total_attempts > 0 else 0
+          fts_percent = (fts_makes / fts_attempts) * 100 if fts_attempts > 0 else 0
           totals_new = clean_team_totals(totals=totals)
           with buttons:
                st.write('### Shot Selection Totals')
-               st.write(f'Two Point Shots: {twos_makes}/{twos_attempts}')
+               st.write(f'Two Point Shots: {twos_makes}/{twos_attempts} ({twos_percent.round(1)}%)')
                st.write(f'Three Point Shots with PT: {three_pt_makes}/{three_pt_attempts}')
                st.write(f'Three Point Shots without PT: {three_no_pt_makes}/{three_no_pt_attempts}')
-               st.write(f'Total Three Point Shots: {three_total_makes}/{three_total_attempts}')
+               st.write(f'Total Three Point Shots: {three_total_makes}/{three_total_attempts} ({threes_percent.round(1)}%)')
                st.write(f'Three PT Percentage of Total Threes: {(three_pt_percent*100).round(1)}%')
-               st.write(f'Free Throws: {fts_makes}/{fts_attempts}')
+               st.write(f'Free Throws: {fts_makes}/{fts_attempts} ({fts_percent.round(1)}%)')
           fig = ut.load_shot_chart_team(totals=totals_new, team_selected=games_selected)
           fig.update_layout(
                width=700,
