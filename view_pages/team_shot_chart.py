@@ -135,6 +135,7 @@ def get_grades(pbp):
      }
 
      pbp['SHOT_LIST'] = list(zip(pbp['SHOT_SPOT'], pbp['SHOT_DEFENSE']))
+     pbp['POINTS'] = pbp['SHOT_SPOT'].str[-1].astype(int)
      pbp['SCORE'] = pbp['SHOT_LIST'].map(shot_map)
      pbp = pbp.dropna()
      pbp['GPA'] = pbp['SCORE'].map(map_gpa)
@@ -146,8 +147,13 @@ def get_grades(pbp):
              .agg(GPA_SUM=('GPA', 'sum'),
                   ATTEMPTS=('ATTEMPT', 'sum'))
      )
+     player_data = pbp.groupby(by=['PLAYER_ID', 'POINTS'], as_index=False).agg(
+          ATTEMPTS=('ATTEMPT', 'sum'),
+          MAKES=('MAKE', 'sum')
+     )
+
      pbp_gpa['AVG_GPA'] = pbp_gpa['GPA_SUM'] / pbp_gpa[f'ATTEMPTS']
-     return pbp_gpa
+     return pbp_gpa, player_data
 
 # ----------------------------------------------------------------------------
 @st.cache_data
@@ -262,7 +268,7 @@ if games_selected:
      this_game_pbp = get_selected_games(
           games_selected=games_selected, team_data_filtered=pbp_data_filtered
      )
-     this_game_gpa = get_grades(this_game_pbp)
+     this_game_gpa, player_data = get_grades(this_game_pbp)
      pbp_nda_gpa, pbp_opp_gpa = split_grades(this_game_gpa)
      shot_chart, buttons= st.columns([2, 1])
      with buttons:
@@ -301,6 +307,7 @@ if games_selected:
                st.write(f'Total Three Point Shots: {three_total_makes}/{three_total_attempts}')
                st.write(f'Three PT Percentage of Total Threes: {three_pt_percent.round(3)*100}%')
                st.write(f'Free Throws: {fts_makes}/{fts_attempts}')
+               st.dataframe(data=player_data, width='stretch')
           fig = ut.load_shot_chart_team(totals=totals_new, team_selected=games_selected)
           fig.update_layout(
                width=700,
