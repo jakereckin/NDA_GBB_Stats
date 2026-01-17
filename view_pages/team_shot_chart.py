@@ -345,7 +345,7 @@ if games_selected:
                st.write(f'Three Point Shots with PT: {three_pt_makes}/{three_pt_attempts}')
                st.write(f'Three Point Shots without PT: {three_no_pt_makes}/{three_no_pt_attempts}')
                st.write(f'Total Three Point Shots: {three_total_makes}/{three_total_attempts}')
-               st.write(f'Three PT Percentage of Total Threes: {(three_pt_percent*100).round(3)}%')
+               st.write(f'Three PT Percentage of Total Threes: {(three_pt_percent*100).round(1)}%')
                st.write(f'Free Throws: {fts_makes}/{fts_attempts}')
           fig = ut.load_shot_chart_team(totals=totals_new, team_selected=games_selected)
           fig.update_layout(
