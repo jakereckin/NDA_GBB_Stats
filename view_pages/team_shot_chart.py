@@ -189,7 +189,7 @@ def get_grades(pbp):
           player_twos.merge(player_threes, on='Number', how='outer')
                      .merge(player_fts, on='Number', how='outer')
                      .fillna(0)
-                     .sort_values(by=['Number'], ascending=True)
+                     .sort_values(by=['2pt FGM'], ascending=True)
      )
 
      pbp_gpa['AVG_GPA'] = pbp_gpa['GPA_SUM'] / pbp_gpa[f'ATTEMPTS']
