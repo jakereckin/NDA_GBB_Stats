@@ -175,19 +175,8 @@ def get_grades(pbp):
                      )
                      .drop(columns=['POINTS'])
      )
-     player_fts = (
-          player_data[player_data['POINTS'] == 1]
-                     .rename(
-                          columns={
-                               'MAKES': 'FTM',
-                               'ATTEMPTS': 'FTA'
-                         }
-                     )
-                     .drop(columns=['POINTS'])
-     )
      player_data = (
           player_twos.merge(player_threes, on='Number', how='outer')
-                     .merge(player_fts, on='Number', how='outer')
                      .fillna(0)
                      .sort_values(by=['2pt FGA'], ascending=False)
      )
