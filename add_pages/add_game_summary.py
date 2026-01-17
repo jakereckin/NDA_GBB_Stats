@@ -134,12 +134,8 @@ if len(this_player_val) == 0:
     )
 
 with st.form(key='Game Data', clear_on_submit=False):
-    two_one, two_two = st.columns(spec=2)
-    three_one, three_two = st.columns(spec=2)
-    ft_one, ft_two = st.columns(spec=2)
-    reb_one, reb_two = st.columns(spec=2)
-    ast_one, stl_one = st.columns(spec=2)
-    blk_two, turn, fouls = st.columns(spec=3)
+    two_one, two_two, three_one, three_two, ft_one, ft_two = st.columns(spec=6)
+    reb_one, reb_two, ast_one, stl_one, blk_two, turn, fouls = st.columns(spec=7)
 
     with two_one:
         two_fgm = st.number_input(
