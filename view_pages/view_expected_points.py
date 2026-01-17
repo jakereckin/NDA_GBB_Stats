@@ -177,7 +177,9 @@ def build_features(player_data):
     CODED_SHOT_DEFENSE = {
         'OPEN': 0,
         'GUARDED': 1,
-        'HEAVILY_GUARDED': 2
+        'HEAVILY_GUARDED': 2,
+        'Heavily Guarded': 2,
+        'Guarded': 1
     }
     _player_merge_list = ['PLAYER_ID', 'SPOT', 'SHOT_DEFENSE', 'YEAR']
     _player_game_merge_list = ['GAME_ID', 'PLAYER_ID', 'YEAR', 'SPOT', 'SHOT_DEFENSE']
@@ -393,8 +395,9 @@ def apply_model(play_event_spot):
         'XSPOT', 'YSPOT',
         'SPOT_TOTAL_MAKES', 'GAME_PERCENTAGE',
         'GAME_ATTEMPTS', 'INTIAL_PERCENTAGE',
-        'GAME_TOTAL_MAKES','SHOT_DEFENSE_CODED', 'ROLLING_PERCENT',
-        'SEASON_LAST_5_PERCENT', 'INIT_EXPECTED',
+        'GAME_TOTAL_MAKES','SHOT_DEFENSE_CODED',
+        'MAKE', 'ROLLING_PERCENT',
+        'GAME_ID', 'SEASON_LAST_5_PERCENT', 'INIT_EXPECTED',
         'HOME_FLAG', 'GAME_TEAM_PERCENTAGE', 'OPP_EXPECTED',
         'LAST_ROLLING_POINTS_TEAM_OPPONENT', 'TEAM_SPREAD',
         'LAST_ROLLING_POINTS_TEAM_NDA'
