@@ -30,7 +30,8 @@ def get_season_data(games, players, season):
 
     games_season = games[games['SEASON'] == season]
     players_season = players[players['YEAR'] == season]
-
+    players_season = players_season[players_season['NUMBER'] != 0]
+    games_season = games_season.sort_values(by='DATE', ascending=False)
     games_season['LABEL'] = (
         games_season['OPPONENT'] + ' - ' + games_season['DATE']
     )
