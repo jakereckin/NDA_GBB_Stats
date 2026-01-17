@@ -186,8 +186,8 @@ def get_grades(pbp):
                      .drop(columns=['POINTS'])
      )
      player_data = (
-          player_twos.merge(player_threes, on='PLAYER_ID', how='outer')
-                     .merge(player_fts, on='PLAYER_ID', how='outer')
+          player_twos.merge(player_threes, on='Number', how='outer')
+                     .merge(player_fts, on='Number', how='outer')
                      .fillna(0)
      )
 
