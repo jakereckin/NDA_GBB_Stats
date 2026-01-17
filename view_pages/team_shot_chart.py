@@ -155,8 +155,8 @@ def get_grades(pbp):
           player_data[player_data['POINTS'] == 2]
                      .rename(
                           columns={
-                               'ATTEMPTS': 'TWOS_ATTEMPTS', 
-                               'MAKES': 'TWOS_MAKES'
+                               'MAKES': '2pt FGM',
+                               'ATTEMPTS': '2pt FGA'
                           }
                      )
                      .drop(columns=['POINTS'])
@@ -165,8 +165,8 @@ def get_grades(pbp):
           player_data[player_data['POINTS'] == 3]
                      .rename(
                           columns={
-                               'ATTEMPTS': 'THREES_ATTEMPTS',
-                               'MAKES': 'THREES_MAKES'
+                               'MAKES': '3pt FGM',
+                               'ATTEMPTS': '3pt FGA'
                          }
                      )
                      .drop(columns=['POINTS'])
@@ -175,8 +175,8 @@ def get_grades(pbp):
           player_data[player_data['POINTS'] == 1]
                      .rename(
                           columns={
-                               'ATTEMPTS': 'FTS_ATTEMPTS',
-                               'MAKES': 'FTS_MAKES'
+                               'MAKES': 'FTM',
+                               'ATTEMPTS': 'FTA'
                          }
                      )
                      .drop(columns=['POINTS'])
