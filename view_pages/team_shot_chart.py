@@ -311,7 +311,6 @@ if games_selected:
                st.write(f'Total Three Point Shots: {three_total_makes}/{three_total_attempts}')
                st.write(f'Three PT Percentage of Total Threes: {three_pt_percent.round(3)*100}%')
                st.write(f'Free Throws: {fts_makes}/{fts_attempts}')
-               st.dataframe(data=player_data, width='stretch')
           fig = ut.load_shot_chart_team(totals=totals_new, team_selected=games_selected)
           fig.update_layout(
                width=700,
@@ -323,3 +322,4 @@ if games_selected:
                     unsafe_allow_html=True
                )
                st.plotly_chart(figure_or_data=fig, width='stretch', selection_mode='points')
+          st.dataframe(data=player_data, width='stretch')
