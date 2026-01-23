@@ -87,13 +87,13 @@ this_player_val = game_summary_data[
     (game_summary_data['PLAYER_ID'].astype(int) == player_val)
     & (
         game_summary_data['GAME_ID'].astype(int)
-        == this_game['GAME_ID'].astype(int).values[0]
+        == this_game['GAME_ID'].astype(int).iloc[0]
     )
 ]
 if len(this_player_val) == 0:
     data = [
         player_val,
-        this_game['GAME_ID'].astype(int).values[0],
+        this_game['GAME_ID'].astype(int).iloc[0],
         0,
         0,
         0,
@@ -114,10 +114,10 @@ if len(this_player_val) == 0:
         'DEFENSIVE_REBOUNDS', 'ASSISTS', 'STEALS', 'BLOCKS', 'TURNOVER',
         'FOULS'
     ]
-    this_player_val = pd.DataFrame(data=[data], columns=columns)
+    this_player_val = pd.DataFrame()
     this_player_val = this_player_val.assign(
         PLAYER_ID=player_val,
-        GAME_ID=this_game['GAME_ID'].astype(int).values[0],
+        GAME_ID=this_game['GAME_ID'].astype(int).iloc[0],
         TWO_FGM=0,
         TWO_FGA=0,
         THREE_FGM=0,
@@ -142,98 +142,98 @@ with st.form(key='Game Data', clear_on_submit=False):
             label='2pt FGM',
             min_value=0,
             max_value=100,
-            value=this_player_val['TWO_FGM'].values[0].astype(int)
+            value=this_player_val['TWO_FGM'].iloc[0]
         )
     with two_two:
         two_fga = st.number_input(
             label='2pt FGA',
             min_value=0,
             max_value=100,
-            value=this_player_val['TWO_FGA'].values[0].astype(int)
+            value=this_player_val['TWO_FGA'].iloc[0]
         )
     with three_one:
         three_fgm = st.number_input(
             label='3pt FGM',
             min_value=0,
             max_value=100,
-            value=this_player_val['THREE_FGM'].values[0].astype(int)
+            value=this_player_val['THREE_FGM'].iloc[0]
         )
     with three_two:
         three_fga = st.number_input(
             label='3pt FGA',
             min_value=0,
             max_value=100,
-            value=this_player_val['THREE_FGA'].values[0].astype(int)
+            value=this_player_val['THREE_FGA'].iloc[0]
         )
     with ft_one:
         ftm = st.number_input(
             label='FTM',
             min_value=0,
             max_value=100,
-            value=this_player_val['FTM'].values[0].astype(int)
+            value=this_player_val['FTM'].iloc[0]
         )
     with ft_two:
         fta = st.number_input(
             label='FTA',
             min_value=0,
             max_value=100,
-            value=this_player_val['FTA'].values[0].astype(int)
+            value=this_player_val['FTA'].iloc[0]
         )
     with reb_one:
         off_rebounds = st.number_input(
             label='Off Reb',
             min_value=0,
             max_value=100,
-            value=this_player_val['OFFENSIVE_REBOUNDS'].values[0].astype(int)
+            value=this_player_val['OFFENSIVE_REBOUNDS'].iloc[0]
         )
     with reb_two:
         def_rebounds = st.number_input(
             label='Def Reb',
             min_value=0,
             max_value=100,
-            value=this_player_val['DEFENSIVE_REBOUNDS'].values[0].astype(int)
+            value=this_player_val['DEFENSIVE_REBOUNDS'].iloc[0]
         )
     with ast_one:
         assists = st.number_input(
             label='Ast',
             min_value=0,
             max_value=100,
-            value=this_player_val['ASSISTS'].values[0].astype(int)
+            value=this_player_val['ASSISTS'].iloc[0]
         )
     with stl_one:
         steals = st.number_input(
             label='Steal',
             min_value=0,
             max_value=100,
-            value=this_player_val['STEALS'].values[0].astype(int)
+            value=this_player_val['STEALS'].iloc[0]
         )
     with blk_two:
         blocks = st.number_input(
             label='Block',
             min_value=0,
             max_value=100,
-            value=this_player_val['BLOCKS'].values[0].astype(int)
+            value=this_player_val['BLOCKS'].iloc[0]
         )
     with turn:
         turnover = st.number_input(
             label='Turnover',
             min_value=0,
             max_value=100,
-            value=this_player_val['TURNOVER'].values[0].astype(int)
+            value=this_player_val['TURNOVER'].iloc[0]
         )
     with fouls:
         fouls_val = st.number_input(
             label='Fouls',
             min_value=0,
             max_value=5,
-            value=this_player_val['FOULS'].values[0].astype(int)
+            value=this_player_val['FOULS'].iloc[0]
         )
     save = st.form_submit_button(label='Save')
     if save:
         my_id = (
             str(object=player_val)
             + '_'
-            + this_game['GAME_ID'].astype(int).astype(str).values[0]
+            + this_game['GAME_ID'].astype(int).astype(str).iloc[0]
         )
         game_summary_ids = game_summary_data.copy()
         game_summary_ids['_id'] = (

@@ -26,9 +26,10 @@ add_new_season = st.text_input('Or Add New Season')
 
 if add_new_season != '':
     selected_season = add_new_season
+    
 players = players[players['YEAR'] == selected_season]
 st.write(f'Players in DB for {selected_season}')
-st.dataframe(data=players, use_container_width=True)
+st.dataframe(data=players, width='stretch')
 if selected_season:
 
     with st.form(key='player_form'):
@@ -55,7 +56,9 @@ if selected_season:
         with save_col:
             save = st.form_submit_button(label='Add Player', key='add_player')
         with delete_col:
-            delete = st.form_submit_button(label='Delete Player', key='delete_player')
+            delete = st.form_submit_button(
+                label='Delete Player', key='delete_player'
+            )
         if save:
             with sqlitecloud.connect(sql_lite_connect) as conn:
                 cursor = conn.cursor()
