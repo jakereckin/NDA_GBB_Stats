@@ -90,53 +90,33 @@ this_player_val = game_summary_data[
         == this_game['GAME_ID'].astype(int).iloc[0]
     )
 ]
+for col in ['TWO_FGM', 'TWO_FGA', 'THREE_FGM', 'THREE_FGA', 'FTM', 'FTA',
+            'OFFENSIVE_REBOUNDS', 'DEFENSIVE_REBOUNDS', 'ASSISTS', 'STEALS',
+            'BLOCKS', 'TURNOVER', 'FOULS']:
+    this_player_val[col] = this_player_val[col].astype(int)
+
 if len(this_player_val) == 0:
-    data = [
-        player_val,
-        this_game['GAME_ID'].astype(int).iloc[0],
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-    ]
-    columns = [
-        'PLAYER_ID', 'GAME_ID', 'TWO_FGM', 'TWO_FGA', 'THREE_FGM',
-        'THREE_FGA', 'FTM', 'FTA', 'OFFENSIVE_REBOUNDS',
-        'DEFENSIVE_REBOUNDS', 'ASSISTS', 'STEALS', 'BLOCKS', 'TURNOVER',
-        'FOULS'
-    ]
-    this_player_val = pd.DataFrame()
-    this_player_val = this_player_val.assign(
-        PLAYER_ID=player_val,
-        GAME_ID=this_game['GAME_ID'].astype(int).iloc[0],
-        TWO_FGM=0,
-        TWO_FGA=0,
-        THREE_FGM=0,
-        THREE_FGA=0,
-        FTM=0,
-        FTA=0,
-        OFFENSIVE_REBOUNDS=0,
-        DEFENSIVE_REBOUNDS=0,
-        ASSISTS=0,
-        STEALS=0,
-        BLOCKS=0,
-        TURNOVER=0,
-        FOULS=0
-    )
+    this_player_val = pd.DataFrame({
+        'PLAYER_ID': [player_val],
+        'GAME_ID': [this_game['GAME_ID'].astype(int).iloc[0]],
+        'TWO_FGM': [0],
+        'TWO_FGA': [0],
+        'THREE_FGM': [0],
+        'THREE_FGA': [0],
+        'FTM': [0],
+        'FTA': [0],
+        'OFFENSIVE_REBOUNDS': [0],
+        'DEFENSIVE_REBOUNDS': [0],
+        'ASSISTS': [0],
+        'STEALS': [0],
+        'BLOCKS': [0],
+        'TURNOVER': [0],
+        'FOULS': [0]
+    })
 
 with st.form(key='Game Data', clear_on_submit=False):
     two_one, two_two, three_one, three_two, ft_one, ft_two = st.columns(spec=6)
     reb_one, reb_two, ast_one, stl_one, blk_two, turn, fouls = st.columns(spec=7)
-
     with two_one:
         two_fgm = st.number_input(
             label='2pt FGM',
