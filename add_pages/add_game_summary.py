@@ -6,6 +6,7 @@ import sqlitecloud
 pd.options.mode.chained_assignment = None
 
 
+st.set_page_config(layout='wide')
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
 
