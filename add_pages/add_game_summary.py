@@ -234,21 +234,21 @@ with st.form(key='Game Data', clear_on_submit=False):
                 cursor.execute(
                     sql=sql.insert_game_summary_sql(),
                     parameters=(
-                        str(player_val),
-                        str(this_game['GAME_ID'].astype(int).values[0]),
-                        str(two_fgm),
-                        str(two_fga),
-                        str(three_fgm),
-                        str(three_fga),
-                        str(ftm),
-                        str(fta),
-                        str(off_rebounds),
-                        str(def_rebounds),
-                        str(assists),
-                        str(steals),
-                        str(blocks),
-                        str(turnover),
-                        str(fouls_val)
+                        player_val, 
+                        this_game['GAME_ID'].astype(int).values[0],
+                        two_fgm,
+                        two_fga,
+                        three_fgm,
+                        three_fga,
+                        ftm,
+                        fta,
+                        off_rebounds,
+                        def_rebounds,
+                        assists,
+                        steals,
+                        blocks,
+                        turnover,
+                        fouls_val
                     )
                 )
                 conn.commit()
@@ -258,21 +258,21 @@ with st.form(key='Game Data', clear_on_submit=False):
                 cursor.execute(
                     sql=sql.update_game_summary_sql(),
                     parameters=(
-                        str(two_fgm),
-                        str(two_fga),
-                        str(three_fgm),
-                        str(three_fga),
-                        str(ftm),
-                        str(fta),
-                        str(off_rebounds),
-                        str(def_rebounds),
-                        str(assists),
-                        str(steals),
-                        str(blocks),
-                        str(turnover),
-                        str(fouls_val),
-                        str(player_val),
-                        str(this_game['GAME_ID'].astype(int).values[0])
+                        two_fgm,
+                        two_fga,
+                        three_fgm,
+                        three_fga,
+                        ftm,
+                        fta,
+                        off_rebounds,
+                        def_rebounds,
+                        assists,
+                        steals,
+                        blocks,
+                        turnover,
+                        fouls_val,
+                        player_val,
+                        this_game['GAME_ID'].astype(int).values[0]
                     )
                 )
                 conn.commit()
