@@ -8,6 +8,7 @@ import numpy as np
 from plotly import graph_objs as go
 from streamlit_plotly_events import plotly_events
 
+st.set_page_config(layout='wide')
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
 

@@ -206,8 +206,7 @@ with st.form(key='Game Data', clear_on_submit=False):
             label='Fouls',
             min_value=0,
             max_value=5,
-            value=this_player_val['FOULS'].iloc[0].astype(int),
-            step=1
+            value=this_player_val['FOULS'].iloc[0]
         )
     save = st.form_submit_button(label='Save')
     if save:
