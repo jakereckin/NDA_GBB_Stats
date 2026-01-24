@@ -121,84 +121,84 @@ with st.form(key='Game Data', clear_on_submit=False):
         two_fgm = st.number_input(
             label='2pt FGM',
             min_value=0,
-            max_value=100,
+            max_value=50,
             value=this_player_val['TWO_FGM'].iloc[0]
         )
     with two_two:
         two_fga = st.number_input(
             label='2pt FGA',
             min_value=0,
-            max_value=100,
+            max_value=50,
             value=this_player_val['TWO_FGA'].iloc[0]
         )
     with three_one:
         three_fgm = st.number_input(
             label='3pt FGM',
             min_value=0,
-            max_value=100,
+            max_value=50,
             value=this_player_val['THREE_FGM'].iloc[0]
         )
     with three_two:
         three_fga = st.number_input(
             label='3pt FGA',
             min_value=0,
-            max_value=100,
+            max_value=50,
             value=this_player_val['THREE_FGA'].iloc[0]
         )
     with ft_one:
         ftm = st.number_input(
             label='FTM',
             min_value=0,
-            max_value=100,
+            max_value=50,
             value=this_player_val['FTM'].iloc[0]
         )
     with ft_two:
         fta = st.number_input(
             label='FTA',
             min_value=0,
-            max_value=100,
+            max_value=50,
             value=this_player_val['FTA'].iloc[0]
         )
     with reb_one:
         off_rebounds = st.number_input(
             label='Off Reb',
             min_value=0,
-            max_value=100,
+            max_value=50,
             value=this_player_val['OFFENSIVE_REBOUNDS'].iloc[0]
         )
     with reb_two:
         def_rebounds = st.number_input(
             label='Def Reb',
             min_value=0,
-            max_value=100,
+            max_value=50,
             value=this_player_val['DEFENSIVE_REBOUNDS'].iloc[0]
         )
     with ast_one:
         assists = st.number_input(
             label='Ast',
             min_value=0,
-            max_value=100,
+            max_value=50,
             value=this_player_val['ASSISTS'].iloc[0]
         )
     with stl_one:
         steals = st.number_input(
             label='Steal',
             min_value=0,
-            max_value=100,
+            max_value=50,
             value=this_player_val['STEALS'].iloc[0]
         )
     with blk_two:
         blocks = st.number_input(
             label='Block',
             min_value=0,
-            max_value=100,
+            max_value=50,
             value=this_player_val['BLOCKS'].iloc[0]
         )
     with turn:
         turnover = st.number_input(
             label='Turnover',
             min_value=0,
-            max_value=100,
+            max_value=50,
             value=this_player_val['TURNOVER'].iloc[0]
         )
     with fouls:
@@ -206,7 +206,8 @@ with st.form(key='Game Data', clear_on_submit=False):
             label='Fouls',
             min_value=0,
             max_value=5,
-            value=this_player_val['FOULS'].iloc[0]
+            value=this_player_val['FOULS'].iloc[0],
+            step=1
         )
     save = st.form_submit_button(label='Save')
     if save:
