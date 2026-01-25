@@ -29,6 +29,11 @@ _PLAYER_MAP_NAMES = {
     'MINUTES_PER_GAME': 'Minutes per Game Played'
 }
 
+button = st.button(label='Clear Cache Data')
+if button:
+    st.cache_data.clear()
+    st.cache_resource.clear()
+
 # ----------------------------------------------------------------------------
 @st.cache_data
 def get_data():
