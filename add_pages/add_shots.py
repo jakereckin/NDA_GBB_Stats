@@ -422,7 +422,7 @@ if clicked:
     spot_val = shot_spot.get('spot')
     if spot_val:
         with col4:
-            st.write(f'Adding shot at {spot_val}')
+            st.write(f'Adding shot at {spot_val} for {game_val}')
             with st.form(key='shot_form', clear_on_submit=False):
                 font_size_px = 10
                 pbp_data = load_pbp_data(game_val)
