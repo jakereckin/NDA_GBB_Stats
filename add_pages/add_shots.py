@@ -38,6 +38,13 @@ def load_data():
     return shot_spots, player_game
 
 # ----------------------------------------------------------------------------
+def load_game_summary():
+    game_summary = data_source.run_query(
+            sql=sql.get_game_summary_sql(), connection=sql_lite_connect
+    )
+    return game_summary
+
+# ----------------------------------------------------------------------------
 def load_pbp_data(game_id):
     my_sql = sql.get_play_sql().replace('?', game_id)
     pbp_data = data_source.run_query(
@@ -201,6 +208,7 @@ st.set_page_config(layout='wide', initial_sidebar_state='collapsed')
 left, right = st.columns(2)
 _shot_defenses = ['Open', 'Guarded', 'Heavily Guarded']
 shot_spots, player_game = load_data()
+game_summary_data = load_game_summary()
 games = (
     player_game.sort_values(by='SEASON', ascending=False)
                .reset_index(drop=True)
@@ -215,7 +223,6 @@ with left:
 
 games_season = get_season_data(player_game=games, season=season)
 game_list = games_season['GAME_LABEL'].unique().tolist()[::-1]
-
 with right:
     game_select = st.selectbox(
         label='Select Game', options=game_list, width='stretch'
@@ -235,6 +242,138 @@ def make_grid(xmin, xmax, ymin, ymax, spacing):
     ys = np.arange(ymin, ymax + 1, spacing)
     xx, yy = np.meshgrid(xs, ys)
     return xx.ravel().tolist(), yy.ravel().tolist()
+
+game_id = int(game["GAME_ID"].iloc[0])
+game_val = game['GAME_LABEL'].values[0]
+games_season['NUMBER_INT'] = games_season['NUMBER'].astype(int)
+players_season = games_season.sort_values(by='NUMBER')
+unique_players = (
+    games_season.sort_values(by='NUMBER_INT')
+                ['PLAYER_LABEL']
+                .unique()
+)
+# All players in this game
+players_in_game = (
+    games_season.sort_values("NUMBER_INT")[["NUMBER_INT", "PLAYER_LABEL"]]
+    .drop_duplicates()
+)
+players_in_game = players_in_game[players_in_game["NUMBER_INT"] != 0]
+
+# Radio to choose ONE player
+
+game_id = int(game["GAME_ID"].iloc[0])
+
+players_in_game = (
+    games_season.sort_values("NUMBER_INT")[["NUMBER_INT", "PLAYER_LABEL"]]
+    .drop_duplicates()
+)
+
+
+game_id = int(game["GAME_ID"].iloc[0])
+
+players_in_game = (
+    games_season.sort_values("NUMBER_INT")[["NUMBER_INT", "PLAYER_LABEL"]]
+    .drop_duplicates()
+)
+
+leftcol, rightcol = st.columns([2, 1])
+# --- FORM START ---
+with leftcol:
+    these_players = players_in_game[players_in_game["NUMBER_INT"] != 0]
+    player_label = st.radio(
+            label="Select Player",
+            options=these_players["PLAYER_LABEL"].tolist(),
+            horizontal=True
+         )
+    with st.form("quick_stats_form"):
+
+        # LEFT COLUMN: PLAYER SELECT
+        player_id = int(player_label.split(" - ")[0])
+
+        # Stats to track
+        STAT_COLUMNS = {
+            "TWO_FGM": "2FGM",
+            "TWO_FGA": "2FGA",
+            "THREE_FGM": "3FGM",
+            "THREE_FGA": "3FGA",
+            "FTM": "FTM",
+            "FTA": "FTA",
+            "OFFENSIVE_REBOUNDS": "Off Reb",
+            "DEFENSIVE_REBOUNDS": "Def Reb",
+            "ASSISTS": "Assist",
+            "STEALS": "Steal",
+            "BLOCKS": "Block",
+            "TURNOVER": "Turnovers",
+            "FOULS": "Foul"
+        }
+
+        summary_this_game = game_summary_data[
+            game_summary_data["GAME_ID"].astype(int) == game_id
+        ].copy()
+
+        for col in STAT_COLUMNS.keys():
+            summary_this_game[col] = summary_this_game[col].astype(int)
+
+        def get_player_summary_row(pid):
+            row = summary_this_game[summary_this_game["PLAYER_ID"].astype(int) == pid]
+            if len(row) == 0:
+                return pd.DataFrame([{
+                    "PLAYER_ID": pid,
+                    "GAME_ID": game_id,
+                    **{col: 0 for col in STAT_COLUMNS.keys()}
+                }])
+            return row
+
+        # Get current values
+        player_row = get_player_summary_row(player_id)
+
+        # RIGHT SIDE: TWO VERTICAL STAT COLUMNS
+        cols = st.columns(4)
+        stat_items = list(STAT_COLUMNS.items())
+
+        for i, (stat_col, stat_label) in enumerate(stat_items):
+            col_idx = i % 4
+            with cols[col_idx]:
+                current_val = int(player_row[stat_col].iloc[0])
+                new_val = st.number_input(
+                    label=stat_label,
+                    min_value=0,
+                    max_value=99,
+                    value=current_val,
+                        key=f"{player_id}_{stat_col}"
+                )
+                player_row.loc[player_row.index[0], stat_col] = new_val
+
+        # --- SAVE BUTTON ---
+        save_stats = st.form_submit_button("Update Stats")
+
+        if save_stats:
+            exists = len(summary_this_game[
+                summary_this_game["PLAYER_ID"].astype(int) == player_id
+            ]) > 0
+
+            vals = [int(player_row[col].iloc[0]) for col in STAT_COLUMNS.keys()]
+
+            with sqlitecloud.connect(sql_lite_connect) as conn:
+                cursor = conn.cursor()
+
+                if not exists:
+                    cursor.execute(
+                        sql.insert_game_summary_sql(),
+                        (player_id, game_id, *vals)
+                    )
+                else:
+                    cursor.execute(
+                        sql.update_game_summary_sql(),
+                        (*vals, player_id, game_id)
+                    )
+
+                conn.commit()
+
+            st.success("Stats saved successfully!")
+            st.rerun()
+
+
 
 # --- Chart ranges (match your utils court)
 opacity = 1
@@ -286,16 +425,6 @@ if clicked:
             st.write(f'Adding shot at {spot_val}')
             with st.form(key='shot_form', clear_on_submit=False):
                 font_size_px = 10
-                game_val = game['GAME_LABEL'].values[0]
-                players_season = games_season.sort_values(by='NUMBER')
-                games_season['NUMBER_INT'] = (
-                    games_season['NUMBER'].astype(int)
-                )
-                unique_players = (
-                    games_season.sort_values(by='NUMBER_INT')
-                                ['PLAYER_LABEL']
-                                .unique()
-                )
                 pbp_data = load_pbp_data(game_val)
                 player_val = st.radio(
                     label='Player', options=unique_players, horizontal=True
@@ -451,3 +580,7 @@ if clicked:
             
             st.write(f'Deleted {len(selected_deletes)} shots')
             st.rerun()
+
+
+    #st.form_submit_button("Close")
+

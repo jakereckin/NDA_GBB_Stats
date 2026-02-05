@@ -43,7 +43,7 @@ st.write(
 if selected_season:
     with st.form(key='add_games'):
         left_row_one, right_row_one = st.columns(2)
-        left_row_two, middle_row_two, right_row_two = st.columns(3)
+        left_row_two, right_row_two = st.columns(2)
 
         with left_row_one:
             game_id = st.text_input(
@@ -55,22 +55,19 @@ if selected_season:
             )
 
         with left_row_two:
-            location = st.text_input(
-                label='Location', placeholder='Enter Home/Away/Neutral'
+            location = st.radio(
+                label='Location',
+                options=['Home', 'Away', 'Neutral'],
+                horizontal=True
             )
         
-        with middle_row_two:
+        with right_row_two:
             date = st.text_input(
                 label='Date',
                 placeholder='Enter Date (MM/DD/YYYY)',
                 value=pd.to_datetime('today').strftime('%m/%d/%Y'),
             )
-        with right_row_two:
-            season = st.text_input(
-                label='Season',
-                placeholder='Enter Season',
-                value=selected_season
-            )
+        season = selected_season
 
         save_col, delete_col = st.columns(2)
         with save_col:
