@@ -228,6 +228,14 @@ def delete_game_sql():
     """
     return sql
 
+def get_this_game():
+    sql = """
+    SELECT *
+      FROM TEAM_GAME_TOTALS
+      WHERE GAME_ID = ?
+    """
+    return sql
+
 def get_game_summary_sql():
     sql = """
           WITH AVG_MINUTES AS (
