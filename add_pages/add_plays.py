@@ -134,7 +134,7 @@ player_game = load_player_game(SQL_CONN)
 games = player_game.sort_values(by="SEASON", ascending=False).reset_index(drop=True)
 season_list = games["SEASON"].unique().tolist()
 
-left, middle, right = st.columns([1, 3, 1])
+left, middle, right = st.columns([1, 1, 1])
 with left:
     season = st.radio(label="Select Season", options=season_list, horizontal=True)
 
@@ -148,13 +148,15 @@ with middle:
     game_select = st.selectbox(label="Select Game", options=game_list, index=0)
 
 with right:
-    if st.button(label="Clear Cache", key="clear_cache_btn"):
-        load_pbp_data_cached.clear()
-        load_player_game.clear()
-        load_game_summary.clear()
-        st.success("Cache cleared!")
-        time.sleep(1)
-        st.rerun()
+    left, right = st.columns(2)
+    with right:
+        if st.button(label="Clear Cache", key="clear_cache_btn"):
+            load_pbp_data_cached.clear()
+            load_player_game.clear()
+            load_game_summary.clear()
+            st.success("Cache cleared!")
+            time.sleep(1)
+            st.rerun()
 
 game = games_season[games_season["GAME_LABEL"] == game_select].iloc[0]
 game_id = int(game["GAME_ID"])
