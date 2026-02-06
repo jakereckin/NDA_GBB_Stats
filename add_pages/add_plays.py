@@ -34,8 +34,8 @@ def load_game_summary(connection: str, version: int):
     return data_source.run_query(sql=sql.get_game_summary_sql(), connection=connection)
 
 @st.cache_data(show_spinner=False)
-def load_pbp_data_cached(game_id: int, version: int):
-    my_sql = sql.get_play_sql().replace("?", str(game_id))
+def load_pbp_data_cached(game_selelct, version: int):
+    my_sql = sql.get_play_sql().replace("?", str(game_selelct))
     return data_source.run_query(sql=my_sql, connection=SQL_CONN)
 
 @st.cache_data(show_spinner=False)
@@ -161,7 +161,6 @@ with col_chart:
 
 # Load pbp data (cached, versioned)
 pbp_data = load_pbp_data_cached(game_select, st.session_state.pbp_version)
-
 # Add shot flow
 if clicked:
     ev = clicked[0]
@@ -236,43 +235,19 @@ if clicked:
                             final_stat = 'TWO_FGA'
                         else:
                             final_stat = 'THREE_FGA'
-                    if player_number == 0:
+                    if choose_stat != 'Shot' and player_number == 0:
                         st.error('Please select a valid player number')
                         st.stop()
-                    stat_df = create_stat_df(
-                        player_number=player_number,
-                        game_val_final=game_val_final,
-                        stat_type=final_stat
-                    )
-
-                    with sqlitecloud.connect(SQL_CONN) as conn:
-                        cursor = conn.cursor()
-                        for _, row in stat_df.iterrows():
-                            cursor.execute(
-                                sql=sql.insert_game_play(),
-                                parameters=(
-                                    str(row["GAME_ID"]),
-                                    str(row["NUMBER"]),
-                                    str(row["STAT_TYPE"]),
-                                ),
-                            )
-                        conn.commit()
-                        st.success(f'Added {final_stat} for player {player_number}')
-                    if (choose_stat == 'Shot') & (make_miss == 'Y'):
-                        if spot_val == "FREE_THROW1":
-                            final_stat = 'FTM'
-                        elif spot_val[-1] == '2':
-                            final_stat = 'TWO_FGM'
-                        else:
-                            final_stat = 'THREE_FGM'
-                        stat_df_make = create_stat_df(
+                    if player_number != 0:
+                        stat_df = create_stat_df(
                             player_number=player_number,
                             game_val_final=game_val_final,
                             stat_type=final_stat
                         )
+
                         with sqlitecloud.connect(SQL_CONN) as conn:
                             cursor = conn.cursor()
-                            for _, row in stat_df_make.iterrows():
+                            for _, row in stat_df.iterrows():
                                 cursor.execute(
                                     sql=sql.insert_game_play(),
                                     parameters=(
@@ -283,97 +258,119 @@ if clicked:
                                 )
                             conn.commit()
                             st.success(f'Added {final_stat} for player {player_number}')
-                    new_query = (
-                        sql.get_formatted_game_sql()
-                           .replace('this_game_id', str(game_val_final))
-                           .replace('this_player_id', str(player_number))
-                    )
-                    new_game_summary = data_source.run_query(
-                        sql=new_query, connection=SQL_CONN
-                    )
-                    game_summary_data = load_game_summary(SQL_CONN, st.session_state.game_version)
-                    # Update or Insert game summary
-                    my_id = (
-                        str(object=player_number)
-                        + '_'
-                        + str(game_val_final)
-                    )
-                    game_summary_ids = game_summary_data.copy()
-                    game_summary_ids['_id'] = (
-                        game_summary_ids['PLAYER_ID'].astype(dtype=str)
-                        + '_'
-                        + (
-                            game_summary_ids['GAME_ID'].astype(dtype=int)
-                                                    .astype(dtype=str)
-                                                    .values
+                        if (choose_stat == 'Shot') & (make_miss == 'Y'):
+                            if spot_val == "FREE_THROW1":
+                                final_stat = 'FTM'
+                            elif spot_val[-1] == '2':
+                                final_stat = 'TWO_FGM'
+                            else:
+                                final_stat = 'THREE_FGM'
+                            stat_df_make = create_stat_df(
+                                player_number=player_number,
+                                game_val_final=game_val_final,
+                                stat_type=final_stat
+                            )
+                            with sqlitecloud.connect(SQL_CONN) as conn:
+                                cursor = conn.cursor()
+                                for _, row in stat_df_make.iterrows():
+                                    cursor.execute(
+                                        sql=sql.insert_game_play(),
+                                        parameters=(
+                                            str(row["GAME_ID"]),
+                                            str(row["NUMBER"]),
+                                            str(row["STAT_TYPE"]),
+                                        ),
+                                    )
+                                conn.commit()
+                                st.success(f'Added {final_stat} for player {player_number}')
+                        new_query = (
+                            sql.get_formatted_game_sql()
+                            .replace('this_game_id', str(game_val_final))
+                            .replace('this_player_id', str(player_number))
                         )
-                    )
+                        new_game_summary = data_source.run_query(
+                            sql=new_query, connection=SQL_CONN
+                        )
+                        game_summary_data = load_game_summary(SQL_CONN, st.session_state.game_version)
+                        # Update or Insert game summary
+                        my_id = (
+                            str(object=player_number)
+                            + '_'
+                            + str(game_val_final)
+                        )
+                        game_summary_ids = game_summary_data.copy()
+                        game_summary_ids['_id'] = (
+                            game_summary_ids['PLAYER_ID'].astype(dtype=str)
+                            + '_'
+                            + (
+                                game_summary_ids['GAME_ID'].astype(dtype=int)
+                                                        .astype(dtype=str)
+                                                        .values
+                            )
+                        )
 
-                    game_summary_ids_list = game_summary_ids['_id'].unique().tolist()
-                    if my_id not in game_summary_ids_list:
-                        with sqlitecloud.connect(SQL_CONN) as conn:
-                            cursor = conn.cursor()
-                            cursor.execute(
-                                sql=sql.insert_game_summary_sql(),
-                                parameters=(
-                                    player_number,
-                                    str(game_val_final),
-                                    str(new_game_summary['TWO_FGM'].values[0]),
-                                    str(new_game_summary['TWO_FGA'].values[0]),
-                                    str(new_game_summary['THREE_FGM'].values[0]),
-                                    str(new_game_summary['THREE_FGA'].values[0]),
-                                    str(new_game_summary['FTM'].values[0]),
-                                    str(new_game_summary['FTA'].values[0]),
-                                    str(new_game_summary['OFFENSIVE_REBOUNDS'].values[0]),
-                                    str(new_game_summary['DEFENSIVE_REBOUNDS'].values[0]),
-                                    str(new_game_summary['ASSISTS'].values[0]),
-                                    str(new_game_summary['STEALS'].values[0]),
-                                    str(new_game_summary['BLOCKS'].values[0]),
-                                    str(new_game_summary['TURNOVER'].values[0]),
-                                    str(new_game_summary['FOULS'].values[0])
+                        game_summary_ids_list = game_summary_ids['_id'].unique().tolist()
+                        if my_id not in game_summary_ids_list:
+                            with sqlitecloud.connect(SQL_CONN) as conn:
+                                cursor = conn.cursor()
+                                cursor.execute(
+                                    sql=sql.insert_game_summary_sql(),
+                                    parameters=(
+                                        player_number,
+                                        str(game_val_final),
+                                        str(new_game_summary['TWO_FGM'].values[0]),
+                                        str(new_game_summary['TWO_FGA'].values[0]),
+                                        str(new_game_summary['THREE_FGM'].values[0]),
+                                        str(new_game_summary['THREE_FGA'].values[0]),
+                                        str(new_game_summary['FTM'].values[0]),
+                                        str(new_game_summary['FTA'].values[0]),
+                                        str(new_game_summary['OFFENSIVE_REBOUNDS'].values[0]),
+                                        str(new_game_summary['DEFENSIVE_REBOUNDS'].values[0]),
+                                        str(new_game_summary['ASSISTS'].values[0]),
+                                        str(new_game_summary['STEALS'].values[0]),
+                                        str(new_game_summary['BLOCKS'].values[0]),
+                                        str(new_game_summary['TURNOVER'].values[0]),
+                                        str(new_game_summary['FOULS'].values[0])
+                                    )
                                 )
-                            )
-                            conn.commit()
-                    else:
-                        with sqlitecloud.connect(SQL_CONN) as conn:
-                            cursor = conn.cursor()
-                            cursor.execute(
-                                sql=sql.update_game_summary_sql(),
-                                parameters=(
-                                    str(new_game_summary['TWO_FGM'].values[0]),
-                                    str(new_game_summary['TWO_FGA'].values[0]),
-                                    str(new_game_summary['THREE_FGM'].values[0]),
-                                    str(new_game_summary['THREE_FGA'].values[0]),
-                                    str(new_game_summary['FTM'].values[0]),
-                                    str(new_game_summary['FTA'].values[0]),
-                                    str(new_game_summary['OFFENSIVE_REBOUNDS'].values[0]),
-                                    str(new_game_summary['DEFENSIVE_REBOUNDS'].values[0]),
-                                    str(new_game_summary['ASSISTS'].values[0]),
-                                    str(new_game_summary['STEALS'].values[0]),
-                                    str(new_game_summary['BLOCKS'].values[0]),
-                                    str(new_game_summary['TURNOVER'].values[0]),
-                                    str(new_game_summary['FOULS'].values[0]),
-                                    str(player_number),
-                                    str(game_val_final)
+                                conn.commit()
+                        else:
+                            with sqlitecloud.connect(SQL_CONN) as conn:
+                                cursor = conn.cursor()
+                                cursor.execute(
+                                    sql=sql.update_game_summary_sql(),
+                                    parameters=(
+                                        str(new_game_summary['TWO_FGM'].values[0]),
+                                        str(new_game_summary['TWO_FGA'].values[0]),
+                                        str(new_game_summary['THREE_FGM'].values[0]),
+                                        str(new_game_summary['THREE_FGA'].values[0]),
+                                        str(new_game_summary['FTM'].values[0]),
+                                        str(new_game_summary['FTA'].values[0]),
+                                        str(new_game_summary['OFFENSIVE_REBOUNDS'].values[0]),
+                                        str(new_game_summary['DEFENSIVE_REBOUNDS'].values[0]),
+                                        str(new_game_summary['ASSISTS'].values[0]),
+                                        str(new_game_summary['STEALS'].values[0]),
+                                        str(new_game_summary['BLOCKS'].values[0]),
+                                        str(new_game_summary['TURNOVER'].values[0]),
+                                        str(new_game_summary['FOULS'].values[0]),
+                                        str(player_number),
+                                        str(game_val_final)
+                                    )
                                 )
-                            )
-                            conn.commit()
-                    stat_val = new_game_summary[final_stat].values[0]
-                    st.success(
-                        f'Player {player_number} now has {stat_val} {final_stat} '
-                        f'for game {game_val}'
-                    )
-                    st.session_state.game_version += 1
+                                conn.commit()
+                        stat_val = new_game_summary[final_stat].values[0]
+                        st.success(
+                            f'Player {player_number} now has {stat_val} {final_stat} '
+                            f'for game {game_val}'
+                        )
+                        st.session_state.game_version += 1
                     
                     if choose_stat == 'Shot':
                         spot_lookup = shot_spots.drop(columns=["XSPOT", "YSPOT"]).set_index("SPOT")
                         my_df = my_df.join(spot_lookup, on="SPOT")
-
                         all_data_game = pbp_data
-                        if len(all_data_game) == 0:
-                            my_df["PLAY_NUM"] = 0
-                        else:
-                            my_df["PLAY_NUM"] = len(all_data_game)
+                        max_play_num = all_data_game["PLAY_NUM"].max() if len(all_data_game) > 0 else 0
+                        my_df["PLAY_NUM"] = max_play_num + 1
 
                         with sqlitecloud.connect(SQL_CONN) as conn:
                             cursor = conn.cursor()
@@ -392,6 +389,7 @@ if clicked:
                                 ),
                             )
                             conn.commit()
+                        load_pbp_data_cached.clear()
                         current_game = pd.concat(
                             objs=[
                                 all_data_game.reset_index(drop=True), 
@@ -430,7 +428,9 @@ if clicked:
 
 # Ensure pbp_data is fresh if requested
 if st.session_state.refresh_pbp:
+    st.write("Refreshing play-by-play data...")
     pbp_data = load_pbp_data_cached(game_select, st.session_state.pbp_version)
+    st.success("Play-by-play data refreshed!")
     st.session_state.refresh_pbp = False
 
 # Build simple_data robustly so it always displays
