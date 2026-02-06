@@ -134,7 +134,7 @@ player_game = load_player_game(SQL_CONN)
 games = player_game.sort_values(by="SEASON", ascending=False).reset_index(drop=True)
 season_list = games["SEASON"].unique().tolist()
 
-left, middle, right = st.columns(3)
+left, middle, right = st.columns([1, 2, 1])
 with left:
     season = st.radio(label="Select Season", options=season_list, horizontal=True)
 
