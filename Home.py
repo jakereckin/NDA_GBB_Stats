@@ -15,6 +15,7 @@ data_source.run_query(sql.get_users(), sql_lite_connect)
     #st.header(body='', divider='blue')
 image = Image.open(fp='NDA_LOGO.jpg')
 
+st.logo(image=image, width=150)
 credentials = {
     'usernames': {
         'nda_admin': {
