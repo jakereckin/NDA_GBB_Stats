@@ -543,6 +543,13 @@ with right_col:
         connection=SQL_CONN
     )
     current_totals = current_totals.drop(columns=['GAME_ID'])
+    current_totals['Turnover Percent'] = (
+        current_totals['TEAM_TURNOVERS'] / np.where(
+            current_totals['POSSESSIONS'] == 0,
+            1,
+            current_totals['POSSESSIONS']
+        )
+    )
     current_totals = (
         current_totals.rename(
             columns={
@@ -560,7 +567,9 @@ with right_col:
              'TEAM_FGM': 'FGM',
              'TEAM_ASSISTS': 'Assists',
              'TEAM_STEALS': 'Steals',
-             'TEAM_BLOCKS': 'Blocks'},
+             'TEAM_BLOCKS': 'Blocks',
+             'POSSESSIONS': 'Possessions',
+             'POINTS': 'Points'},
         )
     )
     current_totals['PPP'] = current_totals['POINTS'] / np.where(
@@ -577,7 +586,8 @@ with right_col:
     current_totals = current_totals[[
         '2FGM', '2FGA', '3FGM', '3FGA', 'FTM', 'FTA',
         'OREB', 'DREB', 'Assists', 'Steals', 'Blocks',
-        'Turnovers', 'eFG%', 'POSSESSIONS', 'PPP', 'PPA'
+        'Turnovers', 'eFG%', 'POSSESSIONS', 'PPP', 'PPA',
+        'Turnover Percent', 'POINTS'
     ]]
     st.dataframe(
         current_totals.T.rename(columns={0: "Total"}).reset_index().rename(columns={"index": "Stat"}),
