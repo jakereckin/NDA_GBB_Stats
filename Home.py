@@ -138,7 +138,8 @@ if st.session_state.authentication_status == True:
             st.Page('view_pages/view_expected_points.py', title='Expected Points'),
             st.Page('view_pages/view_game_summary.py', title='Game Summary'),
             st.Page('view_pages/view_minutes.py', title='Lineups'),
-            st.Page('view_pages/view_lineup_network.py', title='Lineup Network') 
+            st.Page('view_pages/view_lineup_network.py', title='Lineup Network'),
+            st.Page('view_pages/view_season_trend.py', title='Season Trends') 
         ]
         }
         st.session_state.pg = st.navigation(st.session_state.PAGES)
