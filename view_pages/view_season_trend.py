@@ -2,6 +2,7 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 import polars as pl
+import numpy as np
 from py import sql, data_source
 import plotly.graph_objects as go
 pd.options.mode.chained_assignment = None
@@ -285,12 +286,57 @@ if select_level == 'Team':
         player_season_avg=player_season_avg,
         other_stats=other_stats
     )
+
     choose_stats = team_data_clean.columns.tolist()[1:-1]
     with col3:
         choose_stats = st.selectbox(label='Choose Stats to Show', options=choose_stats)
+
+    y = pd.to_numeric(team_data_clean[choose_stats], errors='coerce').fillna(0).values
+    x_labels = team_data_clean['Opponent'].astype(str).tolist()
+    x_idx = np.arange(len(x_labels))
+
     fig = go.FigureWidget()
-    fig.add_scatter(x=team_data_clean['Opponent'], y=team_data_clean[choose_stats], mode="lines+markers", name=choose_stats)
-    st.plotly_chart(fig, width='stretch', on_select='ignore')
+    fig.add_trace(
+        go.Scatter(
+            x=x_labels,
+            y=y,
+            mode="lines+markers",
+            name=choose_stats,
+            marker=dict(size=8),
+            line=dict(width=2)
+        )
+    )
+
+    if len(x_idx) > 1:
+        coeffs = np.polyfit(x_idx, y, 1)
+        trend_y = np.polyval(coeffs, x_idx)
+        # R-squared
+        ss_res = np.sum((y - trend_y) ** 2)
+        ss_tot = np.sum((y - np.mean(y)) ** 2) if np.sum((y - np.mean(y)) ** 2) != 0 else 1
+        r2 = 1 - ss_res / ss_tot
+
+        fig.add_trace(
+            go.Scatter(
+                x=x_labels,
+                y=trend_y,
+                mode="lines",
+                name=f"Trendline (slope={coeffs[0]:.3f}, R²={r2:.3f})",
+                line=dict(dash="dash", color="red", width=2),
+                hoverinfo="text",
+                hovertext=[f"{label}: {val:.2f}" for label, val in zip(x_labels, trend_y)]
+            )
+        )
+
+    fig.update_layout(
+        xaxis_title="Opponent",
+        yaxis_title=choose_stats,
+        xaxis_tickangle=-45,
+        margin=dict(l=40, r=20, t=40, b=120),
+        height=420
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
 elif select_level == 'Player':
     team_data, player_level, column_config = clean_frames(
         team_data=team_data,
@@ -298,13 +344,58 @@ elif select_level == 'Player':
         player_season_avg=player_season_avg,
         other_stats=other_stats
     )
+
     player_list = player_level['NAME'].unique().tolist()
     with col3:
         choose_stats = st.selectbox(label='Choose Stats to Show', options=other_stats)
-    
+
     player_select = st.radio(label='Select Player', options=player_list, horizontal=True)
     this_player = player_level[player_level['NAME'] == player_select].reset_index(drop=True)
-    player_level_final = this_player[other_stats + ['TYPE', 'NAME', 'LABEL']]
-    fig = go.FigureWidget()
-    fig.add_scatter(x=player_level_final['LABEL'], y=player_level_final[choose_stats], mode="lines+markers", name=choose_stats)
-    st.plotly_chart(fig, width='stretch', on_select='ignore')
+
+    # ensure chosen stat is numeric and handle missing values
+    y_series = pd.to_numeric(this_player[choose_stats], errors='coerce').fillna(0)
+    x_labels = this_player['LABEL'].astype(str).tolist()
+    x_idx = np.arange(len(x_labels))
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=x_labels,
+            y=y_series,
+            mode="lines+markers",
+            name=choose_stats,
+            marker=dict(size=8),
+            line=dict(width=2),
+            connectgaps=False
+        )
+    )
+
+    if len(x_idx) > 1:
+        coeffs = np.polyfit(x_idx, y_series.values, 1)
+        trend_y = np.polyval(coeffs, x_idx)
+        ss_res = np.sum((y_series.values - trend_y) ** 2)
+        ss_tot = np.sum((y_series.values - np.mean(y_series.values)) ** 2) or 1
+        r2 = 1 - ss_res / ss_tot
+
+        fig.add_trace(
+            go.Scatter(
+                x=x_labels,
+                y=trend_y,
+                mode="lines",
+                name=f"Trendline (slope={coeffs[0]:.3f}, R²={r2:.3f})",
+                line=dict(dash="dash", color="red", width=2),
+                hoverinfo="text",
+                hovertext=[f"{lbl}: {val:.2f}" for lbl, val in zip(x_labels, trend_y)]
+            )
+        )
+
+    fig.update_layout(
+        xaxis_title="Game (Opponent - Date)",
+        yaxis_title=choose_stats,
+        xaxis_tickangle=-45,
+        margin=dict(l=40, r=20, t=40, b=120),
+        height=420,
+        hovermode="x unified"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
