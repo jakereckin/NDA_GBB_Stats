@@ -125,7 +125,7 @@ if st.session_state.authentication_status == True:
         st.session_state.PAGES = {
         'Home': [st.Page('home_pages/admin_home.py', title='Admin Home', default=True)],
         'Add Data': [
-            st.Page('add_pages/add_shots.py', title='Add Shots'),
+            st.Page('add_pages/add_plays.py', title='Add Plays'),
             st.Page('add_pages/add_players.py', title='Add Players'),
             st.Page('add_pages/add_minutes.py', title='Add Minutes'),
             st.Page('add_pages/add_games.py', title='Add Games'),

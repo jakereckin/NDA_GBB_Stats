@@ -170,6 +170,38 @@ def insert_plays_sql():
     """
     return sql
 
+def get_formatted_game_sql():
+    sql = """
+    SELECT GAME_ID,
+                    PLAYER_ID,
+                    SUM(CASE WHEN STAT = 'TWO_FGM' THEN 1 ELSE 0 END) AS TWO_FGM,
+      SUM(CASE WHEN STAT = 'TWO_FGA' THEN 1 ELSE 0 END) AS TWO_FGA,
+      SUM(CASE WHEN STAT = 'THREE_FGM' THEN 1 ELSE 0 END) AS THREE_FGM,
+      SUM(CASE WHEN STAT = 'THREE_FGA' THEN 1 ELSE 0 END) AS THREE_FGA,
+    SUM(CASE WHEN STAT = 'FTM' THEN 1 ELSE 0 END) AS FTM,
+      SUM(CASE WHEN STAT = 'FTA' THEN 1 ELSE 0 END) AS FTA,
+      SUM(CASE WHEN STAT = 'OFFENSIVE_REBOUNDS' THEN 1 ELSE 0 END) AS OFFENSIVE_REBOUNDS,
+      SUM(CASE WHEN STAT = 'DEFENSIVE_REBOUNDS' THEN 1 ELSE 0 END) AS DEFENSIVE_REBOUNDS,
+      SUM(CASE WHEN STAT = 'ASSISTS' THEN 1 ELSE 0 END) AS ASSISTS,
+      SUM(CASE WHEN STAT = 'STEALS' THEN 1 ELSE 0 END) AS STEALS,
+      SUM(CASE WHEN STAT = 'BLOCKS' THEN 1 ELSE 0 END) AS BLOCKS,
+      SUM(CASE WHEN STAT = 'TURNOVER' THEN 1 ELSE 0 END) AS TURNOVER,
+      SUM(CASE WHEN STAT = 'FOULS' THEN 1 ELSE 0 END) AS FOULS
+      FROM GAME_STATS_PLAYS
+      WHERE GAME_ID = this_game_id
+      AND PLAYER_ID = this_player_id
+    GROUP BY GAME_ID, PLAYER_ID
+    """
+    return sql
+
+def select_quick_game_info(game_id):
+    sql = f"""
+    SELECT *
+      FROM TEAM_GAME_TOTALS
+      WHERE GAME_ID = {game_id}
+    """
+    return sql
+
 def view_minutes_sql():
     sql = """
     SELECT MINUTES.PLAYER_ID,
@@ -192,6 +224,12 @@ def view_minutes_sql():
     """
     return sql
 
+def insert_game_play():
+    sql = """
+    INSERT INTO GAME_STATS_PLAYS (GAME_ID, PLAYER_ID, STAT)
+    VALUES (?, ?, ?)
+    """
+    return sql
 
 def insert_game_sql():
     sql = """
