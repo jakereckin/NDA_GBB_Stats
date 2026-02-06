@@ -463,14 +463,14 @@ simple_data = simple_data[["NUMBER", "SPOT", "SHOT_DEFENSE", "MAKE_MISS", "PLAY_
 
 left_col, right_col = st.columns([2, 1])
 with left_col:
-    st.write(f"Showing last 30 shots for Game ID: {game_id}")
+    st.markdown(f"**Showing last 30 shots for Game ID: {game_id}**")
     editor_key = f"prev_shots_editor_{game_id}"
     # Use use_container_width to make it render nicely; keep a stable key
     edited_df = st.data_editor(
         simple_data, 
         hide_index=True,
         key=editor_key,
-        use_container_width=True,
+        width='content',
         column_config={
             "NUMBER": st.column_config.NumberColumn(
                 "Player",
@@ -572,10 +572,10 @@ with right_col:
              'POINTS': 'Points'},
         )
     )
-    current_totals['PPP'] = current_totals['POINTS'] / np.where(
-        current_totals['POSSESSIONS'] == 0,
+    current_totals['PPP'] = current_totals['Points'] / np.where(
+        current_totals['Possessions'] == 0,
         1,
-        current_totals['POSSESSIONS']
+        current_totals['Possessions']
     )
     current_totals['PPA'] = current_totals['FG_POINTS'] / np.where(
         current_totals['FGA'] == 0,
@@ -586,8 +586,8 @@ with right_col:
     current_totals = current_totals[[
         '2FGM', '2FGA', '3FGM', '3FGA', 'FTM', 'FTA',
         'OREB', 'DREB', 'Assists', 'Steals', 'Blocks',
-        'Turnovers', 'eFG%', 'POSSESSIONS', 'PPP', 'PPA',
-        'Turnover Percent', 'POINTS'
+        'Turnovers', 'eFG%', 'Possessions', 'PPP', 'PPA',
+        'Turnover Percent', 'Points'
     ]]
     st.dataframe(
         current_totals.T.rename(columns={0: "Total"}).reset_index().rename(columns={"index": "Stat"}),
