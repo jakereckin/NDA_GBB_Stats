@@ -231,6 +231,21 @@ def insert_game_play():
     """
     return sql
 
+def delete_game_play():
+    sql = """
+    DELETE FROM GAME_STATS_PLAYS
+     WHERE GAME_ID = ? AND PLAYER_ID = ? AND STAT = ? AND id = ?
+    """
+    return sql
+
+def get_current_game_stats_plays_sql():
+    sql = """
+    SELECT *
+      FROM GAME_STATS_PLAYS
+      ORDER BY id DESC
+    """
+    return sql
+
 def insert_game_sql():
     sql = """
     INSERT INTO GAMES (GAME_ID,

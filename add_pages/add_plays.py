@@ -20,8 +20,12 @@ if "pbp_version" not in st.session_state:
     st.session_state.pbp_version = 0
 if 'game_version' not in st.session_state:
     st.session_state.game_version = 0
+if 'refresh_game_stat_version' not in st.session_state:
+    st.session_state.refresh_game_stat_version = False
+if 'game_stat_version' not in st.session_state:
+    st.session_state.game_stat_version = 0
 
-@st.cache_data(show_spinner=False)
+@st.cache_resource
 def load_shot_spots(connection: str):
     return data_source.run_query(sql=sql.get_shot_spots_sql(), connection=connection)
 
@@ -37,6 +41,10 @@ def load_game_summary(connection: str, version: int):
 def load_pbp_data_cached(game_selelct, version: int):
     my_sql = sql.get_play_sql().replace("?", str(game_selelct))
     return data_source.run_query(sql=my_sql, connection=SQL_CONN)
+
+@st.cache_data(show_spinner=False)
+def load_game_stats(connection, version: int):
+    return data_source.run_query(sql=sql.get_current_game_stats_plays_sql(), connection=connection)
 
 @st.cache_data(show_spinner=False)
 def make_grid(xmin, xmax, ymin, ymax, spacing):
@@ -102,21 +110,9 @@ def create_df(
     ]
     return pd.DataFrame([row], columns=cols)
 
-def create_stat_df(
-        player_number,
-        game_val_final,
-        stat_type
-):
-    cols = [
-        "GAME_ID",
-        "NUMBER",
-        "STAT_TYPE"
-    ]
-    row = [
-        game_val_final,
-        player_number,
-        stat_type
-    ]
+def create_stat_df(player_number, game_val_final, stat_type):
+    cols = ["GAME_ID", "NUMBER", "STAT_TYPE"]
+    row = [game_val_final, player_number, stat_type]
     return pd.DataFrame([row], columns=cols)
 
 def get_values_needed(game_val: str, game_df: pd.DataFrame, player_val: str):
@@ -127,6 +123,67 @@ def get_values_needed(game_val: str, game_df: pd.DataFrame, player_val: str):
     player_number = int(player_val.split(" - ")[0])
     game_id = int(game_row["GAME_ID"].values[0])
     return player_number, game_id
+
+def upsert_game_summary(player_number, game_id, SQL_CONN):
+    # Build formatted SQL for this player/game
+    new_query = (
+        sql.get_formatted_game_sql()
+        .replace("this_game_id", str(game_id))
+        .replace("this_player_id", str(player_number))
+    )
+
+    # Pull fresh computed summary for this player/game
+    new_game_summary = data_source.run_query(sql=new_query, connection=SQL_CONN)
+
+    # Load existing summaries
+    game_summary_data = load_game_summary(SQL_CONN, st.session_state.game_version)
+
+    # Build composite ID
+    my_id = f"{player_number}_{game_id}"
+
+    # Build list of existing IDs
+    game_summary_ids = game_summary_data.copy()
+    game_summary_ids["_id"] = (
+        game_summary_ids["PLAYER_ID"].astype(str)
+        + "_"
+        + game_summary_ids["GAME_ID"].astype(int).astype(str)
+    )
+    existing_ids = set(game_summary_ids["_id"].unique().tolist())
+
+    # Extract values in correct order
+    vals = [
+        str(new_game_summary["TWO_FGM"].values[0]),
+        str(new_game_summary["TWO_FGA"].values[0]),
+        str(new_game_summary["THREE_FGM"].values[0]),
+        str(new_game_summary["THREE_FGA"].values[0]),
+        str(new_game_summary["FTM"].values[0]),
+        str(new_game_summary["FTA"].values[0]),
+        str(new_game_summary["OFFENSIVE_REBOUNDS"].values[0]),
+        str(new_game_summary["DEFENSIVE_REBOUNDS"].values[0]),
+        str(new_game_summary["ASSISTS"].values[0]),
+        str(new_game_summary["STEALS"].values[0]),
+        str(new_game_summary["BLOCKS"].values[0]),
+        str(new_game_summary["TURNOVER"].values[0]),
+        str(new_game_summary["FOULS"].values[0]),
+    ]
+
+    # Insert or update
+    with sqlitecloud.connect(SQL_CONN) as conn:
+        cursor = conn.cursor()
+
+        if my_id not in existing_ids:
+            cursor.execute(
+                sql=sql.insert_game_summary_sql(),
+                parameters=(player_number, str(game_id), *vals),
+            )
+        else:
+            cursor.execute(
+                sql=sql.update_game_summary_sql(),
+                parameters=(*vals, str(player_number), str(game_id)),
+            )
+
+        conn.commit()
+    return new_game_summary
 
 shot_spots = load_shot_spots(SQL_CONN)
 player_game = load_player_game(SQL_CONN)
@@ -172,6 +229,7 @@ with col_chart:
 
 # Load pbp data (cached, versioned)
 pbp_data = load_pbp_data_cached(game_select, st.session_state.pbp_version)
+game_stat_plays = load_game_stats(SQL_CONN, st.session_state.game_stat_version)
 # Add shot flow
 if clicked:
     ev = clicked[0]
@@ -269,6 +327,7 @@ if clicked:
                                 )
                             conn.commit()
                             st.success(f'Added {final_stat} for player {player_number}')
+                            st.session_state.refresh_game_stat_version = True
                         if (choose_stat == 'Shot') & (make_miss == 'Y'):
                             if spot_val == "FREE_THROW1":
                                 final_stat = 'FTM'
@@ -294,87 +353,18 @@ if clicked:
                                     )
                                 conn.commit()
                                 st.success(f'Added {final_stat} for player {player_number}')
-                        new_query = (
-                            sql.get_formatted_game_sql()
-                            .replace('this_game_id', str(game_val_final))
-                            .replace('this_player_id', str(player_number))
+                                st.session_state.game_stat_version += 1
+                        new_game_summary = upsert_game_summary(
+                            player_number=player_number,
+                            game_id=game_val_final,
+                            SQL_CONN=SQL_CONN
                         )
-                        new_game_summary = data_source.run_query(
-                            sql=new_query, connection=SQL_CONN
-                        )
-                        game_summary_data = load_game_summary(SQL_CONN, st.session_state.game_version)
-                        # Update or Insert game summary
-                        my_id = (
-                            str(object=player_number)
-                            + '_'
-                            + str(game_val_final)
-                        )
-                        game_summary_ids = game_summary_data.copy()
-                        game_summary_ids['_id'] = (
-                            game_summary_ids['PLAYER_ID'].astype(dtype=str)
-                            + '_'
-                            + (
-                                game_summary_ids['GAME_ID'].astype(dtype=int)
-                                                        .astype(dtype=str)
-                                                        .values
-                            )
-                        )
-
-                        game_summary_ids_list = game_summary_ids['_id'].unique().tolist()
-                        if my_id not in game_summary_ids_list:
-                            with sqlitecloud.connect(SQL_CONN) as conn:
-                                cursor = conn.cursor()
-                                cursor.execute(
-                                    sql=sql.insert_game_summary_sql(),
-                                    parameters=(
-                                        player_number,
-                                        str(game_val_final),
-                                        str(new_game_summary['TWO_FGM'].values[0]),
-                                        str(new_game_summary['TWO_FGA'].values[0]),
-                                        str(new_game_summary['THREE_FGM'].values[0]),
-                                        str(new_game_summary['THREE_FGA'].values[0]),
-                                        str(new_game_summary['FTM'].values[0]),
-                                        str(new_game_summary['FTA'].values[0]),
-                                        str(new_game_summary['OFFENSIVE_REBOUNDS'].values[0]),
-                                        str(new_game_summary['DEFENSIVE_REBOUNDS'].values[0]),
-                                        str(new_game_summary['ASSISTS'].values[0]),
-                                        str(new_game_summary['STEALS'].values[0]),
-                                        str(new_game_summary['BLOCKS'].values[0]),
-                                        str(new_game_summary['TURNOVER'].values[0]),
-                                        str(new_game_summary['FOULS'].values[0])
-                                    )
-                                )
-                                conn.commit()
-                        else:
-                            with sqlitecloud.connect(SQL_CONN) as conn:
-                                cursor = conn.cursor()
-                                cursor.execute(
-                                    sql=sql.update_game_summary_sql(),
-                                    parameters=(
-                                        str(new_game_summary['TWO_FGM'].values[0]),
-                                        str(new_game_summary['TWO_FGA'].values[0]),
-                                        str(new_game_summary['THREE_FGM'].values[0]),
-                                        str(new_game_summary['THREE_FGA'].values[0]),
-                                        str(new_game_summary['FTM'].values[0]),
-                                        str(new_game_summary['FTA'].values[0]),
-                                        str(new_game_summary['OFFENSIVE_REBOUNDS'].values[0]),
-                                        str(new_game_summary['DEFENSIVE_REBOUNDS'].values[0]),
-                                        str(new_game_summary['ASSISTS'].values[0]),
-                                        str(new_game_summary['STEALS'].values[0]),
-                                        str(new_game_summary['BLOCKS'].values[0]),
-                                        str(new_game_summary['TURNOVER'].values[0]),
-                                        str(new_game_summary['FOULS'].values[0]),
-                                        str(player_number),
-                                        str(game_val_final)
-                                    )
-                                )
-                                conn.commit()
                         stat_val = new_game_summary[final_stat].values[0]
                         st.success(
                             f'Player {player_number} now has {stat_val} {final_stat} '
                             f'for game {game_val}'
                         )
-                        st.session_state.game_version += 1
+                        st.session_state.refresh_game_stat_version = True
                     
                     if choose_stat == 'Shot':
                         spot_lookup = shot_spots.drop(columns=["XSPOT", "YSPOT"]).set_index("SPOT")
@@ -436,6 +426,8 @@ if clicked:
 
                         st.session_state.pbp_version += 1
                         st.session_state.refresh_pbp = True
+                        st.session_state.refresh_game_stat_version = True
+                        st.session_state.game_stat_version += 1
 
 # Ensure pbp_data is fresh if requested
 if st.session_state.refresh_pbp:
@@ -443,6 +435,12 @@ if st.session_state.refresh_pbp:
     pbp_data = load_pbp_data_cached(game_select, st.session_state.pbp_version)
     st.success("Play-by-play data refreshed!")
     st.session_state.refresh_pbp = False
+
+if st.session_state.refresh_game_stat_version:
+    st.write("Refreshing game stats data...")
+    game_stat_plays = load_game_stats(SQL_CONN, st.session_state.refresh_game_stat_version)
+    st.success("Game stats data refreshed!")
+    st.session_state.refresh_game_stat_version = False
 
 # Build simple_data robustly so it always displays
 desired_cols = ["NUMBER", "SPOT", "SHOT_DEFENSE", "MAKE_MISS", "PLAY_NUM", "GAME_ID"]
@@ -466,7 +464,7 @@ else:
     simple_data["GAME_ID"] = simple_data["GAME_ID"].astype(int)
 
 # Sort and limit rows
-simple_data = simple_data.sort_values(by="PLAY_NUM", ascending=False).head(30).reset_index(drop=True)
+simple_data = simple_data.sort_values(by="PLAY_NUM", ascending=False).head(100).reset_index(drop=True)
 
 # Add DELETE column as boolean and ensure deterministic column order
 simple_data["DELETE"] = False
@@ -476,7 +474,6 @@ left_col, right_col = st.columns([2, 1])
 with left_col:
     st.markdown(f"**Showing last 30 shots for Game ID: {game_id}**")
     editor_key = f"prev_shots_editor_{game_id}"
-    # Use use_container_width to make it render nicely; keep a stable key
     edited_df = st.data_editor(
         simple_data, 
         hide_index=True,
@@ -561,6 +558,13 @@ with right_col:
             current_totals['POSSESSIONS']
         )
     )
+    current_totals['Assist Percent'] = (
+        current_totals['TEAM_ASSISTS'] / np.where(
+            current_totals['TEAM_FGM'] == 0,
+            1,
+            current_totals['TEAM_FGM']
+        )
+    )
     current_totals = (
         current_totals.rename(
             columns={
@@ -598,14 +602,87 @@ with right_col:
         '2FGM', '2FGA', '3FGM', '3FGA', 'FTM', 'FTA',
         'OREB', 'DREB', 'Assists', 'Steals', 'Blocks',
         'Turnovers', 'eFG%', 'Possessions', 'PPP', 'PPA',
-        'Turnover Percent', 'Points'
+        'Turnover Percent', 'Assist Percent', 'Points'
     ]]
     st.dataframe(
         current_totals.T.rename(columns={0: "Total"}).reset_index().rename(columns={"index": "Stat"}),
-        use_container_width=True,
+        width='stretch',
         height=750,
         hide_index=True
     )
+    game_stat_plays['DELETE'] = False
+    game_stat_plays['GAME_ID'] = game_stat_plays['GAME_ID'].astype(int)
+    game_stat_plays = game_stat_plays[game_stat_plays['GAME_ID'] == game_id]
+    delete_data = st.data_editor(
+        game_stat_plays,
+        hide_index=True,
+        key=f"delete_stats_editor_{game_id}",
+        column_config={
+            "PLAYER_ID": st.column_config.NumberColumn(
+                "Player",
+                help="Jersey number of the player who took the shot",
+                width=75
+            ),
+            'STAT': st.column_config.TextColumn(
+                'Stat Type',
+                help='Type of stat (e.g. 2FGM, ASSISTS, TURNOVER)',
+            ),
+            "id": st.column_config.NumberColumn(
+                "Play Number",
+                help="Sequential number of the play in the game",
+                width=75
+
+            ),
+            "GAME_ID": st.column_config.NumberColumn(
+                "Game ID",
+                help="Identifier for the game",
+            ),
+            "DELETE": st.column_config.CheckboxColumn(
+                "Delete",
+                help="Check to mark this shot for deletion from the database",
+            ),
+        }
+    )
+    delete = st.button("Delete Selected Stat", key=f"delete_stat_btn_{game_id}")
+    if delete:
+        # Guard: edited_df may be None if widget wasn't read; handle gracefully
+        if delete_data is None:
+            st.info("No data available to delete.")
+        else:
+            selected_deletes = delete_data[delete_data["DELETE"] == True]
+            game_val_delete_id = None
+            if len(selected_deletes) == 0:
+                st.info("No rows selected for deletion.")
+            else:
+                deleted_count = 0
+                with sqlitecloud.connect(SQL_CONN) as conn:
+                    cursor = conn.cursor()
+                    for _, row in selected_deletes.iterrows():
+                        st.write(row['GAME_ID'], row['PLAYER_ID'], row['STAT'], row['id'])
+                        cursor.execute(
+                            sql=sql.delete_game_play(),
+                            parameters=(
+                                str(int(row["GAME_ID"])),
+                                str((row["PLAYER_ID"])),
+                                str((row["STAT"])),
+                                str(int(row["id"])))
+                        )
+                        deleted_count += 1
+                        game_val_delete_id = int(row["GAME_ID"])
+                        player_number = int(row["PLAYER_ID"])
+                    conn.commit()
+
+                st.success(f"Deleted {deleted_count} shots")
+                new_game_summary = upsert_game_summary(
+                    player_number=player_number,
+                    game_id=game_val_delete_id,
+                    SQL_CONN=SQL_CONN
+                )
+                st.session_state.game_stat_version += 1
+                st.session_state.game_version += 1
+                st.session_state.refresh_game_stat_version = True
+                st.rerun()
+
 
 game_summary_data = load_game_summary(SQL_CONN, st.session_state.game_version)
 game_row = games_season[
@@ -621,29 +698,30 @@ this_game_summary = this_game_summary[[
     'ASSISTS', 'STEALS', 'BLOCKS', 'TURNOVER', 'FOULS',
     'GAME_SCORE', 'POINTS'
 ]]
-st.dataframe(
-    this_game_summary,
-    width='content',
-    hide_index=True,
-    column_config={
-        'PLAYER_ID': st.column_config.NumberColumn(
-            'Player Number',
-            help='Jersey number of the player',
-        ),
-        'TWO_FGM': st.column_config.NumberColumn('2FGM'),
-        'TWO_FGA': st.column_config.NumberColumn('2FGA'),
-        'THREE_FGM': st.column_config.NumberColumn('3FGM'), 
-        'THREE_FGA': st.column_config.NumberColumn('3FGA'),
-        'FTM': st.column_config.NumberColumn('FTM'),
-        'FTA': st.column_config.NumberColumn('FTA'),
-        'OFFENSIVE_REBOUNDS': st.column_config.NumberColumn('OREB'),
-        'DEFENSIVE_REBOUNDS': st.column_config.NumberColumn('DREB'),
-        'ASSISTS': st.column_config.NumberColumn('Assists'),
-        'STEALS': st.column_config.NumberColumn('Steals'),
-        'BLOCKS': st.column_config.NumberColumn('Blocks'),
-        'TURNOVER': st.column_config.NumberColumn('Turnovers'),
-        'FOULS': st.column_config.NumberColumn('Fouls'),
-        'GAME_SCORE': st.column_config.NumberColumn('Game Score'),
-        'POINTS': st.column_config.NumberColumn('Points')
-    }
-)
+with left_col:
+    st.dataframe(
+        this_game_summary,
+        width='content',
+        hide_index=True,
+        column_config={
+            'PLAYER_ID': st.column_config.NumberColumn(
+                'Player Number',
+                help='Jersey number of the player',
+            ),
+            'TWO_FGM': st.column_config.NumberColumn('2FGM'),
+            'TWO_FGA': st.column_config.NumberColumn('2FGA'),
+            'THREE_FGM': st.column_config.NumberColumn('3FGM'), 
+            'THREE_FGA': st.column_config.NumberColumn('3FGA'),
+            'FTM': st.column_config.NumberColumn('FTM'),
+            'FTA': st.column_config.NumberColumn('FTA'),
+            'OFFENSIVE_REBOUNDS': st.column_config.NumberColumn('OREB'),
+            'DEFENSIVE_REBOUNDS': st.column_config.NumberColumn('DREB'),
+            'ASSISTS': st.column_config.NumberColumn('Assists'),
+            'STEALS': st.column_config.NumberColumn('Steals'),
+            'BLOCKS': st.column_config.NumberColumn('Blocks'),
+            'TURNOVER': st.column_config.NumberColumn('Turnovers'),
+            'FOULS': st.column_config.NumberColumn('Fouls'),
+            'GAME_SCORE': st.column_config.NumberColumn('Game Score'),
+            'POINTS': st.column_config.NumberColumn('Points')
+        }
+    )
