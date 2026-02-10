@@ -431,7 +431,6 @@ if clicked:
 
 # Ensure pbp_data is fresh if requested
 if st.session_state.refresh_pbp:
-    st.write("Refreshing play-by-play data...")
     pbp_data = load_pbp_data_cached(game_select, st.session_state.pbp_version)
     st.success("Play-by-play data refreshed!")
     st.session_state.refresh_pbp = False
@@ -472,7 +471,11 @@ simple_data = simple_data[["NUMBER", "SPOT", "SHOT_DEFENSE", "MAKE_MISS", "PLAY_
 
 left_col, right_col = st.columns([2, 1])
 with left_col:
-    st.markdown(f"**Showing last 30 shots for Game ID: {game_id}**")
+    left_side, right_side = st.columns([1, 1])
+    with left_side:
+        st.markdown(f"**Showing last 100 shots for Game ID: {game_id}**")
+    with right_side:
+        delete = st.button("Delete Selected Shots", key=f"delete_btn_{game_id}")
     editor_key = f"prev_shots_editor_{game_id}"
     edited_df = st.data_editor(
         simple_data, 
@@ -515,7 +518,6 @@ with left_col:
     )
     
 
-    delete = st.button("Delete Selected Shots", key=f"delete_btn_{game_id}")
     if delete:
         # Guard: edited_df may be None if widget wasn't read; handle gracefully
         if edited_df is None:
@@ -604,6 +606,7 @@ with right_col:
         'Turnovers', 'eFG%', 'Possessions', 'PPP', 'PPA',
         'Turnover Percent', 'Assist Percent', 'Points'
     ]]
+    st.markdown("#### Current Game Totals")
     st.dataframe(
         current_totals.T.rename(columns={0: "Total"}).reset_index().rename(columns={"index": "Stat"}),
         width='stretch',

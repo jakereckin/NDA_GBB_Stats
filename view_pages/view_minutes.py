@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import ast
 import plotly.express as px
-import polars as pl
 from py import sql, data_source
 pd.options.mode.chained_assignment = None
 
@@ -35,7 +34,7 @@ if button:
     st.cache_resource.clear()
 
 # ----------------------------------------------------------------------------
-@st.cache_data
+@st.cache_data(show_spinner=True)
 def get_data():
     minute_data = data_source.run_query(
         sql=sql.view_minutes_sql(), connection=sql_lite_connect
@@ -43,7 +42,7 @@ def get_data():
     return minute_data
 
 # ----------------------------------------------------------------------------
-@st.cache_data
+@st.cache_data(show_spinner=True)
 def build_lineup_intervals(minutes_data, game_end_sec=36*60):
     out_rows = []
     for game_id, grp in minutes_data.groupby('GAME_ID'):

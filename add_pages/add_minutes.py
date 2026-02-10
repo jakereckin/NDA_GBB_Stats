@@ -14,6 +14,7 @@ def load_data():
     players = data_source.run_query(
         sql=sql.get_players_sql(), connection=sql_lite_connect
     )
+    players = players[players['NUMBER'] != '0']
     games = data_source.run_query(
         sql=sql.get_games_sql(), connection=sql_lite_connect
     )
@@ -29,7 +30,8 @@ def get_season_data(games, players, season):
     games_season['LABEL'] = (
         games_season['OPPONENT'] + ' - ' + games_season['DATE']
     )
-
+    games_season['DATE_DTTM'] = pd.to_datetime(games_season['DATE'])
+    games_season = games_season.sort_values(by='DATE_DTTM', ascending=False)
     return games_season, players_season
 
 # ----------------------------------------------------------------------------
@@ -50,6 +52,7 @@ players, games = load_data()
 my_season_options = (
         games['SEASON'].sort_values(ascending=False).unique().tolist()
     )
+st.title("⏱️ Add Minutes Played")
 with st.form(key='minutes_form', clear_on_submit=False):
     season_col, game_col = st.columns(2)
 
@@ -83,7 +86,7 @@ with st.form(key='minutes_form', clear_on_submit=False):
         label='Select Player', options=player_values, horizontal=True
     )
 
-    half_col, min_col, sec_col = st.columns(3)
+    half_col, min_col, sec_col, team_score_in, opp_score_in = st.columns(5)
     with half_col:
         half = st.radio(
             label='Select Half Subbed In', options=[1, 2], horizontal=True
@@ -104,8 +107,18 @@ with st.form(key='minutes_form', clear_on_submit=False):
             value=0,
             step=1,
         )
-
-    second_half_col, second_min_col, second_sec_col = st.columns(3)
+    with team_score_in:
+        points_in = st.number_input(
+            label='Team Points When Subbed In', min_value=0, value=0, step=1
+        )
+    with opp_score_in:
+        opp_points_in = st.number_input(
+            label='Opponent Points When Subbed In',
+            min_value=0,
+            value=0,
+            step=1
+        )
+    second_half_col, second_min_col, second_sec_col, team_score_out, opp_score_out = st.columns(5)
     with second_half_col:
         half_out = st.radio(
             label='Select Half Subbed Out', options=[1, 2], horizontal=True
@@ -127,24 +140,11 @@ with st.form(key='minutes_form', clear_on_submit=False):
             step=1,
         )
 
-    points_in_col, opp_points_in_col = st.columns(2)
-    points_out_col, opp_points_out_col = st.columns(2)
-    with points_in_col:
-        points_in = st.number_input(
-            label='Team Points When Subbed In', min_value=0, value=0, step=1
-        )
-    with points_out_col:
+    with team_score_out:
         points_out = st.number_input(
             label='Team Points When Subbed Out', min_value=0, value=0, step=1
         )
-    with opp_points_in_col:
-        opp_points_in = st.number_input(
-            label='Opponent Points When Subbed In',
-            min_value=0,
-            value=0,
-            step=1
-        )
-    with opp_points_out_col:
+    with opp_score_out:
         opp_points_out = st.number_input(
             label='Opponent Points When Subbed Out',
             min_value=0,
@@ -152,21 +152,21 @@ with st.form(key='minutes_form', clear_on_submit=False):
             step=1
         )
 
-    half_time = 18 * 60
-    if half == 2:
-        time_in = minutes * 60 + seconds
-    else:
-        half_time_in = minutes * 60 + seconds
-        time_in = half_time + half_time_in
-
-    if half_out == 2:
-        time_out = minutes_out * 60 + seconds_out
-    else:
-        half_time_out = minutes_out * 60 + seconds_out
-        time_out = half_time + half_time_out
 
     add_minutes = st.form_submit_button(label='Add Minutes')
     if add_minutes:
+        half_time = 18 * 60
+        if half == 2:
+            time_in = minutes * 60 + seconds
+        else:
+            half_time_in = minutes * 60 + seconds
+            time_in = half_time + half_time_in
+
+        if half_out == 2:
+            time_out = minutes_out * 60 + seconds_out
+        else:
+            half_time_out = minutes_out * 60 + seconds_out
+            time_out = half_time + half_time_out
         with sqlitecloud.connect(sql_lite_connect) as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -183,4 +183,8 @@ with st.form(key='minutes_form', clear_on_submit=False):
                 ),
             )
             conn.commit()
-        st.write('Minutes Added')
+        st.success(
+            f'Minutes Added for Player {player_val} in Game {game_list[0]} '\
+            f'from {time_in} seconds to {time_out} seconds with '\
+            f'team points {points_in} to {points_out} and opponent points {opp_points_in} to {opp_points_out}.'
+        )

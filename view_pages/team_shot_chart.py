@@ -9,9 +9,14 @@ st.set_page_config(layout='wide')
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
+button = st.button(label='Clear Cache')
+if button:
+     st.cache_data.clear()
+     st.cache_resource.clear()
+     st.rerun()
 
 # ----------------------------------------------------------------------------
-@st.cache_data
+@st.cache_data(show_spinner=True)
 def get_game_data():
      team_data = data_source.run_query(
         sql=sql.team_shot_chart_sql(), connection=sql_lite_connect
@@ -26,7 +31,7 @@ def get_game_data():
 
 
 # ----------------------------------------------------------------------------
-@st.cache_data
+@st.cache_data(show_spinner=True)
 def filter_team_data(team_data):
      team_data_filtered = team_data.copy()
      team_data_filtered = team_data_filtered.sort_values(
