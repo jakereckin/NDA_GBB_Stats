@@ -229,7 +229,7 @@ def insert_game_play():
     INSERT INTO GAME_STATS_PLAYS (GAME_ID, PLAYER_ID, STAT)
     VALUES (?, ?, ?)
     """
-    return sql
+    return sql 
 
 def delete_game_play():
     sql = """
