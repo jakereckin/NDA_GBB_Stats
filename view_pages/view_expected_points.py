@@ -394,8 +394,7 @@ def apply_model(play_event_spot):
     model_columns = [
     'XSPOT', 'YSPOT',
      'INTIAL_PERCENTAGE',
-    'SHOT_DEFENSE_CODED', 'MAKE',
-    'GAME_ID',  'INIT_EXPECTED',
+    'SHOT_DEFENSE_CODED', 'INIT_EXPECTED',
     'HOME_FLAG',  'OPP_EXPECTED',
     'LAST_ROLLING_POINTS_TEAM_OPPONENT', 
     'LAST_ROLLING_POINTS_TEAM_NDA'
