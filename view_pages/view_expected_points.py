@@ -392,13 +392,13 @@ def apply_model(play_event_spot):
     '''
     pipeline = joblib.load(filename='pipeline.pkl')
     model_columns = [
-        'XSPOT', 'YSPOT',
-        'SPOT_TOTAL_MAKES', 
-        'INTIAL_PERCENTAGE',
-        'SHOT_DEFENSE_CODED', 'ROLLING_PERCENT',
-         'INIT_EXPECTED',
-        'HOME_FLAG',  'OPP_EXPECTED',
-        'LAST_ROLLING_POINTS_TEAM_OPPONENT', 'TEAM_SPREAD', 'LAST_ROLLING_POINTS_TEAM_NDA'
+    'XSPOT', 'YSPOT',
+     'INTIAL_PERCENTAGE',
+    'SHOT_DEFENSE_CODED', 'MAKE',
+    'GAME_ID',  'INIT_EXPECTED',
+    'HOME_FLAG',  'OPP_EXPECTED',
+    'LAST_ROLLING_POINTS_TEAM_OPPONENT', 
+    'LAST_ROLLING_POINTS_TEAM_NDA'
     ]
     X = play_event_spot.select(model_columns)
     #X = play_event_spot[model_columns]
