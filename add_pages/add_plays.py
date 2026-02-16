@@ -191,9 +191,11 @@ player_game = load_player_game(SQL_CONN)
 games = player_game.sort_values(by="SEASON", ascending=False).reset_index(drop=True)
 season_list = games["SEASON"].unique().tolist()
 
-left, middle, right = st.columns([1, 1, 1])
-with left:
-    season = st.radio(label="Select Season", options=season_list, horizontal=True)
+
+top_left, top_mid, top_right = st.columns([1.2, 1.2, 0.2])
+
+with top_left:
+    season = st.radio("Season", season_list, horizontal=True)
 
 games_season = games[games["SEASON"] == season].copy()
 games_season["DATE_DTTM"] = pd.to_datetime(games_season["DATE"])
@@ -201,19 +203,17 @@ games_season = games_season.sort_values(by="DATE_DTTM")
 games_season["GAME_LABEL"] = games_season["GAME_LABEL"].astype(str)
 game_list = games_season["GAME_LABEL"].unique().tolist()[::-1]
 
-with middle:
-    game_select = st.selectbox(label="Select Game", options=game_list, index=0)
-
-with right:
-    left, right = st.columns(2)
-    with right:
-        if st.button(label="Clear Cache", key="clear_cache_btn"):
-            load_pbp_data_cached.clear()
-            load_player_game.clear()
-            load_game_summary.clear()
-            st.success("Cache cleared!")
-            time.sleep(1)
-            st.rerun()
+with top_mid:
+    game_select = st.selectbox("Game", game_list, index=0)
+    
+with top_right:
+    if st.button("Clear Cache", key="clear_cache_btn", type='primary'):
+        load_pbp_data_cached.clear()
+        load_player_game.clear()
+        load_game_summary.clear()
+        st.success("Cache cleared")
+        time.sleep(1)
+        st.rerun()
 
 game = games_season[games_season["GAME_LABEL"] == game_select].iloc[0]
 game_id = int(game["GAME_ID"])
@@ -223,7 +223,7 @@ games_season["NUMBER_INT"] = games_season["NUMBER"].astype(int)
 unique_players = games_season.sort_values("NUMBER_INT")["PLAYER_LABEL"].unique()
 
 fig = build_blank_chart()
-col_chart, col_form = st.columns(2)
+col_chart, col_form = st.columns([0.45, 0.55])
 with col_chart:
     clicked = plotly_events(plot_fig=fig, click_event=True, key=f"shot-capture-{game_id}")
 
@@ -243,7 +243,7 @@ if clicked:
             st.write(f"Adding shot at {spot_val} for {game_val}")
             with st.form(key=f"shot_form_{game_id}", clear_on_submit=False):
                 player_val = st.radio(label="Player", options=unique_players, horizontal=True)
-                c2, c3, c4, c5 = st.columns(4)
+                c2, c3, c4, c5 = st.columns([1, 1, 1, 1])
                 with c4:
                     free_throw = st.radio(label="Free Throw", options=["N", "Y"], horizontal=True)
                 with c2:
@@ -259,10 +259,10 @@ if clicked:
                 with c5:
                     paint_touch = st.radio(label="Paint Touch", options=["N", "Y"], horizontal=True)
                 other_stats = [
-                    'Shot','Offensive Rebound', 'Defensive Rebound', 'Turnover',
-                    'Steal', 'Block', 'Foul', 'Assist'
+                    'Shot','Offensive Rebound', 'Defensive Rebound', 'Assist',
+                     'Steal', 'Block', 'Turnover', 'Foul'
                 ]
-                choose_stat = st.radio(label="Other Stats", options=other_stats, horizontal=True)
+                choose_stat = st.radio(label="Stat Type", options=other_stats, horizontal=True)
                 add = st.form_submit_button(label="Add Play")
                 if add:
                     player_number, game_val_final = get_values_needed(
@@ -353,7 +353,8 @@ if clicked:
                                     )
                                 conn.commit()
                                 st.success(f'Added {final_stat} for player {player_number}')
-                                st.session_state.game_stat_version += 1
+                        st.session_state.game_stat_version += 1
+                        load_game_stats.clear()
                         new_game_summary = upsert_game_summary(
                             player_number=player_number,
                             game_id=game_val_final,
@@ -364,6 +365,7 @@ if clicked:
                             f'Player {player_number} now has {stat_val} {final_stat} '
                             f'for game {game_val}'
                         )
+                        st.session_state.game_stat_version += 1
                         st.session_state.refresh_game_stat_version = True
                     
                     if choose_stat == 'Shot':
@@ -426,8 +428,6 @@ if clicked:
 
                         st.session_state.pbp_version += 1
                         st.session_state.refresh_pbp = True
-                        st.session_state.refresh_game_stat_version = True
-                        st.session_state.game_stat_version += 1
 
 # Ensure pbp_data is fresh if requested
 if st.session_state.refresh_pbp:
@@ -437,6 +437,7 @@ if st.session_state.refresh_pbp:
 
 if st.session_state.refresh_game_stat_version:
     st.write("Refreshing game stats data...")
+    load_game_stats.clear()
     game_stat_plays = load_game_stats(SQL_CONN, st.session_state.refresh_game_stat_version)
     st.success("Game stats data refreshed!")
     st.session_state.refresh_game_stat_version = False
@@ -471,9 +472,8 @@ simple_data = simple_data[["NUMBER", "SPOT", "SHOT_DEFENSE", "MAKE_MISS", "PLAY_
 
 left_col, right_col = st.columns([2, 1])
 with left_col:
-    left_side, right_side = st.columns([1, 1])
-    with left_side:
-        st.markdown(f"**Showing last 100 shots for Game ID: {game_id}**")
+    left_side, right_side = st.columns([1, .5])
+    st.markdown(f"**Showing last 100 shots for Game ID: {game_id}**")
     with right_side:
         delete = st.button("Delete Selected Shots", key=f"delete_btn_{game_id}")
     editor_key = f"prev_shots_editor_{game_id}"
@@ -481,7 +481,7 @@ with left_col:
         simple_data, 
         hide_index=True,
         key=editor_key,
-        width='content',
+        width='stretch',
         column_config={
             "NUMBER": st.column_config.NumberColumn(
                 "Player",
@@ -676,17 +676,18 @@ with right_col:
                     conn.commit()
 
                 st.success(f"Deleted {deleted_count} shots")
+                load_game_stats.clear()
                 new_game_summary = upsert_game_summary(
                     player_number=player_number,
                     game_id=game_val_delete_id,
                     SQL_CONN=SQL_CONN
                 )
                 st.session_state.game_stat_version += 1
-                st.session_state.game_version += 1
                 st.session_state.refresh_game_stat_version = True
                 st.rerun()
 
 
+load_game_summary.clear()
 game_summary_data = load_game_summary(SQL_CONN, st.session_state.game_version)
 game_row = games_season[
     (games_season["OPPONENT"] == opponent_name)
@@ -704,7 +705,7 @@ this_game_summary = this_game_summary[[
 with left_col:
     st.dataframe(
         this_game_summary,
-        width='content',
+        width='stretch',
         hide_index=True,
         column_config={
             'PLAYER_ID': st.column_config.NumberColumn(
