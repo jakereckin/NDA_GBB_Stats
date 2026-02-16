@@ -151,6 +151,9 @@ def upsert_game_summary(player_number, game_id, SQL_CONN):
     existing_ids = set(game_summary_ids["_id"].unique().tolist())
 
     # Extract values in correct order
+    if len(new_game_summary) == 0:
+        return None
+    
     vals = [
         str(new_game_summary["TWO_FGM"].values[0]),
         str(new_game_summary["TWO_FGA"].values[0]),
