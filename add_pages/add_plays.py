@@ -152,23 +152,37 @@ def upsert_game_summary(player_number, game_id, SQL_CONN):
 
     # Extract values in correct order
     if len(new_game_summary) == 0:
-        return None
-    
-    vals = [
-        str(new_game_summary["TWO_FGM"].values[0]),
-        str(new_game_summary["TWO_FGA"].values[0]),
-        str(new_game_summary["THREE_FGM"].values[0]),
-        str(new_game_summary["THREE_FGA"].values[0]),
-        str(new_game_summary["FTM"].values[0]),
-        str(new_game_summary["FTA"].values[0]),
-        str(new_game_summary["OFFENSIVE_REBOUNDS"].values[0]),
-        str(new_game_summary["DEFENSIVE_REBOUNDS"].values[0]),
-        str(new_game_summary["ASSISTS"].values[0]),
-        str(new_game_summary["STEALS"].values[0]),
-        str(new_game_summary["BLOCKS"].values[0]),
-        str(new_game_summary["TURNOVER"].values[0]),
-        str(new_game_summary["FOULS"].values[0]),
-    ]
+        vals = [
+            str(0),  # TWO_FGM,
+            str(0),  # TWO_FGA,
+            str(0),  # THREE_FGM,
+            str(0),  # THREE_FGA,
+            str(0),  # FTM,
+            str(0),  # FTA,
+            str(0),  # OFFENSIVE_REBOUNDS,
+            str(0),  # DEFENSIVE_REBOUNDS,
+            str(0),  # ASSISTS,
+            str(0),  # STEALS,
+            str(0),  # BLOCKS,
+            str(0),  # TURNOVER,
+            str(0),  # FOULS,
+        ]
+    else:
+        vals = [
+            str(new_game_summary["TWO_FGM"].values[0]),
+            str(new_game_summary["TWO_FGA"].values[0]),
+            str(new_game_summary["THREE_FGM"].values[0]),
+            str(new_game_summary["THREE_FGA"].values[0]),
+            str(new_game_summary["FTM"].values[0]),
+            str(new_game_summary["FTA"].values[0]),
+            str(new_game_summary["OFFENSIVE_REBOUNDS"].values[0]),
+            str(new_game_summary["DEFENSIVE_REBOUNDS"].values[0]),
+            str(new_game_summary["ASSISTS"].values[0]),
+            str(new_game_summary["STEALS"].values[0]),
+            str(new_game_summary["BLOCKS"].values[0]),
+            str(new_game_summary["TURNOVER"].values[0]),
+            str(new_game_summary["FOULS"].values[0]),
+        ]
 
     # Insert or update
     with sqlitecloud.connect(SQL_CONN) as conn:
