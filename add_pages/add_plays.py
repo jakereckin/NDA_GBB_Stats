@@ -570,18 +570,32 @@ with right_col:
         connection=SQL_CONN
     )
     current_totals = current_totals.drop(columns=['GAME_ID'])
-    current_totals['Turnover Percent'] = (
+    current_totals['Turnover %'] = (
         current_totals['TEAM_TURNOVERS'] / np.where(
             current_totals['POSSESSIONS'] == 0,
             1,
             current_totals['POSSESSIONS']
         )
     )
-    current_totals['Assist Percent'] = (
+    current_totals['Assist %'] = (
         current_totals['TEAM_ASSISTS'] / np.where(
             current_totals['TEAM_FGM'] == 0,
             1,
             current_totals['TEAM_FGM']
+        )
+    )
+    current_totals['Free Throw Rate'] = (
+        current_totals['TEAM_FTA'] / np.where(
+            current_totals['TEAM_FGA'] == 0,
+            1,
+            current_totals['TEAM_FGA']
+        )
+    )
+    current_totals['True Shooting %'] = (
+        current_totals['POINTS'] / np.where(
+            (current_totals['TEAM_FGA'] + 0.44 * current_totals['TEAM_FTA']) == 0,
+            1,
+           2 * (current_totals['TEAM_FGA'] + 0.44 * current_totals['TEAM_FTA'])
         )
     )
     current_totals = (
@@ -621,15 +635,105 @@ with right_col:
         '2FGM', '2FGA', '3FGM', '3FGA', 'FTM', 'FTA',
         'OREB', 'DREB', 'Assists', 'Steals', 'Blocks',
         'Turnovers', 'eFG%', 'Possessions', 'PPP', 'PPA',
-        'Turnover Percent', 'Assist Percent', 'Points'
+        'Turnover %', 'Assist %', 'Free Throw Rate', 'True Shooting %', 'Points'
     ]]
     st.markdown("#### Current Game Totals")
+    def efg_val(val):
+        if val >= .6:
+            return "background-color: lightgreen"
+        elif val >= .5:
+            return "background-color: lightyellow"
+        else:
+            return "background-color: lightred"
+        
+    def ppp_val(val):
+        if val >= 1.1:
+            return "background-color: lightgreen"
+        elif val >= 1.0:
+            return "background-color: lightyellow"
+        else:
+            return "background-color: lightred"
+    
+    def to_val(val):
+        if val >= .2:
+            return "background-color: lightred"
+        elif val >= .155:
+            return "background-color: lightyellow"
+        else:
+            return "background-color: lightgreen"
+    
+    def tr_val(val):
+        if val >= .6:
+            return "background-color: lightgreen"
+        elif val >= .55:
+            return "background-color: lightyellow"
+        else:
+            return "background-color: lightred"
+        
+    def ft_val(val):
+        if val >= .25:
+            return "background-color: lightgreen"
+        elif val >= .175:
+            return "background-color: lightyellow"
+        else:
+            return "background-color: lightred"
+
+    top_row = current_totals[['2FGM', '2FGA', '3FGM', '3FGA', 'FTM', 'FTA']]
+    second_row = current_totals[[
+        'OREB', 'DREB', 'Assists', 'Steals', 'Blocks',
+    ]]
+    third_row = current_totals[[
+        'Turnovers', 'eFG%', 'Possessions', 'PPP', 'PPA',
+    ]]
+    fourth_row = current_totals[[
+        'Turnover %', 'Assist %', 'Free Throw Rate', 'True Shooting %', 'Points'
+    ]]
+    third_row_styled = (
+        third_row.style.applymap(efg_val, subset=['eFG%'])
+        .applymap(ppp_val, subset=['PPP'])
+        .format({
+            'Turnovers': '{:.0f}',
+            'Possessions': '{:.0f}',
+            'eFG%': '{:.1%}',
+            'PPP': '{:.2f}',
+            'PPA': '{:.2f}',
+        })
+    )
+    fourth_row_styled = (
+        fourth_row.style.applymap(to_val, subset=['Turnover %'])
+        .applymap(tr_val, subset=['True Shooting %'])
+        .applymap(ft_val, subset=['Free Throw Rate'])
+        .format({
+            'Turnover %': '{:.1%}',
+            'Assist %': '{:.1%}',
+            'Free Throw Rate': '{:.1%}',
+            'True Shooting %': '{:.1%}',
+            'Points': '{:.0f}',
+        })
+    )
+    # build df_display as you already do
+    # render with data_editor
     st.dataframe(
-        current_totals.T.rename(columns={0: "Total"}).reset_index().rename(columns={"index": "Stat"}),
-        width='stretch',
-        height=750,
+       top_row,
+        width="stretch",
         hide_index=True
     )
+    st.dataframe(
+        second_row,
+        width="stretch",
+        hide_index=True
+    )
+    st.dataframe(
+        third_row_styled,
+        width="stretch",
+        hide_index=True
+    )
+    st.dataframe(
+        fourth_row_styled,
+        width="stretch",
+        hide_index=True
+    )
+
     game_stat_plays['DELETE'] = False
     game_stat_plays['GAME_ID'] = game_stat_plays['GAME_ID'].astype(int)
     game_stat_plays = game_stat_plays[game_stat_plays['GAME_ID'] == game_id]
