@@ -640,43 +640,43 @@ with right_col:
     st.markdown("#### Current Game Totals")
     def efg_val(val):
         if val >= .6:
-            return "background-color: lightgreen"
+            return "background-color: green"
         elif val >= .5:
             return "background-color: lightyellow"
         else:
-            return "background-color: lightred"
+            return "background-color: red"
         
     def ppp_val(val):
         if val >= 1.1:
-            return "background-color: lightgreen"
+            return "background-color: green"
         elif val >= 1.0:
             return "background-color: lightyellow"
         else: 
-            return "background-color: lightred"
+            return "background-color: red"
     
     def to_val(val):
         if val >= .2:
-            return "background-color: lightred"
+            return "background-color: red"
         elif val >= .155:
             return "background-color: lightyellow"
         else:
-            return "background-color: lightgreen"
+            return "background-color: green"
     
     def tr_val(val):
         if val >= .6:
-            return "background-color: lightgreen"
+            return "background-color: green"
         elif val >= .55:
             return "background-color: lightyellow"
         else:
-            return "background-color: lightred"
+            return "background-color: red"
         
     def ft_val(val):
         if val >= .25:
-            return "background-color: lightgreen"
+            return "background-color: green"
         elif val >= .175:
             return "background-color: lightyellow"
         else:
-            return "background-color: lightred"
+            return "background-color: red"
 
     top_row = current_totals[['2FGM', '2FGA', '3FGM', '3FGA', 'FTM', 'FTA']]
     second_row = current_totals[[
@@ -706,7 +706,7 @@ with right_col:
         })
     )
     fourth_row_styled = (
-        fourth_row.style.map(to_val, subset=['Turnover %'])
+        fourth_row.style.map(lambda x: to_val(x), subset=['Turnover %'])
         .map(tr_val, subset=['TS%'])
         .map(ft_val, subset=['FTR'])
         .format({
