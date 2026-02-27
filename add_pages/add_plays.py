@@ -651,7 +651,7 @@ with right_col:
             return "background-color: lightgreen"
         elif val >= 1.0:
             return "background-color: lightyellow"
-        else:
+        else: 
             return "background-color: lightred"
     
     def to_val(val):
