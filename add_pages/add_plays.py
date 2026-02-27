@@ -688,9 +688,15 @@ with right_col:
     fourth_row = current_totals[[
         'Turnover %', 'Assist %', 'Free Throw Rate', 'True Shooting %', 'Points'
     ]]
+    fourth_row = fourth_row.rename(
+        columns={
+            'True Shooting %': 'TS%',
+             'Free Throw Rate': 'FTR',
+        }
+    )
     third_row_styled = (
-        third_row.style.applymap(efg_val, subset=['eFG%'])
-        .applymap(ppp_val, subset=['PPP'])
+        third_row.style.map(efg_val, subset=['eFG%'])
+        .map(ppp_val, subset=['PPP'])
         .format({
             'Turnovers': '{:.0f}',
             'Possessions': '{:.0f}',
@@ -700,14 +706,14 @@ with right_col:
         })
     )
     fourth_row_styled = (
-        fourth_row.style.applymap(to_val, subset=['Turnover %'])
-        .applymap(tr_val, subset=['True Shooting %'])
-        .applymap(ft_val, subset=['Free Throw Rate'])
+        fourth_row.style.map(to_val, subset=['Turnover %'])
+        .map(tr_val, subset=['TS%'])
+        .map(ft_val, subset=['FTR'])
         .format({
             'Turnover %': '{:.1%}',
             'Assist %': '{:.1%}',
-            'Free Throw Rate': '{:.1%}',
-            'True Shooting %': '{:.1%}',
+            'FTR': '{:.1%}',
+            'TS%': '{:.1%}',
             'Points': '{:.0f}',
         })
     )
