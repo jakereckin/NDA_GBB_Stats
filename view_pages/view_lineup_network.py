@@ -10,8 +10,9 @@ import matplotlib.patheffects as pe
 from py import sql, data_source
 pd.options.mode.chained_assignment = None
 
-st.cache_resource.clear()
-st.set_page_config(layout='wide')
+st.set_page_config(page_title='Lineup Network', layout='wide')
+st.title('Lineup Network')
+st.caption('Explore lineup transitions and identify combinations that create the strongest scoring margin.')
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
@@ -231,13 +232,14 @@ def get_game_level(data):
     )
     return game_level
 
-season, players = st.columns(2)
+st.subheader('Choose a season and lineup filter')
+season, players = st.columns(2, vertical_alignment='bottom')
 
 minute_data = get_data()
 years = minute_data['SEASON'].sort_values(ascending=False).drop_duplicates().tolist()
 
 with season:
-    select_season = st.radio('Select Season', options=years, horizontal=True)
+    select_season = st.radio('Season', options=years, horizontal=True)
 minute_data = minute_data[minute_data['SEASON'] == select_season]
 clean_lineups = build_lineup_intervals(minutes_data=minute_data)
 games_info, player_info = get_game_player_info(minutes_data=minute_data)
@@ -254,7 +256,11 @@ lineup_analysis['RANK'] = lineup_analysis.groupby('GAME_ID').cumcount() + 1
 player_ids = player_info['PLAYER_ID'].astype(int).drop_duplicates().tolist()
 
 with players:
-    select_players = st.multiselect('Select Players to View', options=player_ids)
+    select_players = st.multiselect(
+        'Players to include',
+        options=player_ids,
+        placeholder='Show lineups containing these players'
+    )
 
 lineup_analysis["LINEUP_SET"] = lineup_analysis["LINEUP_KEY"].apply(lambda x: set(ast.literal_eval(x)))
 these_players = lineup_analysis[ lineup_analysis["LINEUP_SET"].apply(lambda s: set(select_players).issubset(s)) ]
@@ -336,4 +342,6 @@ for node, (x, y) in pos.items():
 plt.title("Lineup Transition Graph", fontsize=24)
 plt.axis("off")
 
-st.pyplot(fig)
+st.markdown('#### Lineup transition graph')
+st.caption('Green nodes have a positive average plus/minus per minute; red nodes are negative.')
+st.pyplot(fig, use_container_width=True)

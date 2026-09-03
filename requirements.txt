@@ -8,7 +8,7 @@ polars==0.18.15
 scikit_learn==1.6.1
 lightgbm==4.5.0
 sqlitecloud==0.0.83
-streamlit==1.51.0
+streamlit==1.62.0
 streamlit_plotly_events==0.0.6
 streamlit-authenticator==0.4.2
 networkx==3.6.1

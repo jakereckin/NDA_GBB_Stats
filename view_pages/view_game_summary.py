@@ -5,8 +5,9 @@ import polars as pl
 from py import sql, data_source
 pd.options.mode.chained_assignment = None
 
-st.cache_resource.clear()
-st.set_page_config(layout='wide')
+st.set_page_config(page_title='Game Summary', layout='wide')
+st.title('Game Summary')
+st.caption('Compare team performance, player contributions, and season averages for selected games.')
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 list_of_stats = [
     'LABEL', 'EFG%', 'TURNOVER_RATE', 'PPA', 
@@ -246,13 +247,14 @@ def clean_frames(team_data, player_level, player_season_avg, other_stats):
 # ============================================================================
 game_summary = load_data()
 team_data = get_team_games(game_summary=game_summary)
-col1, col2, col3 = st.columns([2, 4, 2])
+st.subheader('Choose games and view')
+col1, col2, col3 = st.columns([2, 4, 2], vertical_alignment='bottom')
 team_data = team_data.to_pandas()
 season_list = game_summary['SEASON'].unique().tolist()
 season_list = sorted(season_list, reverse=True)
 
 with col1:
-    season = st.radio(label='Select Season', options=season_list, horizontal=True)
+    season = st.radio(label='Season', options=season_list, horizontal=True)
 
 if season_list:
 
@@ -263,12 +265,17 @@ if season_list:
     games_list = reversed(games_list)
 
     with col2:
-        st.session_state.game = st.multiselect(label='Select Games', options=games_list)
+        st.session_state.game = st.multiselect(
+            label='Games',
+            options=list(games_list),
+            placeholder='Select one or more games',
+            help='Select multiple games to compare combined team and player results.'
+        )
     
     if st.session_state.game != []:
         with col3:
             level_view = st.radio(
-                label='Select View',
+                label='View level',
                 options=['Team Level', 'Player Level', 'Both'],
                 horizontal=True
             )
@@ -287,7 +294,7 @@ if season_list:
         player_level_show = player_level_show[player_level_show['TYPE'] == 'Selected Games']
         player_level_show = player_level_show.drop(columns=['TYPE']).sort_values(by=['Game Score'], ascending=False)
         if level_view == 'Team Level':
-            st.text(body='Team Level Data')
+            st.markdown('#### Team level')
             st.dataframe(
                 data=team_data_clean,
                 width='stretch', 
@@ -295,7 +302,7 @@ if season_list:
                 column_config=column_config
             )
         elif level_view == 'Player Level':
-            st.text(body='Player Level Data')
+            st.markdown('#### Player level')
             st.dataframe(
                 data=player_level_show,
                 width='stretch', 
@@ -303,14 +310,14 @@ if season_list:
                 column_config=column_config
             )
         elif level_view == 'Both':
-            st.text(body='Team Level Data')
+            st.markdown('#### Team level')
             st.dataframe(
                 data=team_data_clean,
                 width='stretch', 
                 hide_index=True,
                 column_config=column_config
             )
-            st.text(body='Player Level Data')
+            st.markdown('#### Player level')
             st.dataframe(
                 data=player_level_show,
                 width='stretch', 
@@ -319,7 +326,7 @@ if season_list:
             )
         if level_view in ['Team Level']:
             data = st.radio(
-                label='Select Stat', options=other_stats, horizontal=True
+                label='Stat to chart', options=other_stats, horizontal=True
             )
             if data:
                 
@@ -333,9 +340,12 @@ if season_list:
                     color='TYPE'
                 )
                 fig.update_layout(
+                    title=f'{data} by player',
                     xaxis_title=data,
                     yaxis_title='Player Name',
                     width=800,
                     height=600
                 )
                 st.plotly_chart(figure_or_data=fig, width='stretch')
+    else:
+        st.info('Select at least one game above to view the summary tables.')

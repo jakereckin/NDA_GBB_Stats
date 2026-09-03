@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import time
 import numpy as np
 import sqlitecloud
 from py import sql, data_source, utils as ut
@@ -9,7 +8,7 @@ pd.options.mode.chained_assignment = None
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
 # ----------------------------------------------------------------------------
-@st.cache_resource
+@st.cache_data(show_spinner=False)
 def load_data():
     players = data_source.run_query(
         sql=sql.get_players_sql(), connection=sql_lite_connect
@@ -52,13 +51,16 @@ players, games = load_data()
 my_season_options = (
         games['SEASON'].sort_values(ascending=False).unique().tolist()
     )
-st.title("⏱️ Add Minutes Played")
+st.set_page_config(page_title='Add Minutes', layout='wide')
+st.title('Add Minutes')
+st.caption('Record when a player enters and exits, plus the score at each substitution.')
 with st.form(key='minutes_form', clear_on_submit=False):
+    st.subheader('Game and player')
     season_col, game_col = st.columns(2)
 
     with season_col:
         season = st.radio(
-            label='Select Season',
+            label='Season',
             options=my_season_options,
             horizontal=True,
         )
@@ -71,7 +73,7 @@ with st.form(key='minutes_form', clear_on_submit=False):
 
     with game_col:
         game_select = st.selectbox(
-            label='Select Game', options=my_game_options
+            label='Game', options=my_game_options
         )
 
     this_game = get_selected_game(
@@ -83,17 +85,17 @@ with st.form(key='minutes_form', clear_on_submit=False):
     game_list = this_game['GAME_ID'].unique().tolist()
 
     player_val = st.radio(
-        label='Select Player', options=player_values, horizontal=True
+        label='Player', options=player_values, horizontal=True
     )
 
     half_col, min_col, sec_col, team_score_in, opp_score_in = st.columns(5)
     with half_col:
         half = st.radio(
-            label='Select Half Subbed In', options=[1, 2], horizontal=True
+            label='Half entered', options=[1, 2], horizontal=True
         )
     with min_col:
         minutes = st.number_input(
-            label='Minutes Subbed In',
+            label='Minutes entered',
             min_value=0,
             max_value=18,
             value=0,
@@ -101,7 +103,7 @@ with st.form(key='minutes_form', clear_on_submit=False):
         )
     with sec_col:
         seconds = st.number_input(
-            label='Seconds Subbed In',
+            label='Seconds entered',
             min_value=0,
             max_value=59,
             value=0,
@@ -109,23 +111,25 @@ with st.form(key='minutes_form', clear_on_submit=False):
         )
     with team_score_in:
         points_in = st.number_input(
-            label='Team Points When Subbed In', min_value=0, value=0, step=1
+            label='Team points when entered', min_value=0, value=0, step=1
         )
     with opp_score_in:
         opp_points_in = st.number_input(
-            label='Opponent Points When Subbed In',
+            label='Opponent points when entered',
             min_value=0,
             value=0,
             step=1
         )
+    st.divider()
+    st.subheader('Exit details')
     second_half_col, second_min_col, second_sec_col, team_score_out, opp_score_out = st.columns(5)
     with second_half_col:
         half_out = st.radio(
-            label='Select Half Subbed Out', options=[1, 2], horizontal=True
+            label='Half exited', options=[1, 2], horizontal=True
         )
     with second_min_col:
         minutes_out = st.number_input(
-            label='Minutes Subbed Out',
+            label='Minutes exited',
             min_value=0,
             max_value=18,
             value=0,
@@ -133,7 +137,7 @@ with st.form(key='minutes_form', clear_on_submit=False):
         )
     with second_sec_col:
         seconds_out = st.number_input(
-            label='Seconds Subbed Out',
+            label='Seconds exited',
             min_value=0,
             max_value=59,
             value=0,
@@ -142,18 +146,18 @@ with st.form(key='minutes_form', clear_on_submit=False):
 
     with team_score_out:
         points_out = st.number_input(
-            label='Team Points When Subbed Out', min_value=0, value=0, step=1
+            label='Team points when exited', min_value=0, value=0, step=1
         )
     with opp_score_out:
         opp_points_out = st.number_input(
-            label='Opponent Points When Subbed Out',
+            label='Opponent points when exited',
             min_value=0,
             value=0,
             step=1
         )
 
 
-    add_minutes = st.form_submit_button(label='Add Minutes')
+    add_minutes = st.form_submit_button(label='Add minutes', type='primary')
     if add_minutes:
         half_time = 18 * 60
         if half == 2:
@@ -183,6 +187,7 @@ with st.form(key='minutes_form', clear_on_submit=False):
                 ),
             )
             conn.commit()
+        load_data.clear()
         st.success(
             f'Minutes Added for Player {player_val} in Game {game_list[0]} '\
             f'from {time_in} seconds to {time_out} seconds with '\

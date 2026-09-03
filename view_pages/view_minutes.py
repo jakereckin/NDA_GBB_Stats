@@ -6,8 +6,9 @@ import plotly.express as px
 from py import sql, data_source
 pd.options.mode.chained_assignment = None
 
-st.cache_resource.clear()
-st.set_page_config(layout='wide')
+st.set_page_config(page_title='Minutes and Lineups', layout='wide')
+st.title('Minutes and Lineups')
+st.caption('Inspect player workload, lineup performance, and scoring margin by season.')
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
@@ -233,9 +234,10 @@ def get_game_level(data):
     return game_level
 
 
+st.subheader('Choose a season and analysis')
 minute_data = get_data()
 years = minute_data['SEASON'].sort_values(ascending=False).drop_duplicates().tolist()
-select_season = st.radio('Select Season', options=years, horizontal=True)
+select_season = st.radio('Season', options=years, horizontal=True)
 minute_data = minute_data[minute_data['SEASON'] == select_season]
 clean_lineups = build_lineup_intervals(minutes_data=minute_data)
 games_info, player_info = get_game_player_info(minutes_data=minute_data)
@@ -269,10 +271,10 @@ if view_analytics == 'Player Lineup':
 
     player_col, min_col, stat_col = st.columns([1, 1, 2])
     with player_col:
-        select_player = st.radio(label='Select Player', options=player_map.keys(), horizontal=True)
+        select_player = st.selectbox(label='Player', options=list(player_map.keys()))
         selected_player = player_map.get(select_player)
     with min_col:
-        min_threshold = st.number_input(label='Minimum minutes to consider', step=1, value=2)
+        min_threshold = st.number_input(label='Minimum minutes', step=1, value=2)
 
     if selected_player:
         that_player_lineups = unique_player_lineups.get(selected_player)
@@ -322,6 +324,7 @@ if view_analytics == 'Player Lineup':
                     color_discrete_sequence=['green']
                 )
                 fig.update_traces(textposition='outside')
+                fig.update_layout(title=f'{data} by player lineup')
                 st.plotly_chart(figure_or_data=fig, width='stretch')
             sorted_lineup = (
                 lineup_level.sort_values(by=[data], ascending=False)
@@ -341,7 +344,7 @@ if view_analytics == 'Player':
         'Plus/Minus per Minute Played', 'Minutes per Game Played', 'Games Played'
         ]
     data = st.radio(
-        label='Select Stat', options=view_stats, horizontal=True
+        label='Stat', options=view_stats, horizontal=True
     )
     col1, col2 = st.columns(spec=[3,2])
     if data:
@@ -355,6 +358,7 @@ if view_analytics == 'Player':
                 color_discrete_sequence=['green']
             )
             fig.update_traces(textposition='outside')
+            fig.update_layout(title=f'{data} by player')
             st.plotly_chart(figure_or_data=fig, width='stretch')
         sorted_lineup = (
             player_clean_data.sort_values(by=[data], ascending=False)
@@ -370,7 +374,7 @@ if view_analytics == 'Player':
 if view_analytics == 'Overall Lineup':
     min_col, stat_col = st.columns([1, 2])
     with min_col:
-        min_threshold = st.number_input(label='Minimum minutes to consider', step=1, value=2)
+        min_threshold = st.number_input(label='Minimum minutes', step=1, value=2)
     lineup_level = get_lineup_level_data(grouped_lineups)
     lineup_level['Minutes per Game'] = (
         lineup_level['TOTAL_MIN'] / lineup_level['GAME_COUNT']
@@ -385,7 +389,7 @@ if view_analytics == 'Overall Lineup':
     ]
     with stat_col:
         data = st.radio(
-            label='Select Stat', options=view_stats, horizontal=True
+            label='Stat', options=view_stats, horizontal=True
         )
     col1, col2 = st.columns([3, 2])
     if data:
@@ -399,7 +403,8 @@ if view_analytics == 'Overall Lineup':
                     color_discrete_sequence=['green']
             )
             fig.update_traces(textposition='outside')
-            st.plotly_chart(figure_or_data=fig, width='content')
+            fig.update_layout(title=f'{data} by overall lineup')
+            st.plotly_chart(figure_or_data=fig, width='stretch')
         sorted_lineup = (
                 lineup_level.sort_values(by=[data], ascending=False)
                             .reset_index(drop=True)
@@ -423,7 +428,7 @@ if view_analytics == 'Game':
     col1, col2 = st.columns(2)
     with col1:
         game_select = st.selectbox(
-            label='Select Game', options=games
+            label='Game', options=games
         )
     game_data = game_data[game_data['OPPONENT'] == game_select]
     view_stats = [
@@ -433,7 +438,7 @@ if view_analytics == 'Game':
         ]
     with col2:
         data = st.radio(
-            label='Select Stat', options=view_stats, horizontal=True
+            label='Stat', options=view_stats, horizontal=True
         )
     col1, col2 = st.columns([3, 2])
     if data:
@@ -447,6 +452,7 @@ if view_analytics == 'Game':
                 color_discrete_sequence=['green']
             )
             fig.update_traces(textposition='outside')
+            fig.update_layout(title=f'{data} by game')
             st.plotly_chart(figure_or_data=fig, width='stretch')
         sorted_lineup = (
             game_data.sort_values(by=[data], ascending=False)

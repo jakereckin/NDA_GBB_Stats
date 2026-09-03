@@ -1,4 +1,3 @@
-import time
 import sqlitecloud
 import numpy as np
 import pandas as pd
@@ -8,6 +7,8 @@ from streamlit_plotly_events import plotly_events
 from py import utils, data_source, sql
 
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
+st.title("Add Plays")
+st.caption("Choose a game, click a spot on the court, then record the play details.")
 
 SQL_CONN = st.secrets["nda_gbb_connection"]["DB_CONNECTION"]
 SHOT_DEFENSES = ["Open", "Guarded", "Heavily Guarded"]
@@ -25,7 +26,7 @@ if 'refresh_game_stat_version' not in st.session_state:
 if 'game_stat_version' not in st.session_state:
     st.session_state.game_stat_version = 0
 
-@st.cache_resource
+@st.cache_data(show_spinner=False)
 def load_shot_spots(connection: str):
     return data_source.run_query(sql=sql.get_shot_spots_sql(), connection=connection)
 
@@ -45,6 +46,13 @@ def load_pbp_data_cached(game_selelct, version: int):
 @st.cache_data(show_spinner=False)
 def load_game_stats(connection, version: int):
     return data_source.run_query(sql=sql.get_current_game_stats_plays_sql(), connection=connection)
+
+@st.cache_data(show_spinner=False)
+def load_current_totals(connection: str, game_id: int, version: int):
+    return data_source.run_query(
+        sql=sql.select_quick_game_info(game_id),
+        connection=connection,
+    )
 
 @st.cache_data(show_spinner=False)
 def make_grid(xmin, xmax, ymin, ymax, spacing):
@@ -209,7 +217,7 @@ games = player_game.sort_values(by="SEASON", ascending=False).reset_index(drop=T
 season_list = games["SEASON"].unique().tolist()
 
 
-top_left, top_mid, top_right = st.columns([1.2, 1.2, 0.2])
+top_left, top_mid, top_right = st.columns([1.2, 1.2, 0.35], vertical_alignment="bottom")
 
 with top_left:
     season = st.radio("Season", season_list, horizontal=True)
@@ -224,12 +232,12 @@ with top_mid:
     game_select = st.selectbox("Game", game_list, index=0)
     
 with top_right:
-    if st.button("Clear Cache", key="clear_cache_btn", type='primary'):
+    if st.button("Clear cache", key="clear_cache_btn", type="secondary", use_container_width=True):
         load_pbp_data_cached.clear()
         load_player_game.clear()
         load_game_summary.clear()
+        load_current_totals.clear()
         st.success("Cache cleared")
-        time.sleep(1)
         st.rerun()
 
 game = games_season[games_season["GAME_LABEL"] == game_select].iloc[0]
@@ -242,6 +250,8 @@ unique_players = games_season.sort_values("NUMBER_INT")["PLAYER_LABEL"].unique()
 fig = build_blank_chart()
 col_chart, col_form = st.columns([0.45, 0.55])
 with col_chart:
+    st.markdown("#### Shot location")
+    st.caption("Click the nearest court spot to begin.")
     clicked = plotly_events(plot_fig=fig, click_event=True, key=f"shot-capture-{game_id}")
 
 # Load pbp data (cached, versioned)
@@ -257,16 +267,17 @@ if clicked:
 
     if spot_val:
         with col_form:
-            st.write(f"Adding shot at {spot_val} for {game_val}")
+            st.markdown(f"#### Add play at `{spot_val}`")
+            st.caption(game_val)
             with st.form(key=f"shot_form_{game_id}", clear_on_submit=False):
                 player_val = st.radio(label="Player", options=unique_players, horizontal=True)
                 c2, c3, c4, c5 = st.columns([1, 1, 1, 1])
                 with c4:
-                    free_throw = st.radio(label="Free Throw", options=["N", "Y"], horizontal=True)
+                    free_throw = st.radio(label="Free throw", options=["N", "Y"], horizontal=True)
                 with c2:
-                    make_miss = st.radio(label="Make/Miss", options=["N", "Y"], horizontal=True)
+                    make_miss = st.radio(label="Made", options=["N", "Y"], horizontal=True)
                 with c3:
-                    shot_defense = st.radio(label="Shot Defense", options=SHOT_DEFENSES, horizontal=True)
+                    shot_defense = st.radio(label="Defense", options=SHOT_DEFENSES, horizontal=True)
                     if shot_defense == "Open":
                         shot_defense = "OPEN"
                     elif shot_defense == "Guarded":
@@ -274,13 +285,13 @@ if clicked:
                     else:
                         shot_defense = "HEAVILY_GUARDED"
                 with c5:
-                    paint_touch = st.radio(label="Paint Touch", options=["N", "Y"], horizontal=True)
+                    paint_touch = st.radio(label="Paint touch", options=["N", "Y"], horizontal=True)
                 other_stats = [
                     'Shot','Offensive Rebound', 'Defensive Rebound', 'Assist',
                      'Steal', 'Block', 'Turnover', 'Foul'
                 ]
-                choose_stat = st.radio(label="Stat Type", options=other_stats, horizontal=True)
-                add = st.form_submit_button(label="Add Play")
+                choose_stat = st.radio(label="Stat type", options=other_stats, horizontal=True)
+                add = st.form_submit_button(label="Add play", type="primary", use_container_width=True)
                 if add:
                     player_number, game_val_final = get_values_needed(
                         game_val=game_val, game_df=games_season, player_val=player_val
@@ -372,11 +383,13 @@ if clicked:
                                 st.success(f'Added {final_stat} for player {player_number}')
                         st.session_state.game_stat_version += 1
                         load_game_stats.clear()
+                        load_current_totals.clear()
                         new_game_summary = upsert_game_summary(
                             player_number=player_number,
                             game_id=game_val_final,
                             SQL_CONN=SQL_CONN
                         )
+                        st.session_state.game_version += 1
                         stat_val = new_game_summary[final_stat].values[0]
                         st.success(
                             f'Player {player_number} now has {stat_val} {final_stat} '
@@ -490,9 +503,10 @@ simple_data = simple_data[["NUMBER", "SPOT", "SHOT_DEFENSE", "MAKE_MISS", "PLAY_
 left_col, right_col = st.columns([2, 1])
 with left_col:
     left_side, right_side = st.columns([1, .5])
-    st.markdown(f"**Showing last 100 shots for Game ID: {game_id}**")
+    st.markdown(f"#### Recent shots · Game {game_id}")
+    st.caption("The latest 100 shots are shown first. Check Delete, then remove selected rows.")
     with right_side:
-        delete = st.button("Delete Selected Shots", key=f"delete_btn_{game_id}")
+        delete = st.button("Delete selected", key=f"delete_btn_{game_id}", type="secondary", use_container_width=True)
     editor_key = f"prev_shots_editor_{game_id}"
     edited_df = st.data_editor(
         simple_data, 
@@ -558,6 +572,7 @@ with left_col:
                 st.success(f"Deleted {deleted_count} shots")
                 st.session_state.pbp_version += 1
                 st.session_state.refresh_pbp = True
+                load_current_totals.clear()
                 st.rerun()
 
 with right_col:
@@ -565,9 +580,10 @@ with right_col:
     game_row = games_season[
         (games_season["OPPONENT"] == opponent_name) & (games_season["DATE"] == game_date)
     ]
-    current_totals = data_source.run_query(
-        sql=sql.select_quick_game_info(game_row['GAME_ID'].values[0]),
-        connection=SQL_CONN
+    current_totals = load_current_totals(
+        connection=SQL_CONN,
+        game_id=int(game_row['GAME_ID'].values[0]),
+        version=st.session_state.pbp_version + st.session_state.game_stat_version,
     )
     current_totals = current_totals.drop(columns=['GAME_ID'])
     current_totals['Turnover %'] = (
@@ -773,7 +789,7 @@ with right_col:
             ),
         }
     )
-    delete = st.button("Delete Selected Stat", key=f"delete_stat_btn_{game_id}")
+    delete = st.button("Delete selected stat", key=f"delete_stat_btn_{game_id}", type="secondary", use_container_width=True)
     if delete:
         # Guard: edited_df may be None if widget wasn't read; handle gracefully
         if delete_data is None:
@@ -804,17 +820,18 @@ with right_col:
 
                 st.success(f"Deleted {deleted_count} shots")
                 load_game_stats.clear()
+                load_current_totals.clear()
                 new_game_summary = upsert_game_summary(
                     player_number=player_number,
                     game_id=game_val_delete_id,
                     SQL_CONN=SQL_CONN
                 )
+                st.session_state.game_version += 1
                 st.session_state.game_stat_version += 1
                 st.session_state.refresh_game_stat_version = True
                 st.rerun()
 
 
-load_game_summary.clear()
 game_summary_data = load_game_summary(SQL_CONN, st.session_state.game_version)
 game_row = games_season[
     (games_season["OPPONENT"] == opponent_name)

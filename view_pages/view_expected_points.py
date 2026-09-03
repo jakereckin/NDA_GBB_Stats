@@ -8,9 +8,10 @@ import joblib
 
 pd.options.mode.chained_assignment = None
 
-st.cache_resource.clear()
-
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
+st.set_page_config(page_title='Expected Points', layout='wide')
+st.title('Expected Points')
+st.caption('See how shot quality and finishing compare, then estimate the range of possible game outcomes.')
 
 effective_field_goal_description = '''
 Effective FG% is a useful metric to understand shot selection.
@@ -27,6 +28,10 @@ liklihood of the shot being made.
 
 Example: 33% chance of making a 3 pointer is 0.33 * 3 = 1 expected point.
 '''
+
+with st.expander('About these metrics'):
+    st.markdown(effective_field_goal_description)
+    st.markdown(expected_points_description)
 # ----------------------------------------------------------------------------
 @st.cache_resource
 def load_data():
@@ -572,9 +577,10 @@ game_summary = (
 
 season_list = player_data.select('SEASON').unique().to_series().to_list()
 season_list = sorted(season_list, key=lambda x: int(x), reverse=True)
-col1, col2 = st.columns(spec=2)
+st.subheader('Choose a game')
+col1, col2 = st.columns(spec=2, vertical_alignment='bottom')
 with col1:
-    season = st.radio(label='Select Season', options=season_list, horizontal=True)
+    season = st.radio(label='Season', options=season_list, horizontal=True)
 if season:
     player_data, player_data2, game_summary = format_data(
         player_data=player_data, game_summary_data=game_summary, selected_season=season
@@ -584,7 +590,7 @@ if season:
     games_list = player_data.select('LABEL').unique().to_series().to_list()
     games_list = sorted(games_list, key=lambda x: pd.to_datetime(x.split(' - ')[1]) ,reverse=True)
     with col2:
-        game = st.selectbox(label='Select Game', options=games_list)
+        game = st.selectbox(label='Game', options=games_list)
 
     if game != []:
         t_game, game_data = get_games_data(
@@ -754,7 +760,10 @@ if season:
                 value=0.3
             )
 
-        run_sim = st.button(label='Run Simulation')
+        st.divider()
+        st.subheader('Outcome simulation')
+        st.caption('Adjust the assumptions, then run a scenario comparison for this game.')
+        run_sim = st.button(label='Run simulation', type='primary')
         if run_sim:
             st.write('Running Simulation...')
             all_sims = run_simulations(
@@ -776,13 +785,13 @@ if season:
                 
             with twenty_five:
                 st.metric(
-                    label='10th Percentile Points',
+                    label='NDA 10th Percentile Points',
                     value=(
                         np.round(all_sims['NDA_SIMULATED_POINTS'].quantile(0.1), 2)
                     )
                 )
                 st.metric(
-                    label='10th Percentile Points',
+                    label=f'{opp_team_name} 10th Percentile Points',
                     value=(
                         np.round(all_sims['OPP_SIMULATED_POINTS'].quantile(0.1), 2)
                     )
@@ -790,13 +799,13 @@ if season:
                 
             with seventy_five:
                 st.metric(
-                    label='90th Percentile Points',
+                    label='NDA 90th Percentile Points',
                     value=(
                         np.round(all_sims['NDA_SIMULATED_POINTS'].quantile(0.9), 2)
                     )
                 )
                 st.metric(
-                    label='90 Percentile Points',
+                    label=f'{opp_team_name} 90th Percentile Points',
                     value=(
                         np.round(all_sims['OPP_SIMULATED_POINTS'].quantile(0.9), 2)
                     )
@@ -832,4 +841,12 @@ if season:
             fig.update_layout(barmode='overlay')
             # Reduce opacity to see both histograms
             fig.update_traces(opacity=0.75)
-            st.plotly_chart(figure_or_data=fig)
+            fig.update_layout(
+                title='Simulated scoring distribution',
+                xaxis_title='Points scored',
+                yaxis_title='Share of simulations (%)',
+                legend_title='Team',
+            )
+            st.plotly_chart(figure_or_data=fig, width='stretch')
+    else:
+        st.info('Select a game above to view expected points and run a simulation.')

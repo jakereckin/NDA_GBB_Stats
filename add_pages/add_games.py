@@ -1,5 +1,4 @@
 import streamlit as st
-import time
 import pandas as pd
 import sqlitecloud
 from py import sql, data_source
@@ -10,6 +9,7 @@ sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
 
 # ----------------------------------------------------------------------------
+@st.cache_data(show_spinner=False)
 def load_data():
     games = data_source.run_query(
         sql=sql.get_games_sql(), connection=sql_lite_connect
@@ -18,12 +18,16 @@ def load_data():
 
 
 # ----------------------------------------------------------------------------
+st.set_page_config(page_title='Add Games', layout='wide')
+st.title('Add Games')
+st.caption('Create or remove a game record used throughout the analytics pages.')
+
 games = load_data()
 games = games.sort_values(by='SEASON', ascending=False).reset_index(drop=True)
 seasons = games['SEASON'].unique().tolist()
 
 selected_season = st.radio(
-    label='Select Season',
+    label='Season',
     options=seasons,
     horizontal=True
 )
@@ -34,10 +38,10 @@ games = (
     .reset_index(drop=True)
 )
 
-st.write(f'*Last Game in DB for {selected_season}*')
+st.subheader(f'Latest game in {selected_season}')
 last_game = games.tail(1)
 st.write(
-    f'{last_game['GAME_ID'].values[0]} - {last_game['OPPONENT'].values[0]}'
+    f"{last_game['GAME_ID'].values[0]} - {last_game['OPPONENT'].values[0]}"
 )
 
 if selected_season:
@@ -47,11 +51,11 @@ if selected_season:
 
         with left_row_one:
             game_id = st.text_input(
-                label='Game ID', placeholder='Enter Game ID'
+                label='Game ID', placeholder='Enter game ID'
             )
         with right_row_one:
             opponent = st.text_input(
-                label='Opponent', placeholder='Enter Opponent'
+                label='Opponent', placeholder='Enter opponent'
             )
 
         with left_row_two:
@@ -64,14 +68,14 @@ if selected_season:
         with right_row_two:
             date = st.text_input(
                 label='Date',
-                placeholder='Enter Date (MM/DD/YYYY)',
+                placeholder='MM/DD/YYYY',
                 value=pd.to_datetime('today').strftime('%m/%d/%Y'),
             )
         season = selected_season
 
         save_col, delete_col = st.columns(2)
         with save_col:
-            save = st.form_submit_button(label='Add Game', key='add_game_btn')
+            save = st.form_submit_button(label='Add game', key='add_game_btn', type='primary')
         with delete_col:
             delete = st.form_submit_button(label='Delete Game', key='delete_game_btn')
 
@@ -89,9 +93,8 @@ if selected_season:
                     ),
                 )
                 conn.commit()
-            st.success('Game Added')
-            st.write(f'Added {opponent} to DB')
-            time.sleep(0.5)
+                load_data.clear()
+                st.success(f'Added {opponent} to the {season} schedule.')
             st.rerun()
 
         if delete:
@@ -103,6 +106,6 @@ if selected_season:
                     parameters=(str(game_id),),
                 )
                 conn.commit()
-            st.success('Game Deleted')
-            time.sleep(0.5)
+                load_data.clear()
+                st.success(f'Deleted game {game_id}.')
             st.rerun()

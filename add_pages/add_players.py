@@ -1,5 +1,4 @@
 import streamlit as st
-import time
 import pandas as pd
 import sqlitecloud
 from py import sql, data_source
@@ -9,16 +8,21 @@ pd.options.mode.chained_assignment = None
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
 # ----------------------------------------------------------------------------
+@st.cache_data(show_spinner=False)
 def load_data():
     players = data_source.run_query(
         sql=sql.get_players_sql(), connection=sql_lite_connect
     )
     return players
 
+st.set_page_config(page_title='Add Players', layout='wide')
+st.title('Add Players')
+st.caption('Add a player to a season roster or remove an existing roster entry.')
+
 players = load_data()
 seasons = players['YEAR'].unique().tolist()
 selected_season = st.selectbox(
-    label='Select Season',
+    label='Season',
     placeholder='Enter Season',
     options=seasons
 )
@@ -28,7 +32,7 @@ if add_new_season != '':
     selected_season = add_new_season
     
 players = players[players['YEAR'] == selected_season]
-st.write(f'Players in DB for {selected_season}')
+st.subheader(f'Roster for {selected_season}')
 st.dataframe(data=players, width='stretch')
 if selected_season:
 
@@ -37,24 +41,24 @@ if selected_season:
 
         with left:
             number = st.text_input(
-                label='Player Number',
+                label='Player number',
                 placeholder='Enter Player Number'
             )
         
         with middle:
             first_name = st.text_input(
-                label='First Name',
+                label='First name',
                 placeholder='Enter First Name'
             )
         
         with right:
             last_name = st.text_input(
-                label='Last Name',
+                label='Last name',
                 placeholder='Enter Last Name'
             )
         save_col, delete_col = st.columns(spec=2)
         with save_col:
-            save = st.form_submit_button(label='Add Player', key='add_player')
+            save = st.form_submit_button(label='Add player', key='add_player', type='primary')
         with delete_col:
             delete = st.form_submit_button(
                 label='Delete Player', key='delete_player'
@@ -72,10 +76,8 @@ if selected_season:
                     )
                 )
                 conn.commit()
-            st.write('Players Added') 
-            st.write(f'Added {last_name} to DB')
-            time.sleep(.5)
-            st.write('Reloading...')
+                load_data.clear()
+                st.success(f'Added {first_name} {last_name} to the {selected_season} roster.')
             st.rerun()
 
         if delete:
@@ -89,6 +91,6 @@ if selected_season:
                     )
                 )
                 conn.commit()
-            st.write('Player Deleted')
-            time.sleep(.5)
+                load_data.clear()
+                st.success(f'Deleted player {number} from the {selected_season} roster.')
             st.rerun()

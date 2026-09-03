@@ -3,8 +3,9 @@ import pandas as pd
 from py import sql, data_source, utils as ut
 pd.options.mode.chained_assignment = None
 
-st.cache_data.clear()
-st.set_page_config(layout='wide')
+st.set_page_config(page_title='Player Shot Chart', layout='wide')
+st.title('Player Shot Chart')
+st.caption('Review a player’s shot profile, shot-quality grade, and most productive court locations.')
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
@@ -139,20 +140,21 @@ def get_grades(pbp):
      return pbp_gpa
 
 
-shot_chart_col, others = st.columns([3, 1])
+st.subheader('Choose a player and scope')
+shot_chart_col, others = st.columns([3, 1], vertical_alignment='top')
 
 players, player_grouped_data, pbp = get_player_data()
 players = players.sort_values(by='SEASON', ascending=False)
 season_list = players.SEASON.unique().tolist()
 
 with others:
-     season = st.radio(label='Select Season', options=season_list, horizontal=True)
-     use_games = st.radio(label='Use Specific Game?', options=['No', 'Yes'], horizontal=True)
+     season = st.radio(label='Season', options=season_list, horizontal=True)
+     use_games = st.radio(label='Scope', options=['Season', 'Single game'], horizontal=True)
 
-if use_games == 'Yes':
+if use_games == 'Single game':
      games_in_season = players[players['SEASON'] == season]['GAME'].unique().tolist()
      with others:
-          game = st.selectbox(label='Select Game', options=games_in_season)
+          game = st.selectbox(label='Game', options=games_in_season)
 else:
      game = None
 
@@ -162,7 +164,7 @@ pbp_data = pbp[pbp['SEASON'] == season]
 player_names = player_data['NAME'].unique()
 with others:
      players_selected = st.radio(
-         label='Choose Player', options=player_names, horizontal=True
+           label='Player', options=player_names
      )
 
 this_game, this_game_grouped, pbp_grouped = filter_player_data(
@@ -176,7 +178,7 @@ pbp_score = get_grades(pbp_grouped)
 pbp_gpa = pbp_score['GPA_SUM'].sum() / pbp_score['ATTEMPTS'].sum()
 
 with others:
-     st.metric(label='Shot Selection GPA', value=pbp_gpa.round(3))
+     st.metric(label='Shot selection GPA', value=f'{pbp_gpa:.3f}')
 
 if players_selected:
      totals, totals_sorted = format_visual_data(
@@ -201,16 +203,12 @@ if players_selected:
      fig.update_layout(width=500, height=500)
      with shot_chart_col:
           st.markdown(
-               body=f"<h1 style='text-align: center; color: black;'>Shot Chart for {players_selected}</h1>",
-               unsafe_allow_html=True
+               f'#### {players_selected} shot chart'
           )
 
-          st.plotly_chart(figure_or_data=fig, width='stretch')
+          st.plotly_chart(figure_or_data=fig, width='stretch', config={'displaylogo': False})
 
-     st.markdown(
-          body=f"<h1 style='text-align: center; color: black;'>Top 5 Spots for {players_selected}</h1>", 
-          unsafe_allow_html=True
-     )
+     st.markdown(f'#### Top five spots for {players_selected}')
      st.dataframe(
           data=totals_sorted.head(5), width='stretch', hide_index=True
      )

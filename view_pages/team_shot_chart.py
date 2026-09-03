@@ -4,12 +4,14 @@ import numpy as np
 from py import sql, data_source, utils as ut
 pd.options.mode.chained_assignment = None
 
-st.cache_data.clear()
 st.set_page_config(layout='wide')
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
-button = st.button(label='Clear Cache')
+st.title('Team Shot Chart')
+st.caption('Compare shot selection, efficiency, and shot-quality grades across one or more games.')
+
+button = st.button(label='Clear cache', type='secondary')
 if button:
      st.cache_data.clear()
      st.cache_resource.clear()
@@ -274,7 +276,8 @@ season_list = (
      team_data['SEASON'].sort_values(ascending=False).unique().tolist()
 )
 
-col1, col2 = st.columns([1, 2])
+st.subheader('Choose a comparison')
+col1, col2 = st.columns([1, 2], vertical_alignment='bottom')
 with col1:
      season = st.radio(
           label='Select Season', options=season_list, horizontal=True
@@ -288,8 +291,9 @@ games = this_year['U_ID'].unique()
 with col2:
      games_selected = st.multiselect(
           label='Choose Games',
-          options=reversed(games),
-          placeholder='Select one or more games to view shot chart'
+          options=list(reversed(games)),
+          placeholder='Select one or more games',
+          help='Select multiple games to compare combined shot profiles.'
      )
 if games_selected:
 
@@ -304,7 +308,9 @@ if games_selected:
      )
      this_game_gpa, player_data = get_grades(this_game_pbp)
      pbp_nda_gpa, pbp_opp_gpa = split_grades(this_game_gpa)
-     shot_chart, buttons= st.columns([2, 1])
+     st.divider()
+     st.subheader('Shot profile')
+     shot_chart, buttons = st.columns([2, 1], vertical_alignment='top')
      with buttons:
           select_team = st.radio(
                label='Select to View NDA or Opponent',
@@ -313,11 +319,11 @@ if games_selected:
           )
           st.metric(
                label='NDA Shot Selection GPA',
-               value=pbp_nda_gpa.round(2)
+               value=f'{pbp_nda_gpa:.2f}'
           )  
           st.metric(
                label='Opponents Shot Selection GPA',
-               value=pbp_opp_gpa.round(2)
+               value=f'{pbp_opp_gpa:.2f}'
           )
 
      if select_team == 'Opponent':
@@ -337,22 +343,20 @@ if games_selected:
           fts_percent = (fts_makes / fts_attempts) * 100 if fts_attempts > 0 else 0
           totals_new = clean_team_totals(totals=totals)
           with buttons:
-               st.write('### Shot Selection Totals')
-               st.write(f'Two Point Shots: {twos_makes}/{twos_attempts} ({twos_percent.round(1)}%)')
-               st.write(f'Three Point Shots with PT: {three_pt_makes}/{three_pt_attempts}')
-               st.write(f'Three Point Shots without PT: {three_no_pt_makes}/{three_no_pt_attempts}')
-               st.write(f'Total Three Point Shots: {three_total_makes}/{three_total_attempts} ({threes_percent.round(1)}%)')
-               st.write(f'Three PT Percentage of Total Threes: {(three_pt_percent*100).round(1)}%')
-               st.write(f'Free Throws: {fts_makes}/{fts_attempts} ({fts_percent.round(1)}%)')
+               st.markdown('#### Shot totals')
+               st.metric('2-point accuracy', f'{twos_percent:.1f}%', f'{twos_makes}/{twos_attempts}', delta_arrow='off')
+               st.metric('3-point accuracy', f'{threes_percent:.1f}%', f'{three_total_makes}/{three_total_attempts}', delta_arrow='off')
+               st.metric('Free-throw accuracy', f'{fts_percent:.1f}%', f'{fts_makes}/{fts_attempts}', delta_arrow='off')
+               st.caption(f'{three_pt_percent * 100:.1f}% of threes included a paint touch.')
           fig = ut.load_shot_chart_team(totals=totals_new, team_selected=games_selected)
           fig.update_layout(
                width=700,
                height=500
           )
           with shot_chart:
-               st.markdown(
-                    body=f"<h1 style='text-align: center; color: black;'>Shot Chart for {select_team}</h1>", 
-                    unsafe_allow_html=True
-               )
+               st.markdown(f'#### {select_team} shot chart')
                st.plotly_chart(figure_or_data=fig, width='stretch', selection_mode='points')
-          st.dataframe(data=player_data, width='stretch')
+          st.markdown('#### Player breakdown')
+          st.dataframe(data=player_data, width='stretch', hide_index=True)
+else:
+     st.info('Select at least one game above to load the shot chart and comparison tables.')

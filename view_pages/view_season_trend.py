@@ -7,8 +7,9 @@ from py import sql, data_source
 import plotly.graph_objects as go
 pd.options.mode.chained_assignment = None
 
-st.cache_resource.clear()
-st.set_page_config(layout='wide')
+st.set_page_config(page_title='Season Trends', layout='wide')
+st.title('Season Trends')
+st.caption('Track team and player performance over time and compare the season average with selected games.')
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 list_of_stats = [
     'LABEL', 'EFG%', 'TURNOVER_RATE', 'PPA', 
@@ -257,13 +258,14 @@ def clean_frames(team_data, player_level, player_season_avg, other_stats):
 # ============================================================================
 game_summary = load_data()
 team_data = get_team_games(game_summary=game_summary)
-col1, col2, col3 = st.columns([2, 2, 4])
+st.subheader('Choose a season and view')
+col1, col2, col3 = st.columns([2, 2, 4], vertical_alignment='bottom')
 team_data = team_data.to_pandas()
 season_list = game_summary['SEASON'].unique().tolist()
 season_list = sorted(season_list, reverse=True)
 
 with col1:
-    season = st.radio(label='Select Season', options=season_list, horizontal=True)
+    season = st.radio(label='Season', options=season_list, horizontal=True)
 
 game_summary_season = game_seasons(game_summary=game_summary, season=season)
 team_data, player_level, player_season_avg = get_game_player_details(
@@ -274,7 +276,7 @@ team_data, player_level, player_season_avg = get_game_player_details(
 
 with col2:
     select_level = st.radio(
-        label='Select Data Level',
+        label='Data level',
         options=['Team', 'Player'],
         horizontal=True
     )
@@ -289,7 +291,7 @@ if select_level == 'Team':
 
     choose_stats = team_data_clean.columns.tolist()[1:-1]
     with col3:
-        choose_stats = st.selectbox(label='Choose Stats to Show', options=choose_stats)
+        choose_stats = st.selectbox(label='Stat to chart', options=choose_stats)
 
     y = pd.to_numeric(team_data_clean[choose_stats], errors='coerce').fillna(0).values
     x_labels = team_data_clean['Opponent'].astype(str).tolist()
@@ -335,7 +337,8 @@ if select_level == 'Team':
         height=420
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    fig.update_layout(title=f'{choose_stats} by game')
+    st.plotly_chart(fig, width='stretch')
 
 elif select_level == 'Player':
     team_data, player_level, column_config = clean_frames(
@@ -347,9 +350,9 @@ elif select_level == 'Player':
 
     player_list = player_level['NAME'].unique().tolist()
     with col3:
-        choose_stats = st.selectbox(label='Choose Stats to Show', options=other_stats)
+        choose_stats = st.selectbox(label='Stat to chart', options=other_stats)
 
-    player_select = st.radio(label='Select Player', options=player_list, horizontal=True)
+    player_select = st.selectbox(label='Player', options=player_list)
     this_player = player_level[player_level['NAME'] == player_select].reset_index(drop=True)
 
     # ensure chosen stat is numeric and handle missing values
@@ -398,4 +401,5 @@ elif select_level == 'Player':
         hovermode="x unified"
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    fig.update_layout(title=f'{choose_stats} for {player_select}')
+    st.plotly_chart(fig, width='stretch')
