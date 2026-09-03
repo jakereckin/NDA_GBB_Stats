@@ -5,7 +5,7 @@ from PIL import Image
 import streamlit_authenticator as stauth
 pd.options.mode.chained_assignment = None
 
-st.set_page_config(page_title='NDA GBB Analytics')
+st.set_page_config(page_title='Notre Dame Academy Girls Basketball Analytics')
 
 
 
@@ -37,6 +37,12 @@ authenticator = stauth.Authenticate(
     cookie_name=cookie_name,
     key=cookie_key,
     cookie_expiry_days=cookie_expiry_days,
+)
+
+authenticator.login(
+    location="main",
+    key="auth_login_widget",
+    fields={'Login': 'Admin Login', 'Form name': 'Admin Login'}
 )
 
 if "is_guest" not in st.session_state:
@@ -81,8 +87,8 @@ if st.session_state['authentication_status'] is None:
         margin: 1.5rem 0 1rem;
     }
     </style>
-    <div class="login-kicker">NDA GBB Analytics</div>
-    <h1 class="login-title">A clearer view of the game.</h1>
+    <div class="login-kicker">Notre Dame Academy Girls Basketball Analytics</div>
+    <h1 class="login-title">Notre Dame Academy Girls Basketball Analytics</h1>
     <div class="login-copy">Review performance, explore the season, and keep game data in one place.</div>
     ''',
     unsafe_allow_html=True,
@@ -91,11 +97,6 @@ if st.session_state['authentication_status'] is None:
     login_col, guest_col = st.columns(2, vertical_alignment="top")
     with login_col:
         st.markdown('<div class="login-band"><strong>Admin access</strong><br>Enter your credentials to manage game data and view all reports.</div>', unsafe_allow_html=True)
-        authenticator.login(
-            location="main",
-            key="auth_login_widget",
-            fields={'Login': 'Admin Login', 'Form name':'Admin Login'}
-        )
     with guest_col:
         st.image(image=image, width=220)
         st.markdown('<div class="login-band"><strong>Explore analytics</strong><br>Browse reports without entering data.</div>', unsafe_allow_html=True)
