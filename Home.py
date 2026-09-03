@@ -6,6 +6,7 @@ import streamlit_authenticator as stauth
 pd.options.mode.chained_assignment = None
 
 st.set_page_config(page_title='Notre Dame Academy Girls Basketball Analytics')
+st.sidebar.caption('Version 2026.0.1')
 
 
 
