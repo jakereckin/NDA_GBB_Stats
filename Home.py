@@ -6,7 +6,8 @@ import streamlit_authenticator as stauth
 pd.options.mode.chained_assignment = None
 
 st.set_page_config(page_title='Notre Dame Academy Girls Basketball Analytics')
-st.sidebar.caption('Version 2026.0.1')
+version = '2026.0.2'
+st.sidebar.caption('Version ' + version)
 
 
 
@@ -94,7 +95,7 @@ if st.session_state['authentication_status'] is None:
     ''',
     unsafe_allow_html=True,
     )
-    st.caption("Version 2026.0.1")
+    st.caption("Version " + version)
     login_col, guest_col = st.columns(2, vertical_alignment="top")
     with login_col:
         st.markdown('<div class="login-band"><strong>Admin access</strong><br>Enter your credentials to manage game data and view all reports.</div>', unsafe_allow_html=True)

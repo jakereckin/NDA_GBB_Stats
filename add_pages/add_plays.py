@@ -846,30 +846,30 @@ this_game_summary = this_game_summary[[
     'ASSISTS', 'STEALS', 'BLOCKS', 'TURNOVER', 'FOULS',
     'GAME_SCORE', 'POINTS'
 ]]
-with left_col:
-    st.dataframe(
-        this_game_summary,
-        width='stretch',
-        hide_index=True,
-        column_config={
-            'PLAYER_ID': st.column_config.NumberColumn(
-                'Player Number',
-                help='Jersey number of the player',
-            ),
-            'TWO_FGM': st.column_config.NumberColumn('2FGM'),
-            'TWO_FGA': st.column_config.NumberColumn('2FGA'),
-            'THREE_FGM': st.column_config.NumberColumn('3FGM'), 
-            'THREE_FGA': st.column_config.NumberColumn('3FGA'),
-            'FTM': st.column_config.NumberColumn('FTM'),
-            'FTA': st.column_config.NumberColumn('FTA'),
-            'OFFENSIVE_REBOUNDS': st.column_config.NumberColumn('OREB'),
-            'DEFENSIVE_REBOUNDS': st.column_config.NumberColumn('DREB'),
-            'ASSISTS': st.column_config.NumberColumn('Assists'),
-            'STEALS': st.column_config.NumberColumn('Steals'),
-            'BLOCKS': st.column_config.NumberColumn('Blocks'),
-            'TURNOVER': st.column_config.NumberColumn('Turnovers'),
-            'FOULS': st.column_config.NumberColumn('Fouls'),
-            'GAME_SCORE': st.column_config.NumberColumn('Game Score'),
-            'POINTS': st.column_config.NumberColumn('Points')
-        }
-    )
+st.markdown(f"#### Player game summary · {game_val}")
+st.dataframe(
+    this_game_summary,
+    width='stretch',
+    hide_index=True,
+    column_config={
+        'PLAYER_ID': st.column_config.NumberColumn(
+            'Player Number',
+            help='Jersey number of the player',
+        ),
+        'TWO_FGM': st.column_config.NumberColumn('2FGM'),
+        'TWO_FGA': st.column_config.NumberColumn('2FGA'),
+        'THREE_FGM': st.column_config.NumberColumn('3FGM'),
+        'THREE_FGA': st.column_config.NumberColumn('3FGA'),
+        'FTM': st.column_config.NumberColumn('FTM'),
+        'FTA': st.column_config.NumberColumn('FTA'),
+        'OFFENSIVE_REBOUNDS': st.column_config.NumberColumn('OREB'),
+        'DEFENSIVE_REBOUNDS': st.column_config.NumberColumn('DREB'),
+        'ASSISTS': st.column_config.NumberColumn('Assists'),
+        'STEALS': st.column_config.NumberColumn('Steals'),
+        'BLOCKS': st.column_config.NumberColumn('Blocks'),
+        'TURNOVER': st.column_config.NumberColumn('Turnovers'),
+        'FOULS': st.column_config.NumberColumn('Fouls'),
+        'GAME_SCORE': st.column_config.NumberColumn('Game Score'),
+        'POINTS': st.column_config.NumberColumn('Points')
+    }
+)
