@@ -32,7 +32,7 @@ allowed_for_guest = ['View Data']
 
 cookie_name = "nda_app_cookie"
 cookie_key = st.secrets['page_password']['COOKIE_KEY'] # use an environment var in production
-cookie_expiry_days = 0
+cookie_expiry_days = 365
 
 authenticator = stauth.Authenticate(
     credentials=credentials,
