@@ -6,7 +6,7 @@ import streamlit_authenticator as stauth
 pd.options.mode.chained_assignment = None
 
 st.set_page_config(page_title='Notre Dame Academy Girls Basketball Analytics')
-version = '2026.0.2'
+version = '2026.0.3'
 st.sidebar.caption('Version ' + version)
 
 
@@ -32,7 +32,7 @@ allowed_for_guest = ['View Data']
 
 cookie_name = "nda_app_cookie"
 cookie_key = st.secrets['page_password']['COOKIE_KEY'] # use an environment var in production
-cookie_expiry_days = 90
+cookie_expiry_days = 0
 
 authenticator = stauth.Authenticate(
     credentials=credentials,
