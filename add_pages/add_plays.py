@@ -26,28 +26,39 @@ if 'refresh_game_stat_version' not in st.session_state:
 if 'game_stat_version' not in st.session_state:
     st.session_state.game_stat_version = 0
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl="1h", max_entries=1)
 def load_shot_spots(connection: str):
     return data_source.run_query(sql=sql.get_shot_spots_sql(), connection=connection)
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl="1h", max_entries=1)
 def load_player_game(connection: str):
     return data_source.run_query(sql=sql.get_player_game_sql(), connection=connection)
 
-@st.cache_data(show_spinner=False)
-def load_game_summary(connection: str, version: int):
-    return data_source.run_query(sql=sql.get_game_summary_sql(), connection=connection)
+@st.cache_data(show_spinner=False, ttl="15m", max_entries=32)
+def load_game_summary(connection: str, game_id: int, version: int):
+    return data_source.run_query(
+        sql=sql.get_game_summary_sql(game_id=game_id),
+        connection=connection,
+        params=(game_id,),
+    )
 
-@st.cache_data(show_spinner=False)
-def load_pbp_data_cached(game_selelct, version: int):
-    my_sql = sql.get_play_sql().replace("?", str(game_selelct))
-    return data_source.run_query(sql=my_sql, connection=SQL_CONN)
+@st.cache_data(show_spinner=False, ttl="10m", max_entries=16)
+def load_pbp_data_cached(game_select: str, version: int):
+    return data_source.run_query(
+        sql=sql.get_play_sql(parameterized=True),
+        connection=SQL_CONN,
+        params=(game_select,),
+    )
 
-@st.cache_data(show_spinner=False)
-def load_game_stats(connection, version: int):
-    return data_source.run_query(sql=sql.get_current_game_stats_plays_sql(), connection=connection)
+@st.cache_data(show_spinner=False, ttl="15m", max_entries=32)
+def load_game_stats(connection: str, game_id: int, version: int):
+    return data_source.run_query(
+        sql=sql.get_current_game_stats_plays_sql(),
+        connection=connection,
+        params=(game_id,),
+    )
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl="5m", max_entries=32)
 def load_current_totals(connection: str, game_id: int, version: int):
     return data_source.run_query(
         sql=sql.select_quick_game_info(game_id),
@@ -144,7 +155,9 @@ def upsert_game_summary(player_number, game_id, SQL_CONN):
     new_game_summary = data_source.run_query(sql=new_query, connection=SQL_CONN)
 
     # Load existing summaries
-    game_summary_data = load_game_summary(SQL_CONN, st.session_state.game_version)
+    game_summary_data = load_game_summary(
+        SQL_CONN, game_id, st.session_state.game_version
+    )
 
     # Build composite ID
     my_id = f"{player_number}_{game_id}"
@@ -220,7 +233,9 @@ season_list = games["SEASON"].unique().tolist()
 top_left, top_mid, top_right = st.columns([1.2, 1.2, 0.35], vertical_alignment="bottom")
 
 with top_left:
-    season = st.radio("Season", season_list, horizontal=True)
+    season = st.segmented_control(
+        "Season", season_list, default=season_list[0]
+    )
 
 games_season = games[games["SEASON"] == season].copy()
 games_season["DATE_DTTM"] = pd.to_datetime(games_season["DATE"])
@@ -232,10 +247,12 @@ with top_mid:
     game_select = st.selectbox("Game", game_list, index=0)
     
 with top_right:
-    if st.button("Clear cache", key="clear_cache_btn", type="secondary", use_container_width=True):
+    if st.button("Clear cache", key="clear_cache_btn", type="secondary"):
         load_pbp_data_cached.clear()
         load_player_game.clear()
+        load_shot_spots.clear()
         load_game_summary.clear()
+        load_game_stats.clear()
         load_current_totals.clear()
         st.success("Cache cleared")
         st.rerun()
@@ -254,9 +271,11 @@ with col_chart:
     st.caption("Click the nearest court spot to begin.")
     clicked = plotly_events(plot_fig=fig, click_event=True, key=f"shot-capture-{game_id}")
 
-# Load pbp data (cached, versioned)
+# Load selected-game data (cached and versioned)
 pbp_data = load_pbp_data_cached(game_select, st.session_state.pbp_version)
-game_stat_plays = load_game_stats(SQL_CONN, st.session_state.game_stat_version)
+game_stat_plays = load_game_stats(
+    SQL_CONN, game_id, st.session_state.game_stat_version
+)
 # Add shot flow
 if clicked:
     ev = clicked[0]
@@ -269,29 +288,60 @@ if clicked:
         with col_form:
             st.markdown(f"#### Add play at `{spot_val}`")
             st.caption(game_val)
+            other_stats = [
+                'Shot', 'Offensive Rebound', 'Defensive Rebound', 'Assist',
+                'Steal', 'Block', 'Turnover', 'Foul'
+            ]
+            choose_stat = st.radio(
+                label="Stat type", options=other_stats, horizontal=True
+            )
             with st.form(key=f"shot_form_{game_id}", clear_on_submit=False):
                 player_val = st.radio(label="Player", options=unique_players, horizontal=True)
-                c2, c3, c4, c5 = st.columns([1, 1, 1, 1])
-                with c4:
-                    free_throw = st.radio(label="Free throw", options=["N", "Y"], horizontal=True)
-                with c2:
-                    make_miss = st.radio(label="Made", options=["N", "Y"], horizontal=True)
-                with c3:
-                    shot_defense = st.radio(label="Defense", options=SHOT_DEFENSES, horizontal=True)
+                if choose_stat == 'Shot':
+                    c2, c3, c4, c5 = st.columns([1, 1, 1, 1])
+                    with c4:
+                        free_throw = st.segmented_control(
+                            label="Free throw",
+                            options=["N", "Y"],
+                            default="N",
+                            format_func=lambda value: "Yes" if value == "Y" else "No",
+                        )
+                    with c2:
+                        make_miss = st.segmented_control(
+                            label="Made",
+                            options=["N", "Y"],
+                            default="N",
+                            format_func=lambda value: "Yes" if value == "Y" else "No",
+                        )
+                    with c3:
+                        shot_defense = st.segmented_control(
+                            label="Defense",
+                            options=SHOT_DEFENSES,
+                            default=SHOT_DEFENSES[0],
+                            wrap=True,
+                            width="stretch",
+                        )
+                    with c5:
+                        paint_touch = st.segmented_control(
+                            label="Paint touch",
+                            options=["N", "Y"],
+                            default="N",
+                            format_func=lambda value: "Yes" if value == "Y" else "No",
+                        )
                     if shot_defense == "Open":
                         shot_defense = "OPEN"
                     elif shot_defense == "Guarded":
                         shot_defense = "GUARDED"
                     else:
                         shot_defense = "HEAVILY_GUARDED"
-                with c5:
-                    paint_touch = st.radio(label="Paint touch", options=["N", "Y"], horizontal=True)
-                other_stats = [
-                    'Shot','Offensive Rebound', 'Defensive Rebound', 'Assist',
-                     'Steal', 'Block', 'Turnover', 'Foul'
-                ]
-                choose_stat = st.radio(label="Stat type", options=other_stats, horizontal=True)
-                add = st.form_submit_button(label="Add play", type="primary", use_container_width=True)
+                else:
+                    free_throw = "N"
+                    make_miss = "N"
+                    shot_defense = "Open"
+                    paint_touch = "N"
+                add = st.form_submit_button(
+                    label="Add play", type="primary", width="stretch"
+                )
                 if add:
                     player_number, game_val_final = get_values_needed(
                         game_val=game_val, game_df=games_season, player_val=player_val
@@ -468,7 +518,9 @@ if st.session_state.refresh_pbp:
 if st.session_state.refresh_game_stat_version:
     st.write("Refreshing game stats data...")
     load_game_stats.clear()
-    game_stat_plays = load_game_stats(SQL_CONN, st.session_state.refresh_game_stat_version)
+    game_stat_plays = load_game_stats(
+        SQL_CONN, game_id, st.session_state.game_stat_version
+    )
     st.success("Game stats data refreshed!")
     st.session_state.refresh_game_stat_version = False
 
@@ -506,7 +558,9 @@ with left_col:
     st.markdown(f"#### Recent shots · Game {game_id}")
     st.caption("The latest 100 shots are shown first. Check Delete, then remove selected rows.")
     with right_side:
-        delete = st.button("Delete selected", key=f"delete_btn_{game_id}", type="secondary", use_container_width=True)
+        delete = st.button(
+            "Delete selected", key=f"delete_btn_{game_id}", type="secondary"
+        )
     editor_key = f"prev_shots_editor_{game_id}"
     edited_df = st.data_editor(
         simple_data, 
@@ -576,13 +630,9 @@ with left_col:
                 st.rerun()
 
 with right_col:
-    opponent_name, game_date = game_val.split(" - ")
-    game_row = games_season[
-        (games_season["OPPONENT"] == opponent_name) & (games_season["DATE"] == game_date)
-    ]
     current_totals = load_current_totals(
         connection=SQL_CONN,
-        game_id=int(game_row['GAME_ID'].values[0]),
+        game_id=game_id,
         version=st.session_state.pbp_version + st.session_state.game_stat_version,
     )
     current_totals = current_totals.drop(columns=['GAME_ID'])
@@ -758,7 +808,6 @@ with right_col:
 
     game_stat_plays['DELETE'] = False
     game_stat_plays['GAME_ID'] = game_stat_plays['GAME_ID'].astype(int)
-    game_stat_plays = game_stat_plays[game_stat_plays['GAME_ID'] == game_id]
     delete_data = st.data_editor(
         game_stat_plays,
         hide_index=True,
@@ -832,14 +881,10 @@ with right_col:
                 st.rerun()
 
 
-game_summary_data = load_game_summary(SQL_CONN, st.session_state.game_version)
-game_row = games_season[
-    (games_season["OPPONENT"] == opponent_name)
-    & (games_season["DATE"] == game_date)
-]
-this_game_summary = game_summary_data[
-    game_summary_data['GAME_ID'] == game_row['GAME_ID'].values[0]
-]
+game_summary_data = load_game_summary(
+    SQL_CONN, game_id, st.session_state.game_version
+)
+this_game_summary = game_summary_data
 this_game_summary = this_game_summary[[
     'PLAYER_ID', 'TWO_FGM', 'TWO_FGA', 'THREE_FGM', 'THREE_FGA',
     'FTM', 'FTA', 'OFFENSIVE_REBOUNDS', 'DEFENSIVE_REBOUNDS',

@@ -114,8 +114,8 @@ INNER JOIN GAMES
     """
     return sql
 
-def get_play_sql():
-    sql = """
+def get_play_sql(parameterized=False):
+    sql = f"""
 SELECT SPOTS.SPOT,
                PLAYS.SHOT_DEFENSE,
                PLAYS.MAKE_MISS,
@@ -143,7 +143,7 @@ SELECT SPOTS.SPOT,
   INNER JOIN PLAYERS
   ON PLAYERS.NUMBER = PLAYS.PLAYER_ID
   AND GAMES.SEASON = PLAYERS.YEAR
-  WHERE GAMES.OPPONENT || ' - ' || GAMES.DATE = '?'
+  WHERE GAMES.OPPONENT || ' - ' || GAMES.DATE = {"?" if parameterized else "'?'"}
   """
     return sql
 
@@ -242,6 +242,7 @@ def get_current_game_stats_plays_sql():
     sql = """
     SELECT *
       FROM GAME_STATS_PLAYS
+  WHERE GAME_ID = ?
       ORDER BY id DESC
     """
     return sql
@@ -289,7 +290,7 @@ def get_this_game():
     """
     return sql
 
-def get_game_summary_sql():
+def get_game_summary_sql(game_id=None):
     sql = """
           WITH AVG_MINUTES AS (
               SELECT MINUTES_PLAYED.PLAYER_ID,
@@ -362,6 +363,8 @@ def get_game_summary_sql():
             ON AVG_MINUTES.PLAYER_ID = GAME_SUMMARY.PLAYER_ID
             AND AVG_MINUTES.YEAR = PLAYERS.YEAR
     """
+    if game_id is not None:
+      sql += "\n WHERE GAME_SUMMARY.GAME_ID = ?"
     return sql
 
 def team_shot_chart_sql():

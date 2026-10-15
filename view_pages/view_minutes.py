@@ -14,19 +14,18 @@ sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
 _PLAYER_LINEUPS_MAP_NAMES = {
     'TOTAL_MIN': 'Total Minutes Played',
-    'POITNS_SCORED_PER_GAME': 'Points Scored per Game',
-    'POINTS_PER_MINUTE': 'Points per Minute Played',
-    'OPP_POINTS_PER_MINUTE': 'Points Allowed per Minute Played',
-    'PLUS_MINUS_PER_MINUTE': 'Plus/Minus per Minute Played',
+    'POINTS_PER_MINUTE': 'Team Points per Minute',
+    'OPP_POINTS_PER_MINUTE': 'Opponent Points per Minute',
+    'PLUS_MINUS_PER_MINUTE': 'Scoring Margin per Minute',
     'GAME_COUNT': 'Games Played'
 }
 
 _PLAYER_MAP_NAMES = {
     'GAME_COUNT': 'Games Played',
-    'POINTS_PER_MINUTE': 'Team Points while Playing per Minute',
-    'OPP_POINTS_PER_MINUTE': 'Points Allowed while Playing per Minute',
-    'PLUS_MINUS_PER_MINUTE': 'Plus/Minus per Minute Played',
-    'MINUTES_PER_GAME': 'Minutes per Game Played'
+    'POINTS_PER_MINUTE': 'Team Points per Minute on Court',
+    'OPP_POINTS_PER_MINUTE': 'Opponent Points per Minute on Court',
+    'PLUS_MINUS_PER_MINUTE': 'Scoring Margin per Minute on Court',
+    'MINUTES_PER_GAME': 'Minutes per Game'
 }
 
 button = st.button(label='Clear Cache Data')
@@ -57,7 +56,7 @@ def build_lineup_intervals(minutes_data, game_end_sec=36*60):
         if times[-1] != game_end_sec:
             times = np.append(times, game_end_sec)
         times = list(reversed(times))
-            # iterate intervals
+        # iterate intervals
         for i in range(len(times) - 1):
             start = int(times[i])
             end = int(times[i + 1])
@@ -234,7 +233,7 @@ def get_game_level(data):
     return game_level
 
 
-st.subheader('Choose a season and analysis')
+st.subheader('Explore team performance')
 minute_data = get_data()
 years = minute_data['SEASON'].sort_values(ascending=False).drop_duplicates().tolist()
 select_season = st.radio('Season', options=years, horizontal=True)
@@ -245,6 +244,7 @@ games_info_dict = dict(zip(games_info['GAME_ID'], games_info['GAME_DATE']))
 grouped_lineups = group_data(clean_lineups=clean_lineups, game_dict=games_info_dict)
 unique_player_lineups, my_players = get_unique_lineups(grouped_lineups=grouped_lineups, player_info=player_info)
 player_map = dict(zip(player_info['PLAYER_NAME'], player_info['PLAYER_ID'].astype(int)))
+player_id_to_name = {player_id: player_name for player_name, player_id in player_map.items()}
 
 def lineup_ids_to_names(lineup_key):
     try:
@@ -253,17 +253,28 @@ def lineup_ids_to_names(lineup_key):
     except Exception:
         return lineup_key
     try:
-        names = [player_map.get(int(pid), str(pid)) for pid in ids]
+        names = [player_id_to_name.get(int(pid), str(pid)) for pid in ids]
     except Exception:
-        names = [player_map.get(pid, str(pid)) for pid in ids]
-    return tuple(zip(names))
+        names = [player_id_to_name.get(pid, str(pid)) for pid in ids]
+    return ', '.join(names)
 
 
 col1, col2 = st.columns(2)
 view_analytics = st.radio(
-    label='Choose What Level of Analytics to View',
+    label='What would you like to compare?',
     options=['Player Lineup', 'Overall Lineup', 'Player', 'Game'],
-    horizontal=True
+    horizontal=True,
+    format_func=lambda view: {
+        'Player Lineup': 'Lineups with a player',
+        'Overall Lineup': 'All lineups',
+        'Player': 'Players',
+        'Game': 'Game'
+    }[view],
+    help='Compare combinations of players, individual players, or lineups from one game.'
+)
+st.caption(
+    'Scoring margin is your team’s points minus the opponent’s points while the '
+    'player or lineup is on court. Per-minute rates make playing time easier to compare.'
 )
 
 
@@ -274,7 +285,12 @@ if view_analytics == 'Player Lineup':
         select_player = st.selectbox(label='Player', options=list(player_map.keys()))
         selected_player = player_map.get(select_player)
     with min_col:
-        min_threshold = st.number_input(label='Minimum minutes', step=1, value=2)
+        min_threshold = st.number_input(
+            label='Minimum lineup minutes',
+            step=1,
+            value=2,
+            help='Hide lineups with less total court time across the selected season.'
+        )
 
     if selected_player:
         that_player_lineups = unique_player_lineups.get(selected_player)
@@ -302,15 +318,15 @@ if view_analytics == 'Player Lineup':
 
         #lineup_level['Lineup'] = lineup_level['LINEUP_KEY']
         lineup_level['Lineup'] = lineup_level['LINEUP_KEY'].apply(lineup_ids_to_names)
-        lineup_level['Lineups'] = lineup_level['LINEUP_KEY']
+        lineup_level['Lineup'] = lineup_level['LINEUP_KEY'].apply(lineup_ids_to_names)
         view_stats = [
-            'Plus/Minus per Minute Played', 'Games Played', 
-            'Points per Minute Played',
-            'Points Allowed per Minute Played'
+            'Scoring Margin per Minute', 'Games Played',
+            'Team Points per Minute',
+            'Opponent Points per Minute'
         ]
         with stat_col:
             data = st.radio(
-                label='Select Stat', options=view_stats, horizontal=True
+                label='Measure', options=view_stats, horizontal=True
             )
         col1, col2 = st.columns([3, 2])
         if data:
@@ -318,20 +334,20 @@ if view_analytics == 'Player Lineup':
                 fig = px.bar(
                     data_frame=lineup_level.round(2),
                     x=data,
-                    y='Lineups',
+                    y='Lineup',
                     orientation='h',
                     text=data,
                     color_discrete_sequence=['green']
                 )
                 fig.update_traces(textposition='outside')
-                fig.update_layout(title=f'{data} by player lineup')
+                fig.update_layout(title=f'{data} by lineup')
                 st.plotly_chart(figure_or_data=fig, width='stretch')
             sorted_lineup = (
                 lineup_level.sort_values(by=[data], ascending=False)
                             .reset_index(drop=True)
             )
             with col2:
-                st.dataframe(sorted_lineup[['Lineups', data, 'Minutes per Game']].round(2), hide_index=True)
+                st.dataframe(sorted_lineup[['Lineup', data, 'Minutes per Game']].round(2), hide_index=True)
 
 if view_analytics == 'Player':
 
@@ -340,11 +356,11 @@ if view_analytics == 'Player':
     player_clean_data = player_clean_data.rename(columns=_PLAYER_MAP_NAMES)
     player_clean_data['Name'] = player_clean_data['PLAYER_NAME']
     view_stats = [
-        'Team Points while Playing per Minute', 'Points Allowed while Playing per Minute',
-        'Plus/Minus per Minute Played', 'Minutes per Game Played', 'Games Played'
+        'Team Points per Minute on Court', 'Opponent Points per Minute on Court',
+        'Scoring Margin per Minute on Court', 'Minutes per Game', 'Games Played'
         ]
     data = st.radio(
-        label='Stat', options=view_stats, horizontal=True
+        label='Measure', options=view_stats, horizontal=True
     )
     col1, col2 = st.columns(spec=[3,2])
     if data:
@@ -374,22 +390,27 @@ if view_analytics == 'Player':
 if view_analytics == 'Overall Lineup':
     min_col, stat_col = st.columns([1, 2])
     with min_col:
-        min_threshold = st.number_input(label='Minimum minutes', step=1, value=2)
+        min_threshold = st.number_input(
+            label='Minimum lineup minutes',
+            step=1,
+            value=2,
+            help='Hide lineups with less total court time across the selected season.'
+        )
     lineup_level = get_lineup_level_data(grouped_lineups)
     lineup_level['Minutes per Game'] = (
         lineup_level['TOTAL_MIN'] / lineup_level['GAME_COUNT']
     )
     lineup_level = lineup_level[lineup_level['TOTAL_MIN'] >= min_threshold]
     lineup_level = lineup_level.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
-    lineup_level['Lineup'] = lineup_level['LINEUP_KEY']
+    lineup_level['Lineup'] = lineup_level['LINEUP_KEY'].apply(lineup_ids_to_names)
     view_stats = [
-            'Plus/Minus per Minute Played',
-            'Points per Minute Played',
-            'Points Allowed per Minute Played'
+            'Scoring Margin per Minute',
+            'Team Points per Minute',
+            'Opponent Points per Minute'
     ]
     with stat_col:
         data = st.radio(
-            label='Stat', options=view_stats, horizontal=True
+            label='Measure', options=view_stats, horizontal=True
         )
     col1, col2 = st.columns([3, 2])
     if data:
@@ -423,22 +444,22 @@ if view_analytics == 'Game':
     game_clean_data['GAME_COUNT'] = 1
     game_data = game_clean_data.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
 
-    game_data['Lineup'] = game_data['LINEUP_KEY']
+    game_data['Lineup'] = game_data['LINEUP_KEY'].apply(lineup_ids_to_names)
     games = game_data['OPPONENT'].unique().tolist()
     col1, col2 = st.columns(2)
     with col1:
         game_select = st.selectbox(
-            label='Game', options=games
+            label='Game date', options=games
         )
     game_data = game_data[game_data['OPPONENT'] == game_select]
     view_stats = [
-            'Plus/Minus per Minute Played',
-            'Points per Minute Played',
-            'Points Allowed per Minute Played'
+            'Scoring Margin per Minute',
+            'Team Points per Minute',
+            'Opponent Points per Minute'
         ]
     with col2:
         data = st.radio(
-            label='Stat', options=view_stats, horizontal=True
+            label='Measure', options=view_stats, horizontal=True
         )
     col1, col2 = st.columns([3, 2])
     if data:

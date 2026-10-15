@@ -28,87 +28,42 @@ credentials = {
     }
 }
 
-allowed_for_guest = ['View Data']
-
 cookie_name = "nda_app_cookie"
-cookie_key = st.secrets['page_password']['COOKIE_KEY'] # use an environment var in production
+cookie_key = st.secrets['page_password']['COOKIE_KEY']
 cookie_expiry_days = 365
 
 authenticator = stauth.Authenticate(
     credentials=credentials,
     cookie_name=cookie_name,
-    key=cookie_key,
+    cookie_key=cookie_key,
     cookie_expiry_days=cookie_expiry_days,
 )
 
-authenticator.login(
-    location="main",
-    key="auth_login_widget",
-    fields={'Login': 'Admin Login', 'Form name': 'Admin Login'}
-)
+st.session_state.setdefault("is_guest", False)
+st.session_state.setdefault("auth_role", None)
+st.session_state.setdefault("authentication_status", None)
 
-if "is_guest" not in st.session_state:
-    st.session_state["is_guest"] = False
-if "auth_role" not in st.session_state:
-    st.session_state["auth_role"] = None
-if "authentication_status" not in st.session_state:
-    st.session_state["authentication_status"] = None
-    st.session_state.PAGES = None
-    st.session_state.pg = None
-
-
-
-if st.session_state['authentication_status'] is None:
-    st.markdown(
-    body='''
-    <style>
-    .login-kicker {
-        color: #2f6f72;
-        font-size: 0.8rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-    }
-    .login-title {
-        color: #173042;
-        font-size: clamp(2.2rem, 5vw, 4rem);
-        font-weight: 700;
-        line-height: 1.02;
-        margin: 0.25rem 0 0.75rem;
-    }
-    .login-copy {
-        color: #52636b;
-        font-size: 1.05rem;
-        margin-bottom: 1.5rem;
-    }
-    .login-band {
-        background: #e8f1ef;
-        border-left: 5px solid #d49a3a;
-        color: #173042;
-        padding: 1rem 1.25rem;
-        margin: 1.5rem 0 1rem;
-    }
-    </style>
-    <div class="login-kicker">Notre Dame Academy Girls Basketball Analytics</div>
-    <h1 class="login-title">Notre Dame Academy Girls Basketball Analytics</h1>
-    <div class="login-copy">Review performance, explore the season, and keep game data in one place.</div>
-    ''',
-    unsafe_allow_html=True,
-    )
-    st.caption("Version " + version)
-    login_col, guest_col = st.columns(2, vertical_alignment="top")
+if st.session_state.get("authentication_status") is not True:
+    st.title('NDA Girls Basketball Analytics')
+    st.caption('Sign in as an administrator or continue as a guest.')
+    login_col, guest_col = st.columns(2, vertical_alignment='top')
     with login_col:
-        st.markdown('<div class="login-band"><strong>Admin access</strong><br>Enter your credentials to manage game data and view all reports.</div>', unsafe_allow_html=True)
+        authenticator.login(
+            location='main',
+            key='auth_login_widget',
+            fields={'Login': 'Sign in', 'Form name': 'Admin sign in'}
+        )
     with guest_col:
-        st.image(image=image, width=220)
-        st.markdown('<div class="login-band"><strong>Explore analytics</strong><br>Browse reports without entering data.</div>', unsafe_allow_html=True)
-        if st.button("View Analytics", key="guest_button"):
-            st.session_state["is_guest"] = True
-            st.session_state["auth_role"] = "guest"
-            st.session_state["auth_name"] = "Guest"
-            st.session_state["authentication_status"] = True
+        st.subheader('Guest access')
+        st.write('Browse reports without access to data entry.')
+        if st.button('Browse as guest', key='guest_button'):
+            st.session_state['is_guest'] = True
+            st.session_state['auth_role'] = 'guest'
+            st.session_state['auth_name'] = 'Guest'
+            st.session_state['authentication_status'] = True
             st.session_state['username'] = 'Guest'
-            st.session_state.auth_username = 'Guest'
+            st.session_state['auth_username'] = 'Guest'
+            st.rerun()
 
 # Read authenticator results from session_state
 auth_status = st.session_state.get("authentication_status")
@@ -126,10 +81,10 @@ if auth_status is True and not st.session_state.get("is_guest"):
     st.session_state["is_guest"] = False
     # show logout (unique key)
 
-if (auth_status is True) & (auth_username == 'nda_admin'):
+if auth_status is True and auth_username == 'nda_admin':
     authenticator.logout("Logout", "sidebar", key="auth_logout_widget")
 
-if st.session_state.is_guest == True:
+if st.session_state.is_guest:
     st.sidebar.title('NDA Analytics')
     guest_logout_button = st.sidebar.button('Logout', key='guest_logout')
     if guest_logout_button:
