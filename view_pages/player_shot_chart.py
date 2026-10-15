@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from py import sql, data_source, utils as ut
+from py import sql, data_source, utils as ut, view_ui
 pd.options.mode.chained_assignment = None
 
 st.set_page_config(page_title='Player Shot Chart', layout='wide')
@@ -148,13 +148,23 @@ players = players.sort_values(by='SEASON', ascending=False)
 season_list = players.SEASON.unique().tolist()
 
 with others:
-     season = st.radio(label='Season', options=season_list, horizontal=True)
-     use_games = st.radio(label='Scope', options=['Season', 'Single game'], horizontal=True)
+     season = view_ui.select_season(
+          options=season_list, key='player_shot_season'
+     )
+     use_games = st.segmented_control(
+          label='Scope',
+          options=['Season', 'Single game'],
+          default='Season'
+     )
 
 if use_games == 'Single game':
      games_in_season = players[players['SEASON'] == season]['GAME'].unique().tolist()
      with others:
-          game = st.selectbox(label='Game', options=games_in_season)
+          game = view_ui.select_game(
+               options=games_in_season,
+               key='player_shot_game',
+               label='Game',
+          )
 else:
      game = None
 
@@ -163,8 +173,8 @@ player_grouped_data = player_grouped_data[player_grouped_data['SEASON'] == seaso
 pbp_data = pbp[pbp['SEASON'] == season]
 player_names = player_data['NAME'].unique()
 with others:
-     players_selected = st.radio(
-           label='Player', options=player_names
+     players_selected = st.selectbox(
+          label='Player', options=player_names, key='player_shot_player'
      )
 
 this_game, this_game_grouped, pbp_grouped = filter_player_data(
@@ -201,12 +211,29 @@ if players_selected:
           totals=totals_new, players_selected=players_selected
      )
      fig.update_layout(width=500, height=500)
+     attempt_count = int(this_game['ATTEMPTS'].sum())
+     game_count = int(this_game['GAME'].nunique())
+     current_scope = f"{season} season · {players_selected} · "
+     current_scope += f"{game}" if game is not None else 'all games'
+     view_ui.render_page_context(
+          page_key='player_shot_chart',
+          scope=current_scope,
+     )
+     st.metric('Shot attempts in scope', attempt_count, help=f"Across {game_count} game(s).")
+     shot_view = st.segmented_control(
+          'Shot profile display',
+          options=['Court chart', 'Shot table'],
+          default='Court chart',
+          key='player_shot_display',
+     )
      with shot_chart_col:
           st.markdown(
                f'#### {players_selected} shot chart'
           )
-
-          st.plotly_chart(figure_or_data=fig, width='stretch', config={'displaylogo': False})
+          if shot_view == 'Shot table':
+               st.dataframe(totals_sorted, width='stretch', hide_index=True)
+          else:
+               st.plotly_chart(figure_or_data=fig, width='stretch', config={'displaylogo': False})
 
      st.markdown(f'#### Top five spots for {players_selected}')
      st.dataframe(

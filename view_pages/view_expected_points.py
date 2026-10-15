@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import polars as pl
-from py import sql, data_source
+from py import sql, data_source, view_ui
 import joblib
 
 pd.options.mode.chained_assignment = None
@@ -580,7 +580,9 @@ season_list = sorted(season_list, key=lambda x: int(x), reverse=True)
 st.subheader('Choose a game')
 col1, col2 = st.columns(spec=2, vertical_alignment='bottom')
 with col1:
-    season = st.radio(label='Season', options=season_list, horizontal=True)
+    season = view_ui.select_season(
+        options=season_list, key='expected_points_season'
+    )
 if season:
     player_data, player_data2, game_summary = format_data(
         player_data=player_data, game_summary_data=game_summary, selected_season=season
@@ -590,7 +592,11 @@ if season:
     games_list = player_data.select('LABEL').unique().to_series().to_list()
     games_list = sorted(games_list, key=lambda x: pd.to_datetime(x.split(' - ')[1]) ,reverse=True)
     with col2:
-        game = st.selectbox(label='Game', options=games_list)
+        game = view_ui.select_game(
+            options=games_list,
+            key='expected_points_game',
+            label='Game',
+        )
 
     if game != []:
         t_game, game_data = get_games_data(
@@ -615,6 +621,10 @@ if season:
                 'LAST_ROLLING_POINTS_TEAM_NDA': 'NDA_POINTS',
                 'LAST_ROLLING_POINTS_TEAM_OPPONENT': 'OPP_POINTS'
             }
+        )
+        view_ui.render_page_context(
+            page_key='view_expected_points',
+            scope=f"{season} season · {game}",
         )
         # ========== EXPECTED TRITONS ==========
         tritons = this_game.filter(
@@ -684,6 +694,10 @@ if season:
             0
         )
         expected_fg_opp = opp['EXPECTED_POINTS'].sum()
+        st.caption(
+            f"Sample size: {int(tritons['ATTEMPT'].sum())} NDA shot attempts · "
+            f"{int(opp['ATTEMPT'].sum())} opponent shot attempts."
+        )
 
         # ========== ACTUAL OPP ==========
         actual_fg_opp = opp['ACTUAL_POINTS'].sum()
@@ -847,6 +861,31 @@ if season:
                 yaxis_title='Share of simulations (%)',
                 legend_title='Team',
             )
-            st.plotly_chart(figure_or_data=fig, width='stretch')
+            simulation_view = st.segmented_control(
+                'Simulation display',
+                options=['Distribution chart', 'Percentile table'],
+                default='Distribution chart',
+                key='expected_points_simulation_display',
+            )
+            if simulation_view == 'Percentile table':
+                simulation_data = all_sims.to_pandas()
+                percentile_table = pd.DataFrame({
+                    'Team': ['NDA', opp_team_name],
+                    '10th percentile points': [
+                        simulation_data['NDA_SIMULATED_POINTS'].quantile(0.1),
+                        simulation_data['OPP_SIMULATED_POINTS'].quantile(0.1),
+                    ],
+                    'Median points': [
+                        simulation_data['NDA_SIMULATED_POINTS'].median(),
+                        simulation_data['OPP_SIMULATED_POINTS'].median(),
+                    ],
+                    '90th percentile points': [
+                        simulation_data['NDA_SIMULATED_POINTS'].quantile(0.9),
+                        simulation_data['OPP_SIMULATED_POINTS'].quantile(0.9),
+                    ],
+                }).round(1)
+                st.dataframe(percentile_table, width='stretch', hide_index=True)
+            else:
+                st.plotly_chart(figure_or_data=fig, width='stretch')
     else:
         st.info('Select a game above to view expected points and run a simulation.')

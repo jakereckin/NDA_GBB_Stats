@@ -48,17 +48,6 @@ with logo_col:
 	st.image(logo, width=150)
 
 st.markdown(
-	'<div class="guest-band"><strong>Analytics view</strong><br>Select a report below or use the View Data section in the sidebar.</div>',
+	'<div class="guest-band"><strong>Analytics view</strong><br>Use the View Data section in the sidebar to open an analysis.</div>',
 	unsafe_allow_html=True,
 )
-
-st.subheader("Featured reports")
-left_col, right_col = st.columns(2)
-with left_col:
-	st.page_link("view_pages/team_shot_chart.py", label="Team shot chart", icon="📊")
-	st.page_link("view_pages/player_shot_chart.py", label="Player shot chart", icon="👤")
-	st.page_link("view_pages/view_game_summary.py", label="Game summary", icon="📋")
-with right_col:
-	st.page_link("view_pages/view_expected_points.py", label="Expected points", icon="🎯")
-	st.page_link("view_pages/view_minutes.py", label="Lineups", icon="⏱️")
-	st.page_link("view_pages/view_lineup_network.py", label="Lineup network", icon="🔗")

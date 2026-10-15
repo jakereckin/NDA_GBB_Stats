@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from py import sql, data_source, utils as ut
+from py import sql, data_source, utils as ut, view_ui
 pd.options.mode.chained_assignment = None
 
 st.set_page_config(layout='wide')
@@ -279,8 +279,8 @@ season_list = (
 st.subheader('Choose a comparison')
 col1, col2 = st.columns([1, 2], vertical_alignment='bottom')
 with col1:
-     season = st.radio(
-          label='Select Season', options=season_list, horizontal=True
+     season = view_ui.select_season(
+          options=season_list, key='team_shot_season'
      )
 
 this_year = (
@@ -289,11 +289,12 @@ this_year = (
 )
 games = this_year['U_ID'].unique()
 with col2:
-     games_selected = st.multiselect(
-          label='Choose Games',
-          options=list(reversed(games)),
-          placeholder='Select one or more games',
-          help='Select multiple games to compare combined shot profiles.'
+     game_options = list(reversed(games))
+     games_selected = view_ui.select_games(
+          options=game_options,
+          key='team_shot_games',
+          label='Games to compare',
+          help='Starts with the latest game. Add games to compare combined shot profiles.'
      )
 if games_selected:
 
@@ -312,10 +313,10 @@ if games_selected:
      st.subheader('Shot profile')
      shot_chart, buttons = st.columns([2, 1], vertical_alignment='top')
      with buttons:
-          select_team = st.radio(
-               label='Select to View NDA or Opponent',
+          select_team = st.segmented_control(
+               label='Team on court',
                options=['NDA', 'Opponent'],
-               horizontal=True
+               default='NDA'
           )
           st.metric(
                label='NDA Shot Selection GPA',
@@ -338,6 +339,10 @@ if games_selected:
            three_pt_percent, fts_makes, fts_attempts) = get_shot_data(
                totals_sorted=totals_sorted
           )
+          view_ui.render_page_context(
+               page_key='team_shot_chart',
+               scope=f"{season} season · {len(games_selected)} game(s) · {select_team}",
+          )
           twos_percent = (twos_makes / twos_attempts) * 100 if twos_attempts > 0 else 0
           threes_percent = (three_total_makes / three_total_attempts) * 100 if three_total_attempts > 0 else 0
           fts_percent = (fts_makes / fts_attempts) * 100 if fts_attempts > 0 else 0
@@ -355,7 +360,16 @@ if games_selected:
           )
           with shot_chart:
                st.markdown(f'#### {select_team} shot chart')
-               st.plotly_chart(figure_or_data=fig, width='stretch', selection_mode='points')
+               shot_view = st.segmented_control(
+                    'Shot profile display',
+                    options=['Court chart', 'Shot table'],
+                    default='Court chart',
+                    key='team_shot_display',
+               )
+               if shot_view == 'Shot table':
+                    st.dataframe(totals_sorted, width='stretch', hide_index=True)
+               else:
+                    st.plotly_chart(figure_or_data=fig, width='stretch', selection_mode='points')
           st.markdown('#### Player breakdown')
           st.dataframe(data=player_data, width='stretch', hide_index=True)
 else:

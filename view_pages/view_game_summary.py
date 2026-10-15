@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 import polars as pl
-from py import sql, data_source
+from py import sql, data_source, view_ui
 pd.options.mode.chained_assignment = None
 
 st.set_page_config(page_title='Game Summary', layout='wide')
@@ -254,7 +254,9 @@ season_list = game_summary['SEASON'].unique().tolist()
 season_list = sorted(season_list, reverse=True)
 
 with col1:
-    season = st.radio(label='Season', options=season_list, horizontal=True)
+    season = view_ui.select_season(
+        options=season_list, key='game_summary_season'
+    )
 
 if season_list:
 
@@ -265,24 +267,24 @@ if season_list:
     games_list = reversed(games_list)
 
     with col2:
-        st.session_state.game = st.multiselect(
-            label='Games',
+        selected_games = view_ui.select_games(
+            label='Games to compare',
             options=list(games_list),
-            placeholder='Select one or more games',
+            key='game_summary_games',
             help='Select multiple games to compare combined team and player results.'
         )
     
-    if st.session_state.game != []:
+    if selected_games:
         with col3:
-            level_view = st.radio(
+            level_view = st.segmented_control(
                 label='View level',
                 options=['Team Level', 'Player Level', 'Both'],
-                horizontal=True
+                default='Team Level'
             )
         team_data, player_level, player_season_avg = get_game_player_details(
             team_data=team_data,
             game_summary_season=game_summary_season,
-            game=st.session_state.game
+            game=selected_games
         )
         team_data_clean, player_level, column_config = clean_frames(
             team_data=team_data,
@@ -293,6 +295,14 @@ if season_list:
         player_level_show = player_level[['NAME', 'TYPE'] + other_stats]
         player_level_show = player_level_show[player_level_show['TYPE'] == 'Selected Games']
         player_level_show = player_level_show.drop(columns=['TYPE']).sort_values(by=['Game Score'], ascending=False)
+        view_ui.render_page_context(
+            page_key='view_game_summary',
+            scope=f"{season} season · {len(selected_games)} selected game(s) · {level_view}",
+        )
+        st.caption(
+            f"Sample size: {len(selected_games)} game(s) · "
+            f"{game_summary_season['GAME_ID'].nunique()} games in the season."
+        )
         if level_view == 'Team Level':
             st.markdown('#### Team level')
             st.dataframe(
@@ -325,8 +335,8 @@ if season_list:
                 column_config=column_config
             )
         if level_view in ['Team Level']:
-            data = st.radio(
-                label='Stat to chart', options=other_stats, horizontal=True
+            data = st.selectbox(
+                label='Stat to chart', options=other_stats
             )
             if data:
                 

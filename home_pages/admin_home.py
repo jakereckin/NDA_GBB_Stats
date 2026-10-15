@@ -56,15 +56,3 @@ st.markdown(
 	unsafe_allow_html=True,
 )
 
-st.subheader("Start here")
-action_col, analysis_col = st.columns(2)
-with action_col:
-	st.markdown("**Game-day entry**")
-	st.caption("Record plays, players, minutes, and game details.")
-	st.page_link("add_pages/add_plays.py", label="Add plays", icon="🏀")
-	st.page_link("add_pages/add_minutes.py", label="Add minutes", icon="⏱️")
-with analysis_col:
-	st.markdown("**Performance review**")
-	st.caption("Move from a quick overview to detailed team and player views.")
-	st.page_link("view_pages/team_shot_chart.py", label="Team shot chart", icon="📊")
-	st.page_link("view_pages/view_game_summary.py", label="Game summary", icon="📋")

@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 import ast
 import plotly.express as px
-from py import sql, data_source
+import plotly.graph_objects as go
+from py import sql, data_source, view_ui
 pd.options.mode.chained_assignment = None
 
 st.set_page_config(page_title='Minutes and Lineups', layout='wide')
@@ -236,7 +237,9 @@ def get_game_level(data):
 st.subheader('Explore team performance')
 minute_data = get_data()
 years = minute_data['SEASON'].sort_values(ascending=False).drop_duplicates().tolist()
-select_season = st.radio('Season', options=years, horizontal=True)
+select_season = view_ui.select_season(
+    options=years, key='minutes_season'
+)
 minute_data = minute_data[minute_data['SEASON'] == select_season]
 clean_lineups = build_lineup_intervals(minutes_data=minute_data)
 games_info, player_info = get_game_player_info(minutes_data=minute_data)
@@ -246,24 +249,30 @@ unique_player_lineups, my_players = get_unique_lineups(grouped_lineups=grouped_l
 player_map = dict(zip(player_info['PLAYER_NAME'], player_info['PLAYER_ID'].astype(int)))
 player_id_to_name = {player_id: player_name for player_name, player_id in player_map.items()}
 
-def lineup_ids_to_names(lineup_key):
+def lineup_ids_to_numbers(lineup_key):
     try:
         # lineup_key may be a stringified tuple like "(1, 2, 3, 4, 5)"
         ids = ast.literal_eval(lineup_key) if isinstance(lineup_key, str) else lineup_key
     except Exception:
         return lineup_key
-    try:
-        names = [player_id_to_name.get(int(pid), str(pid)) for pid in ids]
-    except Exception:
-        names = [player_id_to_name.get(pid, str(pid)) for pid in ids]
-    return ', '.join(names)
+    return ', '.join(f'#{int(player_id)}' for player_id in ids)
+
+
+number_key = pd.DataFrame(
+    [
+        {'Jersey number': player_id, 'Player': player_name}
+        for player_id, player_name in sorted(player_id_to_name.items())
+    ]
+)
+with st.expander('Jersey number key'):
+    st.dataframe(number_key, width='content', hide_index=True)
 
 
 col1, col2 = st.columns(2)
-view_analytics = st.radio(
+view_analytics = st.segmented_control(
     label='What would you like to compare?',
     options=['Player Lineup', 'Overall Lineup', 'Player', 'Game'],
-    horizontal=True,
+    default='Player Lineup',
     format_func=lambda view: {
         'Player Lineup': 'Lineups with a player',
         'Overall Lineup': 'All lineups',
@@ -317,37 +326,54 @@ if view_analytics == 'Player Lineup':
         lineup_level = lineup_level.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
 
         #lineup_level['Lineup'] = lineup_level['LINEUP_KEY']
-        lineup_level['Lineup'] = lineup_level['LINEUP_KEY'].apply(lineup_ids_to_names)
-        lineup_level['Lineup'] = lineup_level['LINEUP_KEY'].apply(lineup_ids_to_names)
+        lineup_level['Lineup'] = lineup_level['LINEUP_KEY'].apply(lineup_ids_to_numbers)
         view_stats = [
             'Scoring Margin per Minute', 'Games Played',
             'Team Points per Minute',
             'Opponent Points per Minute'
         ]
         with stat_col:
-            data = st.radio(
-                label='Measure', options=view_stats, horizontal=True
-            )
+            data = st.selectbox(label='Measure', options=view_stats)
+        results_view = st.segmented_control(
+            'Results',
+            options=['Chart and table', 'Chart', 'Table'],
+            default='Chart and table',
+            key='minutes_player_lineup_display',
+        )
         col1, col2 = st.columns([3, 2])
         if data:
-            with col1:
-                fig = px.bar(
-                    data_frame=lineup_level.round(2),
-                    x=data,
-                    y='Lineup',
-                    orientation='h',
-                    text=data,
-                    color_discrete_sequence=['green']
-                )
-                fig.update_traces(textposition='outside')
-                fig.update_layout(title=f'{data} by lineup')
-                st.plotly_chart(figure_or_data=fig, width='stretch')
             sorted_lineup = (
                 lineup_level.sort_values(by=[data], ascending=False)
                             .reset_index(drop=True)
             )
-            with col2:
-                st.dataframe(sorted_lineup[['Lineup', data, 'Minutes per Game']].round(2), hide_index=True)
+            sorted_lineup.insert(0, 'Rank', np.arange(len(sorted_lineup)) + 1)
+            view_ui.render_page_context(
+                page_key='view_minutes',
+                scope=f"{select_season} season · lineups with {select_player} · {data}",
+            )
+            st.caption(
+                f"Sample size: {len(lineup_level)} qualifying lineups · "
+                f"{int(lineup_level['Games Played'].sum())} lineup-games."
+            )
+            if results_view != 'Table':
+                with col1:
+                    fig = px.bar(
+                        data_frame=sorted_lineup.round(2),
+                        x=data,
+                        y='Lineup',
+                        orientation='h',
+                        text=data,
+                        color_discrete_sequence=['green']
+                    )
+                    fig.update_traces(textposition='outside')
+                    fig.update_layout(title=f'{data} by lineup')
+                    st.plotly_chart(figure_or_data=fig, width='stretch')
+            if results_view != 'Chart':
+                with col2:
+                    st.dataframe(
+                        sorted_lineup[['Rank', 'Lineup', data, 'Minutes per Game']].round(2),
+                        hide_index=True,
+                    )
 
 if view_analytics == 'Player':
 
@@ -359,33 +385,48 @@ if view_analytics == 'Player':
         'Team Points per Minute on Court', 'Opponent Points per Minute on Court',
         'Scoring Margin per Minute on Court', 'Minutes per Game', 'Games Played'
         ]
-    data = st.radio(
-        label='Measure', options=view_stats, horizontal=True
+    data = st.selectbox(label='Measure', options=view_stats)
+    results_view = st.segmented_control(
+        'Results',
+        options=['Chart and table', 'Chart', 'Table'],
+        default='Chart and table',
+        key='minutes_player_display',
     )
     col1, col2 = st.columns(spec=[3,2])
     if data:
-        with col1:
-            fig = px.bar(
-                data_frame=player_clean_data.round(2),
-                x=data,
-                y='Name',
-                orientation='h',
-                text=data,
-                color_discrete_sequence=['green']
-            )
-            fig.update_traces(textposition='outside')
-            fig.update_layout(title=f'{data} by player')
-            st.plotly_chart(figure_or_data=fig, width='stretch')
         sorted_lineup = (
             player_clean_data.sort_values(by=[data], ascending=False)
                         .reset_index(drop=True)
         )
-        with col2:
-            st.dataframe(
-                data=sorted_lineup[['Name', data]].round(2), 
-                hide_index=True, 
-                width='content'
-            )
+        sorted_lineup.insert(0, 'Rank', np.arange(len(sorted_lineup)) + 1)
+        view_ui.render_page_context(
+            page_key='view_minutes',
+            scope=f"{select_season} season · all players · {data}",
+        )
+        st.caption(
+            f"Sample size: {len(player_clean_data)} players · "
+            f"{int(player_clean_data['Games Played'].sum())} player-games."
+        )
+        if results_view != 'Table':
+            with col1:
+                fig = px.bar(
+                    data_frame=sorted_lineup.round(2),
+                    x=data,
+                    y='Name',
+                    orientation='h',
+                    text=data,
+                    color_discrete_sequence=['green']
+                )
+                fig.update_traces(textposition='outside')
+                fig.update_layout(title=f'{data} by player')
+                st.plotly_chart(figure_or_data=fig, width='stretch')
+        if results_view != 'Chart':
+            with col2:
+                st.dataframe(
+                    data=sorted_lineup[['Rank', 'Name', data]].round(2),
+                    hide_index=True,
+                    width='stretch'
+                )
 
 if view_analytics == 'Overall Lineup':
     min_col, stat_col = st.columns([1, 2])
@@ -402,40 +443,55 @@ if view_analytics == 'Overall Lineup':
     )
     lineup_level = lineup_level[lineup_level['TOTAL_MIN'] >= min_threshold]
     lineup_level = lineup_level.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
-    lineup_level['Lineup'] = lineup_level['LINEUP_KEY'].apply(lineup_ids_to_names)
+    lineup_level['Lineup'] = lineup_level['LINEUP_KEY'].apply(lineup_ids_to_numbers)
     view_stats = [
             'Scoring Margin per Minute',
             'Team Points per Minute',
             'Opponent Points per Minute'
     ]
     with stat_col:
-        data = st.radio(
-            label='Measure', options=view_stats, horizontal=True
-        )
+        data = st.selectbox(label='Measure', options=view_stats)
+    results_view = st.segmented_control(
+        'Results',
+        options=['Chart and table', 'Chart', 'Table'],
+        default='Chart and table',
+        key='minutes_overall_lineup_display',
+    )
     col1, col2 = st.columns([3, 2])
     if data:
-        with col1:
-            fig = px.bar(
-                    data_frame=lineup_level.round(2),
+        sorted_lineup = (
+                lineup_level.sort_values(by=[data], ascending=False)
+                            .reset_index(drop=True)
+        )
+        sorted_lineup.insert(0, 'Rank', np.arange(len(sorted_lineup)) + 1)
+        view_ui.render_page_context(
+            page_key='view_minutes',
+            scope=f"{select_season} season · all lineups · {data}",
+        )
+        st.caption(
+            f"Sample size: {len(lineup_level)} lineups · "
+            f"{int(lineup_level['Games Played'].sum())} lineup-games."
+        )
+        if results_view != 'Table':
+            with col1:
+                fig = px.bar(
+                    data_frame=sorted_lineup.round(2),
                     x=data,
                     y='Lineup',
                     orientation='h',
                     text=data,
                     color_discrete_sequence=['green']
-            )
-            fig.update_traces(textposition='outside')
-            fig.update_layout(title=f'{data} by overall lineup')
-            st.plotly_chart(figure_or_data=fig, width='stretch')
-        sorted_lineup = (
-                lineup_level.sort_values(by=[data], ascending=False)
-                            .reset_index(drop=True)
-        )
-        with col2:
-            st.dataframe(
-                data=sorted_lineup[['Lineup', data, 'Minutes per Game']].round(2),
-                hide_index=True,
-                width='stretch'
-            )
+                )
+                fig.update_traces(textposition='outside')
+                fig.update_layout(title=f'{data} by overall lineup')
+                st.plotly_chart(figure_or_data=fig, width='stretch')
+        if results_view != 'Chart':
+            with col2:
+                st.dataframe(
+                    data=sorted_lineup[['Rank', 'Lineup', data, 'Minutes per Game']].round(2),
+                    hide_index=True,
+                    width='stretch'
+                )
 
 if view_analytics == 'Game':
 
@@ -444,40 +500,132 @@ if view_analytics == 'Game':
     game_clean_data['GAME_COUNT'] = 1
     game_data = game_clean_data.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
 
-    game_data['Lineup'] = game_data['LINEUP_KEY'].apply(lineup_ids_to_names)
+    game_data['Lineup'] = game_data['LINEUP_KEY'].apply(lineup_ids_to_numbers)
     games = game_data['OPPONENT'].unique().tolist()
     col1, col2 = st.columns(2)
     with col1:
-        game_select = st.selectbox(
-            label='Game date', options=games
+        game_select = view_ui.select_game(
+            options=games,
+            key='minutes_game',
+            label='Game',
         )
     game_data = game_data[game_data['OPPONENT'] == game_select]
+    selected_game_id = games_info.loc[
+        games_info['GAME_DATE'] == game_select, 'GAME_ID'
+    ].iloc[0]
+    rotation = clean_lineups[
+        clean_lineups['GAME_ID'] == selected_game_id
+    ].copy()
+    rotation['Lineup'] = rotation['LINEUP_KEY'].apply(lineup_ids_to_numbers)
+    rotation['ELAPSED_START'] = (36 * 60 - rotation['TIME_IN']) / 60
+    rotation['STINT_MINUTES'] = rotation['SECONDS_PLAYED'] / 60
+    rotation['STINT_MARGIN'] = (
+        rotation['POINTS_SCORED'] - rotation['OPP_POINTS_SCORED']
+    )
+    st.subheader('Rotation timeline')
+    st.caption(
+        'Each bar shows a lineup stint from tip-off to the end of the game. '
+        'Green stints gained margin; red stints lost margin.'
+    )
+    timeline = go.Figure()
+    for lineup, stint_group in rotation.groupby('Lineup', sort=False):
+        stint_colors = np.where(
+            stint_group['STINT_MARGIN'].fillna(0) >= 0,
+            '#2d8a62',
+            '#c64949',
+        )
+        hover_data = stint_group[[
+            'ELAPSED_START', 'STINT_MINUTES', 'SCORE_IN', 'SCORE_OUT',
+            'OPP_SCORE_IN', 'OPP_SCORE_OUT', 'STINT_MARGIN',
+        ]].to_numpy()
+        timeline.add_trace(go.Bar(
+            x=stint_group['STINT_MINUTES'],
+            base=stint_group['ELAPSED_START'],
+            y=[lineup] * len(stint_group),
+            orientation='h',
+            marker_color=stint_colors,
+            customdata=hover_data,
+            hovertemplate=(
+                '<b>%{y}</b><br>'
+                'Elapsed: %{customdata[0]:.1f} min<br>'
+                'Stint: %{customdata[1]:.1f} min<br>'
+                'Score: %{customdata[2]}-%{customdata[4]} to '
+                '%{customdata[3]}-%{customdata[5]}<br>'
+                'Stint margin: %{customdata[6]:+.0f}<extra></extra>'
+            ),
+            showlegend=False,
+        ))
+    timeline.update_layout(
+        barmode='overlay',
+        xaxis=dict(
+            title='Elapsed game time (minutes)',
+            range=[0, 36],
+            dtick=4,
+            fixedrange=True,
+        ),
+        yaxis=dict(title='Lineup', autorange='reversed'),
+        height=max(300, 48 * rotation['Lineup'].nunique()),
+        margin=dict(l=20, r=20, t=20, b=40),
+    )
+    st.plotly_chart(timeline, width='stretch')
     view_stats = [
             'Scoring Margin per Minute',
             'Team Points per Minute',
             'Opponent Points per Minute'
         ]
     with col2:
-        data = st.radio(
-            label='Measure', options=view_stats, horizontal=True
-        )
+        data = st.selectbox(label='Measure', options=view_stats)
+    results_view = st.segmented_control(
+        'Results',
+        options=['Chart and table', 'Chart', 'Table'],
+        default='Chart and table',
+        key='minutes_game_display',
+    )
     col1, col2 = st.columns([3, 2])
     if data:
-        with col1:
-            fig = px.bar(
-                data_frame=game_data.round(2),
-                x=data,
-                y='Lineup',
-                orientation='h',
-                text=data,
-                color_discrete_sequence=['green']
-            )
-            fig.update_traces(textposition='outside')
-            fig.update_layout(title=f'{data} by game')
-            st.plotly_chart(figure_or_data=fig, width='stretch')
         sorted_lineup = (
             game_data.sort_values(by=[data], ascending=False)
                         .reset_index(drop=True)
         )
-        with col2:
-            st.dataframe(sorted_lineup[['Lineup', data, 'Total Minutes Played']].round(2), hide_index=True)
+        sorted_lineup.insert(0, 'Rank', np.arange(len(sorted_lineup)) + 1)
+        view_ui.render_page_context(
+            page_key='view_minutes',
+            scope=f"{select_season} season · {game_select} · {data}",
+        )
+        if not game_data.empty:
+            best_lineup = game_data.sort_values(
+                'Scoring Margin per Minute', ascending=False
+            ).iloc[0]
+            st.caption(
+                f"Best scoring margin: {best_lineup['Lineup']} at "
+                f"{best_lineup['Scoring Margin per Minute']:+.2f} points/min "
+                f"over {best_lineup['Total Minutes Played']:.1f} minutes."
+            )
+        st.caption(f"Sample size: {len(game_data)} lineups in this game.")
+        if results_view != 'Table':
+            with col1:
+                fig = px.bar(
+                    data_frame=sorted_lineup.round(2),
+                    x=data,
+                    y='Lineup',
+                    orientation='h',
+                    text=data,
+                    color_discrete_sequence=['green']
+                )
+                fig.update_traces(textposition='outside')
+                fig.update_layout(title=f'{data} by game')
+                st.plotly_chart(figure_or_data=fig, width='stretch')
+        if results_view != 'Chart':
+            with col2:
+                performance_columns = [
+                    'Lineup',
+                    'Total Minutes Played',
+                    'Team Points per Minute',
+                    'Opponent Points per Minute',
+                    'Scoring Margin per Minute',
+                ]
+                st.dataframe(
+                    sorted_lineup[['Rank'] + performance_columns].round(2),
+                    hide_index=True,
+                    width='stretch',
+                )

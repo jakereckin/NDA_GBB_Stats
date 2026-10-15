@@ -7,7 +7,7 @@ import polars as pl
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
-from py import sql, data_source
+from py import sql, data_source, view_ui
 pd.options.mode.chained_assignment = None
 
 st.set_page_config(page_title='Lineup Network', layout='wide')
@@ -232,14 +232,23 @@ def get_game_level(data):
     )
     return game_level
 
-st.subheader('Choose a season and lineup filter')
-season, players = st.columns(2, vertical_alignment='bottom')
+st.subheader('Choose a game scope and lineup filter')
+season, scope, game, players = st.columns(4, vertical_alignment='bottom')
 
 minute_data = get_data()
 years = minute_data['SEASON'].sort_values(ascending=False).drop_duplicates().tolist()
 
 with season:
-    select_season = st.radio('Season', options=years, horizontal=True)
+    select_season = view_ui.select_season(
+        options=years, key='lineup_network_season'
+    )
+with scope:
+    analysis_scope = st.segmented_control(
+        'Scope',
+        options=['Single game', 'Season'],
+        default='Single game',
+        key='lineup_network_scope',
+    )
 minute_data = minute_data[minute_data['SEASON'] == select_season]
 clean_lineups = build_lineup_intervals(minutes_data=minute_data)
 games_info, player_info = get_game_player_info(minutes_data=minute_data)
@@ -254,94 +263,218 @@ lineup_analysis = clean_lineups.groupby('GAME_ID').apply(
 
 lineup_analysis['RANK'] = lineup_analysis.groupby('GAME_ID').cumcount() + 1
 player_ids = player_info['PLAYER_ID'].astype(int).drop_duplicates().tolist()
+player_names = dict(zip(
+    player_info['PLAYER_ID'].astype(int), player_info['PLAYER_NAME']
+))
 
 with players:
     select_players = st.multiselect(
         'Players to include',
         options=player_ids,
-        placeholder='Show lineups containing these players'
+        format_func=lambda player_id: (
+            f"{player_names.get(player_id, 'Player')} (#{player_id})"
+        ),
+        placeholder='Filter to lineups containing these players',
+        help='Choose one or more players to focus the transition graph.'
     )
 
-lineup_analysis["LINEUP_SET"] = lineup_analysis["LINEUP_KEY"].apply(lambda x: set(ast.literal_eval(x)))
-these_players = lineup_analysis[ lineup_analysis["LINEUP_SET"].apply(lambda s: set(select_players).issubset(s)) ]
-# Sort to ensure correct ordering
-df = these_players.sort_values(["GAME_ID", "RANK"])
+available_games = (
+    games_info.sort_values('GAME_ID', ascending=False)['GAME_DATE']
+    .drop_duplicates()
+    .tolist()
+)
+selected_game_id = None
+selected_game = None
+if analysis_scope == 'Single game':
+    with game:
+        selected_game = view_ui.select_game(
+            options=available_games,
+            key='lineup_network_game',
+            label='Game',
+        )
+    selected_game_id = games_info.loc[
+        games_info['GAME_DATE'] == selected_game, 'GAME_ID'
+    ].iloc[0]
+    scope_lineup_analysis = lineup_analysis[
+        lineup_analysis['GAME_ID'] == selected_game_id
+    ].copy()
+else:
+    scope_lineup_analysis = lineup_analysis.copy()
 
-# --- STEP 1: Build transitions BEFORE filtering ---
-
-# Build graph
-G = nx.DiGraph()
-
-# Add all nodes first
-for lineup in df["LINEUP_KEY"].unique():
-    G.add_node(lineup)
-
-# Add edges based on sequential RANK within GAME_ID
-for game_id, group in df.groupby("GAME_ID"):
-    group = group.sort_values("RANK")
-
-    # Create next-rank mapping
-    group["NEXT_LINEUP"] = group["LINEUP_KEY"].shift(-1)
-
-    # Only valid transitions
-    transitions = group.dropna(subset=["NEXT_LINEUP"])
-
-    for _, row in transitions.iterrows():
-        u = row["LINEUP_KEY"]
-        v = row["NEXT_LINEUP"]
-
-        if u == v:
-            continue  # prevent self-loops
-
-        if G.has_edge(u, v):
-            G[u][v]["weight"] += 1
-        else:
-            G.add_edge(u, v, weight=1)
-
-# --- STEP 2: Apply filtering AFTER transitions are built ---
-
+scope_lineup_analysis["LINEUP_SET"] = scope_lineup_analysis["LINEUP_KEY"].apply(
+    lambda lineup: set(ast.literal_eval(lineup))
+)
+player_filtered = scope_lineup_analysis
 if select_players:
-    valid_nodes = set(
-        df[df["LINEUP_SET"].apply(lambda s: set(select_players).issubset(s))]["LINEUP_KEY"]
+    player_filtered = player_filtered[
+        player_filtered['LINEUP_SET'].apply(
+            lambda lineup: set(select_players).issubset(lineup)
+        )
+    ]
+
+lineup_stats = (
+    player_filtered.groupby('LINEUP_KEY', as_index=False)
+    .agg(
+        TOTAL_MINUTES=('MIN_PLAYED', 'sum'),
+        TEAM_POINTS=('POINTS_SCORED', 'sum'),
+        OPPONENT_POINTS=('OPP_POINTS_SCORED', 'sum'),
+        GAMES_PLAYED=('GAME_ID', 'nunique'),
     )
+)
+lineup_stats['SCORING_MARGIN_PER_MINUTE'] = (
+    (lineup_stats['TEAM_POINTS'] - lineup_stats['OPPONENT_POINTS'])
+    / lineup_stats['TOTAL_MINUTES']
+)
 
-    # Remove nodes not matching filter
-    nodes_to_remove = [n for n in G.nodes() if n not in valid_nodes]
-    G.remove_nodes_from(nodes_to_remove)
-
-# --- STEP 3: Compute PM/min only for remaining nodes ---
-
-df["PLUS_MINUS"] = df["POINTS_SCORED"] - df["OPP_POINTS_SCORED"]
-df["PM_PER_MIN"] = df["PLUS_MINUS"] / df["MIN_PLAYED"]
-
-pm_map = df.groupby("LINEUP_KEY")["PM_PER_MIN"].mean().to_dict()
-
-# --- DRAW GRAPH ---
-
-fig = plt.figure(figsize=(50, 25))
-pos = nx.spring_layout(G, k=2, seed=13)
-
-weights = [G[u][v]["weight"] for u, v in G.edges()]
-node_colors = ["red" if pm_map.get(n, 0) < 0 else "green" for n in G.nodes()]
-
-nx.draw_networkx_nodes(G, pos, node_size=900, node_color=node_colors)
-nx.draw_networkx_edges(G, pos, width=weights, arrowsize=20, arrowstyle="-|>")
-
-# Labels with stroke
-for node, (x, y) in pos.items():
-    plt.text(
-        x, y,
-        node,
-        fontsize=14,
-        fontweight="bold",
-        ha="center",
-        va="center",
-        path_effects=[pe.withStroke(linewidth=3, foreground="white")]
+filter_col, rank_col, limit_col = st.columns([1, 1.4, 1])
+with filter_col:
+    minimum_minutes = st.number_input(
+        'Minimum lineup minutes',
+        min_value=0,
+        value=0,
+        step=1,
+        help='Exclude lineups with fewer total minutes this season.',
     )
+lineup_stats = lineup_stats[
+    lineup_stats['TOTAL_MINUTES'] >= minimum_minutes
+]
+with rank_col:
+    rank_by = st.selectbox(
+        'Rank lineups by',
+        options=['Scoring margin per minute', 'Minutes played'],
+    )
+rank_column = (
+    'SCORING_MARGIN_PER_MINUTE'
+    if rank_by == 'Scoring margin per minute'
+    else 'TOTAL_MINUTES'
+)
+lineup_stats = lineup_stats.sort_values(rank_column, ascending=False)
+with limit_col:
+    top_count = st.slider(
+        'Maximum lineups to show',
+        min_value=1,
+       # max_value=max(1, len(lineup_stats)),
+        value=min(25, max(1, len(lineup_stats))),
+    )
+filtered_stats = lineup_stats.head(top_count).copy()
+filtered_stats.insert(0, 'RANK', np.arange(len(filtered_stats)) + 1)
+visible_lineups = set(filtered_stats['LINEUP_KEY'])
 
-plt.title("Lineup Transition Graph", fontsize=24)
-plt.axis("off")
+def lineup_label(lineup):
+    lineup_players = ast.literal_eval(lineup)
+    return ', '.join(f'#{int(player_id)}' for player_id in lineup_players)
 
-st.markdown('#### Lineup transition graph')
-st.caption('Green nodes have a positive average plus/minus per minute; red nodes are negative.')
-st.pyplot(fig, use_container_width=True)
+G = nx.DiGraph()
+G.add_nodes_from(visible_lineups)
+for _, group in scope_lineup_analysis.sort_values(['GAME_ID', 'RANK']).groupby('GAME_ID'):
+    game_lineups = group['LINEUP_KEY'].tolist()
+    for source, target in zip(game_lineups, game_lineups[1:]):
+        if source == target or source not in visible_lineups or target not in visible_lineups:
+            continue
+        if G.has_edge(source, target):
+            G[source][target]['weight'] += 1
+        else:
+            G.add_edge(source, target, weight=1)
+
+transition_data = pd.DataFrame(
+    [
+        {
+            'From lineup': lineup_label(source),
+            'To lineup': lineup_label(target),
+            'Transitions': details['weight'],
+        }
+        for source, target, details in G.edges(data=True)
+    ],
+    columns=['From lineup', 'To lineup', 'Transitions'],
+).sort_values('Transitions', ascending=False)
+
+jersey_key = pd.DataFrame(
+    [
+        {'Jersey number': player_id, 'Player': player_name}
+        for player_id, player_name in sorted(player_names.items())
+    ]
+)
+with st.expander('Jersey number key'):
+    st.dataframe(jersey_key, width='content', hide_index=True)
+
+scope_filter = ', '.join(
+    player_names.get(player_id, str(player_id)) for player_id in select_players
+) or 'all players'
+scope_label = selected_game if selected_game is not None else 'all games'
+view_ui.render_page_context(
+    page_key='view_lineup_network',
+    scope=f"{select_season} season · {scope_label} · {scope_filter} · {rank_by}",
+)
+st.caption(
+    f"Sample size: {len(filtered_stats)} lineups · "
+    f"{filtered_stats['TOTAL_MINUTES'].sum():.1f} lineup-minutes · "
+    f"{scope_lineup_analysis['GAME_ID'].nunique()} game(s)."
+)
+if not filtered_stats.empty:
+    best_lineup = filtered_stats.sort_values(
+        'SCORING_MARGIN_PER_MINUTE', ascending=False
+    ).iloc[0]
+    st.caption(
+        f"Best filtered lineup: {lineup_label(best_lineup['LINEUP_KEY'])} · "
+        f"{best_lineup['SCORING_MARGIN_PER_MINUTE']:+.2f} points/min over "
+        f"{best_lineup['TOTAL_MINUTES']:.1f} minutes."
+    )
+results_view = st.segmented_control(
+    'Results',
+    options=['Graph and table', 'Graph', 'Table'],
+    default='Graph and table',
+    key='lineup_network_display',
+)
+
+if results_view != 'Table':
+    fig, ax = plt.subplots(figsize=(14, 9), constrained_layout=True)
+    pos = nx.spring_layout(G, k=2, seed=13) if G.number_of_nodes() else {}
+    stats_by_lineup = filtered_stats.set_index('LINEUP_KEY')
+    node_colors = [
+        'red' if stats_by_lineup.loc[node, 'SCORING_MARGIN_PER_MINUTE'] < 0 else 'green'
+        for node in G.nodes()
+    ]
+    nx.draw_networkx_nodes(
+        G, pos, ax=ax, node_size=1800, node_color=node_colors
+    )
+    edge_widths = [
+        min(6, 1 + G[source][target]['weight'] * 0.4)
+        for source, target in G.edges()
+    ]
+    nx.draw_networkx_edges(
+        G, pos, ax=ax, width=edge_widths, arrowsize=16, arrowstyle='-|>'
+    )
+    for node, (x, y) in pos.items():
+        ax.text(
+            x, y,
+            lineup_label(node),
+            fontsize=7,
+            fontweight='bold',
+            ha='center',
+            va='center',
+            path_effects=[pe.withStroke(linewidth=3, foreground='white')],
+        )
+    ax.set_title('Lineup transition graph', fontsize=16)
+    ax.axis('off')
+    st.pyplot(fig, width='stretch')
+    plt.close(fig)
+
+if results_view != 'Graph':
+    display_stats = filtered_stats.copy()
+    display_stats['LINEUP'] = display_stats['LINEUP_KEY'].apply(lineup_label)
+    display_stats = display_stats[[
+        'RANK', 'LINEUP', 'TOTAL_MINUTES', 'GAMES_PLAYED', 'TEAM_POINTS',
+        'OPPONENT_POINTS', 'SCORING_MARGIN_PER_MINUTE',
+    ]].rename(columns={
+        'RANK': 'Rank',
+        'LINEUP': 'Lineup',
+        'TOTAL_MINUTES': 'Minutes played',
+        'GAMES_PLAYED': 'Games played',
+        'TEAM_POINTS': 'Team points',
+        'OPPONENT_POINTS': 'Opponent points',
+        'SCORING_MARGIN_PER_MINUTE': 'Scoring margin per minute',
+    })
+    st.dataframe(display_stats, width='stretch', hide_index=True)
+    if not transition_data.empty:
+        st.markdown('#### Lineup transitions')
+        st.dataframe(transition_data, width='stretch', hide_index=True)
