@@ -26,11 +26,15 @@ games = load_data()
 games = games.sort_values(by='SEASON', ascending=False).reset_index(drop=True)
 seasons = games['SEASON'].unique().tolist()
 
-selected_season = st.radio(
+selected_season = st.selectbox(
     label='Season',
-    options=seasons,
-    horizontal=True
+    placeholder='Enter Season',
+    options=seasons
 )
+add_new_season = st.text_input('Or Add New Season')
+
+if add_new_season != '':
+    selected_season = add_new_season
 
 games = (
     games[games['SEASON'] == selected_season]
