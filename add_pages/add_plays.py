@@ -325,6 +325,7 @@ if choose_stat == "Shot":
         clicked = plotly_events(
             plot_fig=chart,
             click_event=True,
+            override_width=CHART_WIDTH,
             key=f"shot-capture-{game_id}",
         )
 
