@@ -2,7 +2,7 @@ import streamlit as st
 from PIL import Image
 
 st.set_page_config(page_title="Notre Dame Academy Girls Basketball Analytics")
-version = "2026.0.3"
+version = "2026.1.0"
 st.sidebar.caption("Version " + version)
 
 image = Image.open("NDA_LOGO.jpg")
