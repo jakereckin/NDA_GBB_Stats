@@ -5,3 +5,4 @@ NDA_DB - game_summary.csv
 *.pyc
 /ipynb
 *.html
+.streamlit/secrets.toml
