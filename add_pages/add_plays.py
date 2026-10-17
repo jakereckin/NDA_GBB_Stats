@@ -347,6 +347,7 @@ if choose_stat == "Shot":
                 }
                 if clicked_location != selected_location:
                     st.session_state[selected_location_key] = clicked_location
+                    st.rerun()
 
     selected_location = st.session_state.get(selected_location_key)
     if selected_location:

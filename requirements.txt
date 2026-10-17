@@ -12,3 +12,4 @@ streamlit[auth]==1.62.0
 streamlit_plotly_events==0.0.6
 networkx==3.6.1
 ipywidgets==8.1.1
+streamlit===1.66.0
