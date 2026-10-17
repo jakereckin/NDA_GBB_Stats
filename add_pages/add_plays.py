@@ -83,8 +83,10 @@ def build_blank_chart():
         yaxis=dict(range=[Y_MIN, Y_MAX], showgrid=False, zeroline=False, scaleanchor="x"),
         width=CHART_WIDTH,
         height=CHART_HEIGHT,
+        autosize=False,
         margin=dict(l=20, r=20, t=20, b=20),
         plot_bgcolor="white",
+        showlegend=False,
         clickmode="event+select",
     )
     fig.add_trace(
@@ -93,6 +95,7 @@ def build_blank_chart():
             y=capture_y,
             mode="markers",
             marker=dict(opacity=1, size=1, color="white"),
+            showlegend=False,
         )
     )
     return fig
