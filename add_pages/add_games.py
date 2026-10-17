@@ -41,7 +41,7 @@ games = (
     .sort_values(by='GAME_ID', ascending=True)
     .reset_index(drop=True)
 )
-if games:
+if len(games) > 0:
 
     st.subheader(f'Latest game in {selected_season}')
     last_game = games.tail(1)
