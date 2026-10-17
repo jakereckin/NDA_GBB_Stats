@@ -264,250 +264,317 @@ game_val = game["GAME_LABEL"]
 games_season["NUMBER_INT"] = games_season["NUMBER"].astype(int)
 unique_players = games_season.sort_values("NUMBER_INT")["PLAYER_LABEL"].unique()
 
-fig = build_blank_chart()
-col_chart, col_form = st.columns([0.45, 0.55])
-with col_chart:
-    st.markdown("#### Shot location")
-    st.caption("Click the nearest court spot to begin.")
-    clicked = plotly_events(plot_fig=fig, click_event=True, key=f"shot-capture-{game_id}")
+other_stats = [
+    "Shot",
+    "Offensive Rebound",
+    "Defensive Rebound",
+    "Assist",
+    "Steal",
+    "Block",
+    "Turnover",
+    "Foul",
+]
+choose_stat = st.radio(
+    label="Stat type",
+    options=other_stats,
+    horizontal=True,
+    key=f"stat_type_{game_id}",
+)
+player_options = (
+    unique_players
+    if choose_stat == "Shot"
+    else games_season.loc[
+        games_season["NUMBER_INT"] != 0, "PLAYER_LABEL"
+    ].unique()
+)
 
 # Load selected-game data (cached and versioned)
 pbp_data = load_pbp_data_cached(game_select, st.session_state.pbp_version)
 game_stat_plays = load_game_stats(
     SQL_CONN, game_id, st.session_state.game_stat_version
 )
-# Add shot flow
-if clicked:
-    ev = clicked[0]
-    x_click = ev.get("x")
-    y_click = ev.get("y")
-    shot_spot = utils.get_nearest_spot(x=x_click, y=y_click, spots_df=shot_spots)
-    spot_val = shot_spot.get("spot") if shot_spot else None
+spot_val = None
+x_click = None
+y_click = None
 
-    if spot_val:
-        with col_form:
-            st.markdown(f"#### Add play at `{spot_val}`")
-            st.caption(game_val)
-            other_stats = [
-                'Shot', 'Offensive Rebound', 'Defensive Rebound', 'Assist',
-                'Steal', 'Block', 'Turnover', 'Foul'
-            ]
-            choose_stat = st.radio(
-                label="Stat type", options=other_stats, horizontal=True
+if choose_stat == "Shot":
+    col_chart, form_column = st.columns([0.4, 0.6])
+    selected_location_key = f"selected_shot_location_{game_id}"
+    selected_location = st.session_state.get(selected_location_key)
+    chart = go.Figure(build_blank_chart())
+    if selected_location:
+        chart.add_trace(
+            go.Scatter(
+                x=[selected_location["x"]],
+                y=[selected_location["y"]],
+                mode="markers",
+                name="Selected spot",
+                marker=dict(
+                    color="#5c46d6",
+                    size=10,
+                    line=dict(color="white", width=2),
+                ),
+                text=[selected_location["spot"]],
+                hovertemplate="Selected: %{text}<extra></extra>",
+                showlegend=False,
             )
-            with st.form(key=f"shot_form_{game_id}", clear_on_submit=False):
-                player_val = st.radio(label="Player", options=unique_players, horizontal=True)
-                if choose_stat == 'Shot':
-                    c2, c3, c4, c5 = st.columns([1, 1, 1, 1])
-                    with c4:
-                        free_throw = st.segmented_control(
-                            label="Free throw",
-                            options=["N", "Y"],
-                            default="N",
-                            format_func=lambda value: "Yes" if value == "Y" else "No",
-                        )
-                    with c2:
-                        make_miss = st.segmented_control(
-                            label="Made",
-                            options=["N", "Y"],
-                            default="N",
-                            format_func=lambda value: "Yes" if value == "Y" else "No",
-                        )
-                    with c3:
-                        shot_defense = st.segmented_control(
-                            label="Defense",
-                            options=SHOT_DEFENSES,
-                            default=SHOT_DEFENSES[0],
-                            wrap=True,
-                            width="stretch",
-                        )
-                    with c5:
-                        paint_touch = st.segmented_control(
-                            label="Paint touch",
-                            options=["N", "Y"],
-                            default="N",
-                            format_func=lambda value: "Yes" if value == "Y" else "No",
-                        )
-                    if shot_defense == "Open":
-                        shot_defense = "OPEN"
-                    elif shot_defense == "Guarded":
-                        shot_defense = "GUARDED"
-                    else:
-                        shot_defense = "HEAVILY_GUARDED"
+        )
+    with col_chart:
+        st.markdown("#### Shot location")
+        st.caption("Click the nearest court spot to begin.")
+        clicked = plotly_events(
+            plot_fig=chart,
+            click_event=True,
+            key=f"shot-capture-{game_id}",
+        )
+
+    if clicked:
+        event = clicked[0]
+        event_x = event.get("x")
+        event_y = event.get("y")
+        if event_x is not None and event_y is not None:
+            event_x = float(event_x)
+            event_y = float(event_y)
+            shot_spot = utils.get_nearest_spot(
+                x=event_x, y=event_y, spots_df=shot_spots
+            )
+            clicked_spot = shot_spot.get("spot") if shot_spot else None
+            if clicked_spot:
+                clicked_location = {
+                    "spot": clicked_spot,
+                    "x": event_x,
+                    "y": event_y,
+                }
+                if clicked_location != selected_location:
+                    st.session_state[selected_location_key] = clicked_location
+                    st.rerun()
+
+    selected_location = st.session_state.get(selected_location_key)
+    if selected_location:
+        spot_val = selected_location["spot"]
+        x_click = selected_location["x"]
+        y_click = selected_location["y"]
+else:
+    form_column = st.container()
+
+if choose_stat != "Shot" or spot_val:
+    with form_column:
+        if choose_stat == "Shot":
+            st.markdown(f"#### Add play at `{spot_val}`")
+        else:
+            st.markdown(f"#### Add {choose_stat.lower()}")
+        st.caption(game_val)
+        form_key = f"add_play_form_{game_id}_{choose_stat.lower().replace(' ', '_')}"
+        with st.form(key=form_key, clear_on_submit=False):
+            player_val = st.radio(
+                label="Player", options=player_options, horizontal=True
+            )
+            if choose_stat == "Shot":
+                c2, c3, c4, c5 = st.columns([1, 2, 1, 1])
+                with c4:
+                    free_throw = st.segmented_control(
+                        label="Free throw",
+                        options=["N", "Y"],
+                        default="N",
+                        format_func=lambda value: "Yes" if value == "Y" else "No",
+                    )
+                with c2:
+                    make_miss = st.segmented_control(
+                        label="Made",
+                        options=["N", "Y"],
+                        default="N",
+                        format_func=lambda value: "Yes" if value == "Y" else "No",
+                    )
+                with c3:
+                    shot_defense = st.segmented_control(
+                        label="Defense",
+                        options=SHOT_DEFENSES,
+                        default=SHOT_DEFENSES[0],
+                        wrap=True,
+                        width="stretch",
+                    )
+                with c5:
+                    paint_touch = st.segmented_control(
+                        label="Paint touch",
+                        options=["N", "Y"],
+                        default="N",
+                        format_func=lambda value: "Yes" if value == "Y" else "No",
+                    )
+                shot_defense = {
+                    "Open": "OPEN",
+                    "Guarded": "GUARDED",
+                    "Heavily Guarded": "HEAVILY_GUARDED",
+                }[shot_defense]
+            else:
+                free_throw = "N"
+                make_miss = "N"
+                shot_defense = "Open"
+                paint_touch = "N"
+            add = st.form_submit_button(
+                label="Add play", type="primary", width="stretch"
+            )
+
+    if add:
+        player_number, game_val_final = get_values_needed(
+            game_val=game_val, game_df=games_season, player_val=player_val
+        )
+        if free_throw == "Y":
+            spot_val = "FREE_THROW1"
+            x_click = 0
+            y_click = 150
+
+        stat_names = {
+            "Offensive Rebound": "OFFENSIVE_REBOUNDS",
+            "Defensive Rebound": "DEFENSIVE_REBOUNDS",
+            "Turnover": "TURNOVER",
+            "Steal": "STEALS",
+            "Block": "BLOCKS",
+            "Foul": "FOULS",
+            "Assist": "ASSISTS",
+        }
+        if choose_stat == "Shot":
+            if spot_val == "FREE_THROW1":
+                final_stat = "FTA"
+            elif spot_val.endswith("2"):
+                final_stat = "TWO_FGA"
+            else:
+                final_stat = "THREE_FGA"
+        else:
+            final_stat = stat_names[choose_stat]
+
+        if choose_stat != "Shot" and player_number == 0:
+            st.error("Please select a valid player number")
+            st.stop()
+        if player_number != 0:
+            stat_df = create_stat_df(
+                player_number=player_number,
+                game_val_final=game_val_final,
+                stat_type=final_stat,
+            )
+
+            with sqlitecloud.connect(SQL_CONN) as conn:
+                cursor = conn.cursor()
+                for _, row in stat_df.iterrows():
+                    cursor.execute(
+                        sql=sql.insert_game_play(),
+                        parameters=(
+                            str(row["GAME_ID"]),
+                            str(row["NUMBER"]),
+                            str(row["STAT_TYPE"]),
+                        ),
+                    )
+                conn.commit()
+            st.success(f"Added {final_stat} for player {player_number}")
+            st.session_state.refresh_game_stat_version = True
+
+            if choose_stat == "Shot" and make_miss == "Y":
+                if spot_val == "FREE_THROW1":
+                    final_stat = "FTM"
+                elif spot_val.endswith("2"):
+                    final_stat = "TWO_FGM"
                 else:
-                    free_throw = "N"
-                    make_miss = "N"
-                    shot_defense = "Open"
-                    paint_touch = "N"
-                add = st.form_submit_button(
-                    label="Add play", type="primary", width="stretch"
+                    final_stat = "THREE_FGM"
+                stat_df_make = create_stat_df(
+                    player_number=player_number,
+                    game_val_final=game_val_final,
+                    stat_type=final_stat,
                 )
-                if add:
-                    player_number, game_val_final = get_values_needed(
-                        game_val=game_val, game_df=games_season, player_val=player_val
-                    )
-                    if free_throw == "Y":
-                        spot_val = "FREE_THROW1"
-                        x_click = 0
-                        y_click = 150
+                with sqlitecloud.connect(SQL_CONN) as conn:
+                    cursor = conn.cursor()
+                    for _, row in stat_df_make.iterrows():
+                        cursor.execute(
+                            sql=sql.insert_game_play(),
+                            parameters=(
+                                str(row["GAME_ID"]),
+                                str(row["NUMBER"]),
+                                str(row["STAT_TYPE"]),
+                            ),
+                        )
+                    conn.commit()
+                st.success(f"Added {final_stat} for player {player_number}")
 
-                    my_df = create_df(
-                        game_val_final=game_val_final,
-                        player_number=player_number,
-                        spot_val=spot_val,
-                        shot_defense=shot_defense,
-                        make_miss=make_miss,
-                        spot_x=x_click,
-                        spot_y=y_click,
-                        paint_touch=paint_touch,
-                    )
-                    if choose_stat == 'Offensive Rebound':
-                        final_stat = 'OFFENSIVE_REBOUNDS'
-                    elif choose_stat == 'Defensive Rebound':
-                        final_stat = 'DEFENSIVE_REBOUNDS'
-                    elif choose_stat == 'Turnover':
-                        final_stat = 'TURNOVER'
-                    elif choose_stat == 'Steal':
-                        final_stat = 'STEALS'
-                    elif choose_stat == 'Block':
-                        final_stat = 'BLOCKS'
-                    elif choose_stat == 'Foul':
-                        final_stat = 'FOULS'
-                    elif choose_stat == 'Assist':
-                        final_stat = 'ASSISTS'
-                    elif choose_stat == 'Shot':
-                        if spot_val == "FREE_THROW1":
-                            final_stat = 'FTA'
-                        elif spot_val[-1] == '2':
-                            final_stat = 'TWO_FGA'
-                        else:
-                            final_stat = 'THREE_FGA'
-                    if choose_stat != 'Shot' and player_number == 0:
-                        st.error('Please select a valid player number')
-                        st.stop()
-                    if player_number != 0:
-                        stat_df = create_stat_df(
-                            player_number=player_number,
-                            game_val_final=game_val_final,
-                            stat_type=final_stat
-                        )
+            st.session_state.game_stat_version += 1
+            load_game_stats.clear()
+            load_current_totals.clear()
+            new_game_summary = upsert_game_summary(
+                player_number=player_number,
+                game_id=game_val_final,
+                SQL_CONN=SQL_CONN,
+            )
+            st.session_state.game_version += 1
+            stat_val = new_game_summary[final_stat].values[0]
+            st.success(
+                f"Player {player_number} now has {stat_val} {final_stat} "
+                f"for game {game_val}"
+            )
+            st.session_state.game_stat_version += 1
+            st.session_state.refresh_game_stat_version = True
 
-                        with sqlitecloud.connect(SQL_CONN) as conn:
-                            cursor = conn.cursor()
-                            for _, row in stat_df.iterrows():
-                                cursor.execute(
-                                    sql=sql.insert_game_play(),
-                                    parameters=(
-                                        str(row["GAME_ID"]),
-                                        str(row["NUMBER"]),
-                                        str(row["STAT_TYPE"]),
-                                    ),
-                                )
-                            conn.commit()
-                            st.success(f'Added {final_stat} for player {player_number}')
-                            st.session_state.refresh_game_stat_version = True
-                        if (choose_stat == 'Shot') & (make_miss == 'Y'):
-                            if spot_val == "FREE_THROW1":
-                                final_stat = 'FTM'
-                            elif spot_val[-1] == '2':
-                                final_stat = 'TWO_FGM'
-                            else:
-                                final_stat = 'THREE_FGM'
-                            stat_df_make = create_stat_df(
-                                player_number=player_number,
-                                game_val_final=game_val_final,
-                                stat_type=final_stat
-                            )
-                            with sqlitecloud.connect(SQL_CONN) as conn:
-                                cursor = conn.cursor()
-                                for _, row in stat_df_make.iterrows():
-                                    cursor.execute(
-                                        sql=sql.insert_game_play(),
-                                        parameters=(
-                                            str(row["GAME_ID"]),
-                                            str(row["NUMBER"]),
-                                            str(row["STAT_TYPE"]),
-                                        ),
-                                    )
-                                conn.commit()
-                                st.success(f'Added {final_stat} for player {player_number}')
-                        st.session_state.game_stat_version += 1
-                        load_game_stats.clear()
-                        load_current_totals.clear()
-                        new_game_summary = upsert_game_summary(
-                            player_number=player_number,
-                            game_id=game_val_final,
-                            SQL_CONN=SQL_CONN
-                        )
-                        st.session_state.game_version += 1
-                        stat_val = new_game_summary[final_stat].values[0]
-                        st.success(
-                            f'Player {player_number} now has {stat_val} {final_stat} '
-                            f'for game {game_val}'
-                        )
-                        st.session_state.game_stat_version += 1
-                        st.session_state.refresh_game_stat_version = True
-                    
-                    if choose_stat == 'Shot':
-                        spot_lookup = shot_spots.drop(columns=["XSPOT", "YSPOT"]).set_index("SPOT")
-                        my_df = my_df.join(spot_lookup, on="SPOT")
-                        all_data_game = pbp_data
-                        max_play_num = all_data_game["PLAY_NUM"].max() if len(all_data_game) > 0 else 0
-                        my_df["PLAY_NUM"] = max_play_num + 1
+        if choose_stat == "Shot":
+            my_df = create_df(
+                game_val_final=game_val_final,
+                player_number=player_number,
+                spot_val=spot_val,
+                shot_defense=shot_defense,
+                make_miss=make_miss,
+                spot_x=x_click,
+                spot_y=y_click,
+                paint_touch=paint_touch,
+            )
+            spot_lookup = (
+                shot_spots.drop(columns=["XSPOT", "YSPOT"]).set_index("SPOT")
+            )
+            my_df = my_df.join(spot_lookup, on="SPOT")
+            all_data_game = pbp_data
+            max_play_num = (
+                all_data_game["PLAY_NUM"].max() if len(all_data_game) > 0 else 0
+            )
+            my_df["PLAY_NUM"] = max_play_num + 1
 
-                        with sqlitecloud.connect(SQL_CONN) as conn:
-                            cursor = conn.cursor()
-                            cursor.execute(
-                                sql=sql.insert_plays_sql(),
-                                parameters=(
-                                    str(game_val_final),
-                                    str(player_number),
-                                    str(spot_val),
-                                    str(shot_defense),
-                                    str(make_miss),
-                                    str(int(my_df["PLAY_NUM"].values[0])),
-                                    str(x_click),
-                                    str(y_click),
-                                    str(paint_touch),
-                                ),
-                            )
-                            conn.commit()
-                        load_pbp_data_cached.clear()
-                        current_game = pd.concat(
-                            objs=[
-                                all_data_game.reset_index(drop=True), 
-                                my_df.reset_index(drop=True)
-                            ],
-                            ignore_index=True,
-                        )
-                        current_game['ACTUAL_POINTS'] = np.where(
-                            current_game['MAKE_MISS'] == 'Y',
-                            current_game['POINTS'],
-                            0
-                        )
-                        
-                        current_game['NUMBER'] = (
-                            current_game['NUMBER'].astype(int)
-                        )
-                        my_len = len(current_game)
-                        st.success(
-                            f'Submitted shot by player {player_number} '
-                            f' from spot {spot_val} '
-                            f' with defense {shot_defense} '
-                            f' for game {game_val_final} '
-                            f'Added to DB, {my_len} '
-                            f' shots in DB for game {game_val_final}'
-                        )
+            with sqlitecloud.connect(SQL_CONN) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    sql=sql.insert_plays_sql(),
+                    parameters=(
+                        str(game_val_final),
+                        str(player_number),
+                        str(spot_val),
+                        str(shot_defense),
+                        str(make_miss),
+                        str(int(my_df["PLAY_NUM"].values[0])),
+                        str(x_click),
+                        str(y_click),
+                        str(paint_touch),
+                    ),
+                )
+                conn.commit()
+            load_pbp_data_cached.clear()
+            current_game = pd.concat(
+                objs=[
+                    all_data_game.reset_index(drop=True),
+                    my_df.reset_index(drop=True),
+                ],
+                ignore_index=True,
+            )
+            current_game["ACTUAL_POINTS"] = np.where(
+                current_game["MAKE_MISS"] == "Y", current_game["POINTS"], 0
+            )
+            current_game["NUMBER"] = current_game["NUMBER"].astype(int)
+            my_len = len(current_game)
+            st.success(
+                f"Submitted shot by player {player_number} "
+                f"from spot {spot_val} with defense {shot_defense} "
+                f"for game {game_val_final}. Added to DB; {my_len} "
+                f"shots in DB for game {game_val_final}."
+            )
 
-                        nda_points = current_game[current_game['NUMBER'] != 0]
-                        opp_points = current_game[current_game['NUMBER'] == 0]
-                        nda_points_val = int(nda_points.ACTUAL_POINTS.sum())
-                        opp_points_val = int(opp_points.ACTUAL_POINTS.sum())
-                        st.write(f'NDA Points: {nda_points_val}') 
-                        st.write(f'Opp Points: {opp_points_val}')
+            nda_points = current_game[current_game["NUMBER"] != 0]
+            opp_points = current_game[current_game["NUMBER"] == 0]
+            st.write(f"NDA Points: {int(nda_points.ACTUAL_POINTS.sum())}")
+            st.write(f"Opp Points: {int(opp_points.ACTUAL_POINTS.sum())}")
 
-                        st.session_state.pbp_version += 1
-                        st.session_state.refresh_pbp = True
+            st.session_state.pbp_version += 1
+            st.session_state.refresh_pbp = True
 
 # Ensure pbp_data is fresh if requested
 if st.session_state.refresh_pbp:

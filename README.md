@@ -33,9 +33,14 @@ All other visitors can use guest access.
 4. If the Google OAuth consent screen is in testing mode, add each intended
    admin as a test user there as well as to the app's `[admin]` email list.
 
-Install the project requirements before running locally so the Streamlit auth
-extra (including Authlib) is available:
+Create and activate this app's Python 3.13 environment in PowerShell, then
+install the requirements. The NumPy and Pillow pins use versions with Python
+3.13 Windows wheels; the existing pins did not provide them.
 
-```shell
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+streamlit run Home.py
 ```
