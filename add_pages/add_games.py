@@ -41,12 +41,15 @@ games = (
     .sort_values(by='GAME_ID', ascending=True)
     .reset_index(drop=True)
 )
+if games:
 
-st.subheader(f'Latest game in {selected_season}')
-last_game = games.tail(1)
-st.write(
-    f"{last_game['GAME_ID'].values[0]} - {last_game['OPPONENT'].values[0]}"
-)
+    st.subheader(f'Latest game in {selected_season}')
+    last_game = games.tail(1)
+    st.write(
+        f"{last_game['GAME_ID'].values[0]} - {last_game['OPPONENT'].values[0]}"
+    )
+else:
+    st.subheader(f'No games found for {selected_season}')
 
 if selected_season:
     with st.form(key='add_games'):
