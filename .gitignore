@@ -6,3 +6,4 @@ NDA_DB - game_summary.csv
 /ipynb
 *.html
 .streamlit/secrets.toml
+.venv/
