@@ -236,7 +236,7 @@ season_list = games["SEASON"].unique().tolist()
 top_left, top_mid, top_right = st.columns([1.2, 1.2, 0.35], vertical_alignment="bottom")
 
 with top_left:
-    season = st.segmented_control(
+    season = st.pills(
         "Season", season_list, default=season_list[0]
     )
 
@@ -266,7 +266,6 @@ game_val = game["GAME_LABEL"]
 
 games_season["NUMBER_INT"] = games_season["NUMBER"].astype(int)
 unique_players = games_season.sort_values("NUMBER_INT")["PLAYER_LABEL"].unique()
-
 other_stats = [
     "Shot",
     "Offensive Rebound",
@@ -277,19 +276,21 @@ other_stats = [
     "Turnover",
     "Foul",
 ]
-choose_stat = st.radio(
+choose_stat = st.pills(
     label="Stat type",
+    default="Shot",
     options=other_stats,
-    horizontal=True,
     key=f"stat_type_{game_id}",
 )
-player_options = (
-    unique_players
-    if choose_stat == "Shot"
-    else games_season.loc[
-        games_season["NUMBER_INT"] != 0, "PLAYER_LABEL"
-    ].unique()
-)
+
+if choose_stat == "Shot":
+    player_options = unique_players
+else:
+    player_options = pd.DataFrame(unique_players, columns=["PLAYER_LABEL"])
+    player_options["NUMBER_INT"] = player_options["PLAYER_LABEL"].str.split(" - ").str[0].astype(int)
+    player_options = player_options[player_options["NUMBER_INT"] != 0]
+    player_options = player_options.sort_values("NUMBER_INT")["PLAYER_LABEL"].unique()
+
 
 # Load selected-game data (cached and versioned)
 pbp_data = load_pbp_data_cached(game_select, st.session_state.pbp_version)
@@ -370,27 +371,27 @@ if choose_stat != "Shot" or spot_val:
         st.caption(game_val)
         form_key = f"add_play_form_{game_id}_{choose_stat.lower().replace(' ', '_')}"
         with st.form(key=form_key, clear_on_submit=False):
-            player_val = st.radio(
-                label="Player", options=player_options, horizontal=True
+            player_val = st.pills(
+                label="Player", options=player_options
             )
             if choose_stat == "Shot":
                 c2, c3, c4, c5 = st.columns([1, 2, 1, 1])
                 with c4:
-                    free_throw = st.segmented_control(
+                    free_throw = st.pills(
                         label="Free throw",
                         options=["N", "Y"],
                         default="N",
                         format_func=lambda value: "Yes" if value == "Y" else "No",
                     )
                 with c2:
-                    make_miss = st.segmented_control(
+                    make_miss = st.pills(
                         label="Made",
                         options=["N", "Y"],
                         default="N",
                         format_func=lambda value: "Yes" if value == "Y" else "No",
                     )
                 with c3:
-                    shot_defense = st.segmented_control(
+                    shot_defense = st.pills(
                         label="Defense",
                         options=SHOT_DEFENSES,
                         default=SHOT_DEFENSES[0],
@@ -398,7 +399,7 @@ if choose_stat != "Shot" or spot_val:
                         width="stretch",
                     )
                 with c5:
-                    paint_touch = st.segmented_control(
+                    paint_touch = st.pills(
                         label="Paint touch",
                         options=["N", "Y"],
                         default="N",

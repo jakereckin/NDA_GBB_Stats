@@ -21,9 +21,9 @@ st.caption('Add a player to a season roster or remove an existing roster entry.'
 
 players = load_data()
 seasons = players['YEAR'].unique().tolist()
-selected_season = st.selectbox(
+selected_season = st.pills(
     label='Season',
-    placeholder='Enter Season',
+    #placeholder='Enter Season',
     options=seasons
 )
 add_new_season = st.text_input('Or Add New Season')

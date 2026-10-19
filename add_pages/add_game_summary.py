@@ -62,8 +62,10 @@ my_season_options = (
 )
 left, right = st.columns(2)
 with left:
-    season = st.radio(
-        label='Select Season', options=my_season_options, horizontal=True
+    season = st.pills(
+        label='Select Season',
+        options=my_season_options,
+        default=my_season_options[0]
     )
 games_season, players_season = get_season_data(
     games=games, players=players, season=season
@@ -80,8 +82,10 @@ this_game = get_selected_game(
 data_columns = game_summary_data.columns.tolist()
 player_values = players_season['NUMBER'].astype(int).sort_values().tolist()
 game_list = game_summary_data['GAME_ID'].unique().tolist()
-player_val = st.radio(
-    label='Select Player', options=player_values, horizontal=True
+player_val = st.pills(
+    label='Select Player',
+    options=player_values,
+    default=player_values[0]
 )
 
 this_player_val = game_summary_data[

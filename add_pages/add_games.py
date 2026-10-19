@@ -26,9 +26,9 @@ games = load_data()
 games = games.sort_values(by='SEASON', ascending=False).reset_index(drop=True)
 seasons = games['SEASON'].unique().tolist()
 
-selected_season = st.selectbox(
+selected_season = st.pills(
     label='Season',
-    placeholder='Enter Season',
+    #placeholder='Enter Season',
     options=seasons
 )
 add_new_season = st.text_input('Or Add New Season')
