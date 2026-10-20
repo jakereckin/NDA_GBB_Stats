@@ -18,12 +18,13 @@ METRIC_GUIDES = {
         "Simulation range": "The 10th-to-90th percentile range describes lower-to-higher scoring outcomes in the simulations.",
     },
     "view_game_summary": {
-        "OE": "Offensive efficiency: (field goals made + assists) divided by estimated possessions used.",
-        "eFG%": "Field-goal percentage adjusted to account for the extra value of made threes.",
-        "TS%": "Points scored per shooting opportunity, including free throws.",
-        "PPP": "Points scored divided by estimated possessions.",
-        "PPA": "Points scored divided by field-goal attempts.",
-        "FTR": "Free-throw attempts divided by field-goal attempts.",
+        "Points per game": "NDA points divided by the number of selected games.",
+        "Effective FG%": "Field-goal percentage adjusted to account for the extra value of made threes.",
+        "Rebounds per game": "Offensive plus defensive rebounds, averaged across selected games.",
+        "Assists per game": "Recorded team assists, averaged across selected games.",
+        "Turnovers per game": "Recorded team turnovers, averaged across selected games.",
+        "Player per-game stats": "Counting stats are averaged over each player's games played in the selection.",
+        "Shooting percentages": "Calculated from combined makes and attempts, not by averaging game percentages.",
         "Game Score": "A box-score summary score combining scoring, rebounds, assists, defensive plays, turnovers, and fouls.",
     },
     "view_season_trend": {
@@ -76,9 +77,10 @@ def select_season(options, key, label="Season"):
     else:
         selected = options[0]
         st.session_state[key] = selected
-    selected = st.selectbox(
+    selected = st.segmented_control(
         label=label,
         options=options,
+        default=options[0],
         key=key,
         on_change=_sync_shared_selection,
         args=(key, "view_shared_season"),
@@ -136,6 +138,7 @@ def select_games(options, key, label="Games", help=None):
         help=help,
         on_change=_sync_shared_selection,
         args=(key, "view_shared_game"),
+        wrap=True
     )
     _sync_shared_selection(key, "view_shared_game")
     return selected

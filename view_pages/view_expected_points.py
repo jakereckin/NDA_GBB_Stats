@@ -5,133 +5,55 @@ import plotly.express as px
 import polars as pl
 from py import sql, data_source, view_ui
 import joblib
+from pathlib import Path
 
 pd.options.mode.chained_assignment = None
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 st.set_page_config(page_title='Expected Points', layout='wide')
 st.title('Expected Points')
-st.caption('See how shot quality and finishing compare, then estimate the range of possible game outcomes.')
+st.caption(
+    'Compare expected and actual scoring, review shot quality, and explore '
+    'a range of possible game outcomes.'
+)
 
 effective_field_goal_description = '''
 Effective FG% is a useful metric to understand shot selection.
-The formula is (2FGM + 1.5 * 3FGM) / FGA. This weights 3 point
-makes as more since they count for more points. In the NBA,
-87% of teams who win have a higher EFG%.
+The formula is (2FGM + 1.5 * 3FGM) / FGA. The extra weight for made
+threes reflects their additional point value.
 '''
 
 expected_points_description = '''
-Expected points takes the point value for a shot multiplied by
-the percent chance of making that shot. The percent chance of making that
-shot is determined by a model that uses historical data to predict the
-liklihood of the shot being made.
+Expected points is the shot's point value multiplied by the model-estimated
+chance of making it.
 
-Example: 33% chance of making a 3 pointer is 0.33 * 3 = 1 expected point.
+Example: a 3-pointer with a 33% make probability is worth 0.33 * 3 = 0.99
+expected points.
 '''
 
 with st.expander('About these metrics'):
     st.markdown(effective_field_goal_description)
     st.markdown(expected_points_description)
-# ----------------------------------------------------------------------------
 @st.cache_resource
-def load_data():
-    game_summary = data_source.run_query(
-        sql=sql.get_game_summary_sql(), connection=sql_lite_connect
-    )
+def load_pipeline():
+    pipeline_path = Path(__file__).resolve().parents[1] / 'pipeline.pkl'
+    return joblib.load(filename=pipeline_path)
+
+
+@st.cache_data(
+    show_spinner='Loading game data and preparing shot predictions...',
+    ttl='15m',
+    max_entries=1
+)
+def load_expected_points_data():
     player_data = data_source.run_query(
-        sql=sql.get_play_by_play_sql(), connection=sql_lite_connect
+        sql=sql.get_play_by_play_sql(),
+        connection=sql_lite_connect
     )
-    game_summary = pl.from_pandas(data=game_summary)
     player_data = pl.from_pandas(data=player_data)
-    return game_summary, player_data
-
-
-#-----------------------------------------------------------------------------
-def format_data(
-        player_data: pl.DataFrame,
-        game_summary_data: pl.DataFrame,
-        selected_season: int
-    ):
-    '''
-    Format data to count makes and misses.
-
-    Args:
-        spot (pd.DataFrame): DataFrame containing spot data.
-        games (pd.DataFrame): DataFrame containing game data.
-        players (pd.DataFrame): DataFrame containing player data.
-        game_summary_data (pd.DataFrame): DataFrame containing
-            game summary data.
-        selected_season (int): The selected season to filter the data.
-
-    Returns:
-        tuple: A tuple containing the following elements:
-            - player_data (pd.DataFrame): DataFrame containing
-                merged player data.
-            - player_data2 (pd.DataFrame): DataFrame containing
-                selected columns from player_data.
-            - game_summary (pd.DataFrame): DataFrame containin
-                 merged game summary data.
-    '''
-    #game_summary = game_summary_data[game_summary_data['YEAR'] == selected_season]
-    #player_data = player_data[player_data['SEASON'] == selected_season]
-    
-    #player_data2 = player_data[
-    #    ['NAME', 'SHOT_SPOT', 'MAKE', 'ATTEMPT', 'SHOT_DEFENSE']
-    #]
-    game_summary = game_summary_data.filter(
-        pl.col(name='YEAR') == str(selected_season)
-    )
-    player_data = player_data.filter(
-        pl.col(name='SEASON') == str(selected_season)
-    )
-    player_data2 = player_data.select(
-        pl.col(name='NAME'),
-        pl.col(name='SHOT_SPOT'),
-        pl.col(name='MAKE'),
-        pl.col(name='ATTEMPT'),
-        pl.col(name='SHOT_DEFENSE')
-    )
-    return player_data, player_data2, game_summary
-
-
-#-------------------------------------------------------------------------------
-def get_games_data(
-        player_data: pl.DataFrame, game_summary: pl.DataFrame, game: str
-    ):
-    '''
-    Get game data for the selected game.
-
-    Args:
-    player_data (pd.DataFrame): DataFrame containing player data.
-    game_summary (pd.DataFrame): DataFrame containing game summary data.
-    game (str): The label of the game to retrieve data for.
-
-    Returns:
-    tuple: A tuple containing two DataFrames:
-        - t_game (pd.DataFrame): DataFrame containing player
-            data for the selected game.
-        - game_data (pd.DataFrame): DataFrame containing sorted
-            game summary data with a new 'DATE_DTTM' column.
-    '''
-    #t_game = player_data[player_data['LABEL'] == game]
-    #game_data = game_summary[game_summary['LABEL'] == game]
-    t_game = player_data.filter(
-        pl.col(name='LABEL') == game
-    )
-    game_data = game_summary.filter(
-        pl.col(name='LABEL') == game
-    )
-    game_data = (
-        game_data.with_columns(
-            DATE_DTTM=pl.col(name='DATE').str.strptime(
-                dtype=pl.Datetime, fmt='%Y-%m-%d'
-            )
-        )
-        .sort(by='DATE_DTTM')
-    )
-    #game_data.loc[:, 'DATE_DTTM'] = pd.to_datetime(game_data['DATE'])
-    #game_data = game_data.sort_values(by='DATE_DTTM')
-    return t_game, game_data
+    play_event_spot = build_features(player_data=player_data)
+    play_event_spot = apply_model(play_event_spot=play_event_spot)
+    return play_event_spot
 
 
 # ----------------------------------------------------------------------------
@@ -395,7 +317,7 @@ def apply_model(play_event_spot):
             as the product of 'PROB' and 'POINTS'.
         - 'LABEL': A label combining the 'OPPONENT' and 'DATE' columns.
     '''
-    pipeline = joblib.load(filename='pipeline.pkl')
+    pipeline = load_pipeline()
     model_columns = [
     'XSPOT', 'YSPOT',
      'INTIAL_PERCENTAGE',
@@ -440,452 +362,274 @@ def get_expected_points(play_event_spot, this_game):
 
 #-----------------------------------------------------------------------------
 def run_simulations(tritons, opp, sims, standard_dev):
-    '''
-    for sim_count in range(sims):
-    Parameters:
-    tritons (DataFrame): DataFrame containing Tritons' game data.
-    opp (DataFrame): DataFrame containing opponent's game data.
-    sims (int): Number of simulations to run.
-    standard_dev (float): Standard deviation for the normal distribution.
+    def simulate_team(team_data, simulation_count):
+        probabilities = team_data['PROB'].to_numpy()
+        points = team_data['POINTS'].to_numpy()
+        attempts = team_data['ATTEMPT'].to_numpy()
+        simulated_percent = np.random.normal(
+            loc=probabilities,
+            scale=standard_dev,
+            size=(simulation_count, len(probabilities))
+        )
+        np.clip(simulated_percent, 0, 1, out=simulated_percent)
+        return (simulated_percent * points * attempts).sum(axis=1)
 
-    Returns:
-    DataFrame: DataFrame containing the results of all simulations.
-    '''
-    my_frame_list = []
-    sim_count = 0
-    my_bar = st.progress(0)
-    while sim_count < sims:
-        this_sim_nda = tritons
-        this_sim_opp = opp
-        probs_opp = this_sim_opp['PROB'].to_numpy()
-        simulated_opp = np.random.normal(loc=probs_opp, scale=standard_dev)
-        probs_nda = this_sim_nda['PROB'].to_numpy()
-        simulated_nda = np.random.normal(loc=probs_nda, scale=standard_dev)
-        this_sim_opp = this_sim_opp.with_columns(
-            pl.Series('SIMULATED_PERCENT', simulated_opp)
-        )
-        this_sim_opp = this_sim_opp.with_columns(
-            SIMULATED_PERCENT=(
-                pl.when(pl.col(name='SIMULATED_PERCENT') < 0)
-                  .then(0)
-                  .otherwise(pl.col(name='SIMULATED_PERCENT'))
-            )
-        )
-        this_sim_opp = this_sim_opp.with_columns(
-            SIMULATED_PERCENT=(
-                pl.when(pl.col(name='SIMULATED_PERCENT') > 1)
-                  .then(1)
-                  .otherwise(pl.col(name='SIMULATED_PERCENT'))
-            )
-        )
-        this_sim_opp = this_sim_opp.with_columns(
-            SIMULATED_EXPECTED=(
-                pl.col(name='POINTS') * pl.col(name='SIMULATED_PERCENT')
-            )
-        )
-        this_sim_opp = this_sim_opp.with_columns(
-            SIMULATED_POINTS=(
-                pl.col(name='ATTEMPT') * pl.col(name='SIMULATED_EXPECTED')
-            )
-        )
-        this_sim_nda = this_sim_nda.with_columns(
-            pl.Series('SIMULATED_PERCENT', simulated_nda)
-        )
-        this_sim_nda = this_sim_nda.with_columns(
-            SIMULATED_PERCENT=(
-                pl.when(pl.col(name='SIMULATED_PERCENT') < 0)
-                  .then(0)
-                  .otherwise(pl.col(name='SIMULATED_PERCENT'))
-            )
-        )
-        this_sim_nda = this_sim_nda.with_columns(
-            SIMULATED_PERCENT=(
-                pl.when(pl.col(name='SIMULATED_PERCENT') > 1)
-                  .then(1)
-                  .otherwise(pl.col(name='SIMULATED_PERCENT'))
-            )
-        )
-        this_sim_nda = this_sim_nda.with_columns(
-            SIMULATED_EXPECTED=(
-                pl.col(name='POINTS') * pl.col(name='SIMULATED_PERCENT')
-            )
-        )
-        this_sim_nda = this_sim_nda.with_columns(
-            SIMULATED_POINTS=(
-                pl.col(name='ATTEMPT') * pl.col(name='SIMULATED_EXPECTED')
-            )
-        )
-        this_sim_opp = this_sim_opp.with_columns(
-            SIMULATED_POINTS=(
-                pl.when(pl.col(name='SIMULATED_POINTS') < 0)
-                  .then(0)
-                  .otherwise(pl.col(name='SIMULATED_POINTS'))
-            ),
-            RUN=pl.lit(sim_count)
-        )
-        this_sim_nda = this_sim_nda.with_columns(
-            SIMULATED_POINTS=(
-                pl.when(pl.col(name='SIMULATED_POINTS') < 0)
-                  .then(0)
-                  .otherwise(pl.col(name='SIMULATED_POINTS'))
-            ),
-            RUN=pl.lit(sim_count)
-        )
-        this_sim_simple_nda = (
-            this_sim_nda.groupby('RUN')
-                .agg(
-                    NDA_SIMULATED_POINTS=pl.col('SIMULATED_POINTS').sum()
-                )
-        )
-        this_sim_simple_opp = (
-            this_sim_opp.groupby('RUN')
-                .agg(
-                    OPP_SIMULATED_POINTS=pl.col('SIMULATED_POINTS').sum()
-                )
-        )
-        #this_sim_simple = pd.merge(
-        #    left=this_sim_simple_nda, right=this_sim_simple_opp, on='RUN'
-        #)
-        this_sim_simple = this_sim_simple_nda.join(
-            other=this_sim_simple_opp, on='RUN', how='inner'
-        )
-        this_sim_simple = this_sim_simple.with_columns(
-            WIN=pl.when(
-                pl.col(name='NDA_SIMULATED_POINTS') 
-                > pl.col(name='OPP_SIMULATED_POINTS')
-            ).then(1).otherwise(0)
-        )
-        sim_count += 1
-        percent_complete = sim_count / sims
-        my_bar.progress(value=percent_complete)
-        my_frame_list.append(this_sim_simple)
-    all_sims = pl.concat(my_frame_list)
-    return all_sims
-
-
-game_summary, player_data = load_data()
-play_event_spot = build_features(
-    player_data=player_data
-)
-play_event_spot = apply_model(play_event_spot=play_event_spot)
-game_summary = (
-    game_summary.with_columns(
-        SEASON2=pl.col(name='SEASON').cast(dtype=pl.Int64)
+    team_shot_count = max(
+        len(tritons),
+        len(opp),
+        1
     )
-                .sort(by='SEASON2', descending=False)
-)
+    batch_size = max(1, min(512, 2_000_000 // team_shot_count))
+    nda_scores = np.empty(sims, dtype=float)
+    opp_scores = np.empty(sims, dtype=float)
+    progress = st.progress(0)
 
-season_list = player_data.select('SEASON').unique().to_series().to_list()
-season_list = sorted(season_list, key=lambda x: int(x), reverse=True)
+    for start in range(0, sims, batch_size):
+        stop = min(start + batch_size, sims)
+        nda_scores[start:stop] = simulate_team(tritons, stop - start)
+        opp_scores[start:stop] = simulate_team(opp, stop - start)
+        progress.progress(
+            stop / sims,
+            text=f'Simulating outcomes: {stop:,} of {sims:,}'
+        )
+
+    return pd.DataFrame({
+        'NDA_SIMULATED_POINTS': nda_scores,
+        'OPP_SIMULATED_POINTS': opp_scores,
+        'WIN': (nda_scores > opp_scores).astype(int)
+    })
+
+
+play_event_spot = load_expected_points_data()
+
+season_list = play_event_spot.select('SEASON').unique().to_series().to_list()
+season_list = sorted(season_list, key=lambda value: int(value), reverse=True)
 st.subheader('Choose a game')
-col1, col2 = st.columns(spec=2, vertical_alignment='bottom')
-with col1:
-    season = view_ui.select_season(
-        options=season_list, key='expected_points_season'
+
+if not season_list:
+    st.info('No seasons with shot data are available yet.')
+else:
+    season_col, game_col = st.columns(spec=2, vertical_alignment='bottom')
+    with season_col:
+        season = view_ui.select_season(
+            options=season_list,
+            key='expected_points_season'
+        )
+
+    season_data = play_event_spot.filter(
+        pl.col(name='SEASON') == str(season)
     )
-if season:
-    player_data, player_data2, game_summary = format_data(
-        player_data=player_data, game_summary_data=game_summary, selected_season=season
+    games_list = season_data.select('LABEL').unique().to_series().to_list()
+    games_list = sorted(
+        games_list,
+        key=lambda label: pd.to_datetime(label.split(' - ')[1]),
+        reverse=True
     )
 
+    if not games_list:
+        st.info('No games with shot data are available for this season.')
+    else:
+        with game_col:
+            game = view_ui.select_game(
+                options=games_list,
+                key='expected_points_game',
+                label='Game'
+            )
 
-    games_list = player_data.select('LABEL').unique().to_series().to_list()
-    games_list = sorted(games_list, key=lambda x: pd.to_datetime(x.split(' - ')[1]) ,reverse=True)
-    with col2:
-        game = view_ui.select_game(
-            options=games_list,
-            key='expected_points_game',
-            label='Game',
-        )
-
-    if game != []:
-        t_game, game_data = get_games_data(
-            player_data=player_data,
-            game_summary=game_summary,
-            game=game
-        )
-
-        this_game = get_expected_points(
-            play_event_spot=play_event_spot, this_game=game
-        )
-        opp_team_name = game.split(' - ')[0]
-        last_20 = this_game.sort(by='PLAY_NUM')
-        last_20 = this_game.tail(50)
-        last_20 = last_20[[
-            'NUMBER', 'SHOT_SPOT', 'PROB', 'EXPECTED_POINTS', 'ACTUAL_POINTS',
-            'LAST_ROLLING_POINTS_TEAM_NDA',
-            'LAST_ROLLING_POINTS_TEAM_OPPONENT'
-        ]]
-        last_20 = last_20.rename(
-            {
-                'LAST_ROLLING_POINTS_TEAM_NDA': 'NDA_POINTS',
-                'LAST_ROLLING_POINTS_TEAM_OPPONENT': 'OPP_POINTS'
-            }
-        )
         view_ui.render_page_context(
             page_key='view_expected_points',
-            scope=f"{season} season · {game}",
+            scope=f'{season} season · {game}'
         )
-        # ========== EXPECTED TRITONS ==========
-        tritons = this_game.filter(
-            pl.col(name='TEAM') != 'OPPONENT'
+        this_game = get_expected_points(
+            play_event_spot=play_event_spot,
+            this_game=game
         )
-        #tritons = this_game[this_game['TEAM'] != 'OPPONENT']
-        tritons_grouped = (
-            tritons.groupby(by=['POINTS'])
-                .agg(
-                    ATTEMPTS=pl.col('ATTEMPT').sum(),
-                    MAKES=pl.col('MAKE').sum()
-                )
-                .filter(
-                    pl.col(name='POINTS') != 1
-                )
-                .with_columns(
-                    pl.when(pl.col(name='POINTS') == 3)
-                    .then(1.5 * pl.col(name='MAKES'))
-                    .otherwise(0)
-                    .alias('3MAKE'),
-                    pl.when(pl.col(name='POINTS') == 2)
-                    .then(pl.col(name='MAKES'))
-                    .otherwise(0)
-                    .alias('2MAKE')
-                )
-        )
-        tritons_efg_percent = np.where(
-            tritons_grouped['ATTEMPTS'].sum() > 0,
-            (tritons_grouped['2MAKE'].sum() + tritons_grouped['3MAKE'].sum())
-            / tritons_grouped['ATTEMPTS'].sum(),
-            0
-        )
+        opp_team_name = game.split(' - ')[0]
+        tritons = this_game.filter(pl.col(name='TEAM') != 'OPPONENT')
+        opp = this_game.filter(pl.col(name='TEAM') == 'OPPONENT')
+
+        def get_efg_percent(team_data):
+            attempts = team_data.filter(pl.col(name='POINTS') != 1)
+            total_attempts = attempts['ATTEMPT'].sum()
+            if not total_attempts:
+                return 0.0
+            twos = attempts.filter(pl.col(name='POINTS') == 2)['MAKE'].sum()
+            threes = attempts.filter(pl.col(name='POINTS') == 3)['MAKE'].sum()
+            return (twos + 1.5 * threes) / total_attempts
+
         expected_fg = tritons['EXPECTED_POINTS'].sum()
-        
-        # ========== ACTUAL TRITONS ==========
-        actual_fg = tritons['ACTUAL_POINTS'].sum()#.astype(int)
-
-        # ========== EXPECTED OPP ==========
-        opp = this_game.filter(
-            pl.col(name='TEAM') == 'OPPONENT'
-        )
-        opp_grouped =(
-            opp.groupby(by=['POINTS'])
-                .agg(
-                    ATTEMPTS=pl.col('ATTEMPT').sum(),
-                    MAKES=pl.col('MAKE').sum()
-                )
-                .filter(
-                    pl.col(name='POINTS') != 1
-                )
-                .with_columns(
-                    pl.when(pl.col(name='POINTS') == 3)
-                    .then(1.5 * pl.col(name='MAKES'))
-                    .otherwise(0)
-                    .alias('3MAKE'),
-                    pl.when(pl.col(name='POINTS') == 2)
-                    .then(pl.col(name='MAKES'))
-                    .otherwise(0)
-                    .alias('2MAKE')
-                )
-        )
-        #opp = this_game[this_game['TEAM'] == 'OPPONENT']
-        opp_efg_percent = np.where(
-            opp_grouped['ATTEMPTS'].sum() > 0,
-            (opp_grouped['2MAKE'].sum() + opp_grouped['3MAKE'].sum())
-            / opp_grouped['ATTEMPTS'].sum(),
-            0
-        )
+        actual_fg = tritons['ACTUAL_POINTS'].sum()
         expected_fg_opp = opp['EXPECTED_POINTS'].sum()
-        st.caption(
-            f"Sample size: {int(tritons['ATTEMPT'].sum())} NDA shot attempts · "
-            f"{int(opp['ATTEMPT'].sum())} opponent shot attempts."
-        )
-
-        # ========== ACTUAL OPP ==========
         actual_fg_opp = opp['ACTUAL_POINTS'].sum()
+        tritons_delta = actual_fg - expected_fg
+        opp_delta = actual_fg_opp - expected_fg_opp
 
-        tritons_delta = round(number=actual_fg-expected_fg, ndigits=2)
-        opp_delta = float(
-            round(number=actual_fg_opp-expected_fg_opp, ndigits=2)
+        st.caption(
+            f"Sample size: {int(tritons['ATTEMPT'].sum())} NDA shot attempts "
+            f"and {int(opp['ATTEMPT'].sum())} opponent shot attempts."
         )
-
-
-        triton_expected, opp_expected = st.columns(spec=2)
-
-        triton_actual, opp_actual = st.columns(spec=2)
-
-        tri_efg, op_efg = st.columns(spec=2)
-
-        with triton_expected:
-            st.metric(
-                value=np.round(a=expected_fg, decimals=2),
-                label='Expected NDA Points',
-                help=expected_points_description
+        st.subheader('Game snapshot')
+        team_cols = st.columns(spec=2)
+        for team_col, team_name, actual, expected, delta, efg in (
+            (
+                team_cols[0],
+                'NDA',
+                actual_fg,
+                expected_fg,
+                tritons_delta,
+                get_efg_percent(tritons)
+            ),
+            (
+                team_cols[1],
+                opp_team_name,
+                actual_fg_opp,
+                expected_fg_opp,
+                opp_delta,
+                get_efg_percent(opp)
             )
+        ):
+            with team_col:
+                with st.container(border=True):
+                    st.markdown(f'### {team_name}')
+                    metric_cols = st.columns(spec=3)
+                    with metric_cols[0]:
+                        st.metric(
+                            label='Actual points',
+                            value=int(actual),
+                            delta=f'{delta:+.2f} vs expected'
+                        )
+                    with metric_cols[1]:
+                        st.metric(
+                            label='Expected points',
+                            value=f'{expected:.2f}',
+                            help=expected_points_description
+                        )
+                    with metric_cols[2]:
+                        st.metric(
+                            label='Effective FG%',
+                            value=f'{efg:.1%}',
+                            help=effective_field_goal_description
+                        )
 
-        with triton_actual:
-            st.metric(
-                value=int(actual_fg),
-                label='Actual NDA Points',
-                delta=tritons_delta
-            )
-
-        with opp_expected:
-            st.metric(
-                value=np.round(a=expected_fg_opp, decimals=2),
-                label=f'Expected {opp_team_name} Points',
-                help=expected_points_description
-            )
-
-        with opp_actual:
-            st.metric(
-                value=int(actual_fg_opp),
-                label=f'Actual {opp_team_name} Points',
-                delta=opp_delta,
-                delta_color='inverse'
-            )
-
-        with tri_efg:
-            st.metric(
-                value=f'{tritons_efg_percent:.1%}',
-                label='NDA EFG%',
-                help=effective_field_goal_description
-            )
-
-        with op_efg:
-            st.metric(
-                value=f'{opp_efg_percent:.1%}',
-                label=f'{opp_team_name} EFG%',
-                help=effective_field_goal_description
-            )
-        sims, std = st.columns(spec=2)
-
-        with sims:
-            sim_count = st.number_input(
-                label='Number of Simulations',
-                min_value=1,
-                max_value=10000,
-                value=500
-            )
-        
-        with std:
-            standard_dev = st.number_input(
-                label='Standard Deviation',
-                min_value=0.01,
-                max_value=1.0,
-                value=0.3
-            )
-
-        st.divider()
         st.subheader('Outcome simulation')
-        st.caption('Adjust the assumptions, then run a scenario comparison for this game.')
-        run_sim = st.button(label='Run simulation', type='primary')
+        st.caption(
+            'Run a scenario using the selected scoring assumptions. '
+            'Results stay available while you switch between the chart and table.'
+        )
+        with st.form('expected_points_simulation_form', border=True):
+            sim_cols = st.columns(spec=2)
+            with sim_cols[0]:
+                sim_count = st.number_input(
+                    label='Number of simulations',
+                    min_value=1,
+                    max_value=10000,
+                    value=500,
+                    step=100,
+                    help='More simulations provide a steadier estimate but take longer.'
+                )
+            with sim_cols[1]:
+                standard_dev = st.number_input(
+                    label='Probability variation',
+                    min_value=0.01,
+                    max_value=1.0,
+                    value=0.3,
+                    help='Standard deviation applied to each shot make probability.'
+                )
+            run_sim = st.form_submit_button(
+                'Run simulation',
+                type='primary',
+                width='stretch'
+            )
+
+        simulation_key = (game, int(sim_count), float(standard_dev))
         if run_sim:
-            st.write('Running Simulation...')
             all_sims = run_simulations(
                 tritons=tritons,
                 opp=opp,
-                sims=sim_count,
-                standard_dev=standard_dev
+                sims=int(sim_count),
+                standard_dev=float(standard_dev)
             )
-            nda_win_percent = (
-                all_sims['WIN'].mean()
-            )
+            st.session_state['expected_points_simulation'] = {
+                'key': simulation_key,
+                'results': all_sims
+            }
 
-            win_percent, twenty_five, seventy_five = st.columns(spec=3)
+        saved_simulation = st.session_state.get('expected_points_simulation')
+        if saved_simulation and saved_simulation['key'] == simulation_key:
+            all_sims = saved_simulation['results']
+            lower_nda = all_sims['NDA_SIMULATED_POINTS'].quantile(0.1)
+            upper_nda = all_sims['NDA_SIMULATED_POINTS'].quantile(0.9)
+            lower_opp = all_sims['OPP_SIMULATED_POINTS'].quantile(0.1)
+            upper_opp = all_sims['OPP_SIMULATED_POINTS'].quantile(0.9)
+            win_percent, nda_range, opp_range = st.columns(spec=3)
             with win_percent:
                 st.metric(
-                    label=f'NDA Win % of simulations',
-                    value=f'{nda_win_percent:.1%}'
+                    label='NDA simulated win rate',
+                    value=f"{all_sims['WIN'].mean():.1%}"
                 )
-                
-            with twenty_five:
+            with nda_range:
                 st.metric(
-                    label='NDA 10th Percentile Points',
-                    value=(
-                        np.round(all_sims['NDA_SIMULATED_POINTS'].quantile(0.1), 2)
-                    )
+                    label='NDA scoring range (10th-90th percentile)',
+                    value=f'{lower_nda:.1f}-{upper_nda:.1f}'
                 )
+            with opp_range:
                 st.metric(
-                    label=f'{opp_team_name} 10th Percentile Points',
-                    value=(
-                        np.round(all_sims['OPP_SIMULATED_POINTS'].quantile(0.1), 2)
-                    )
+                    label=f'{opp_team_name} scoring range (10th-90th percentile)',
+                    value=f'{lower_opp:.1f}-{upper_opp:.1f}'
                 )
-                
-            with seventy_five:
-                st.metric(
-                    label='NDA 90th Percentile Points',
-                    value=(
-                        np.round(all_sims['NDA_SIMULATED_POINTS'].quantile(0.9), 2)
-                    )
-                )
-                st.metric(
-                    label=f'{opp_team_name} 90th Percentile Points',
-                    value=(
-                        np.round(all_sims['OPP_SIMULATED_POINTS'].quantile(0.9), 2)
-                    )
-                )
-                
-            nda = (
-                all_sims.select(
-                    pl.col(name='NDA_SIMULATED_POINTS')
-                      .alias('POINTS')
-                        )
-                        .with_columns(
-                            pl.lit('NDA').alias('NAME')
-                        )
-            )
-            opp = (
-                all_sims.select(
-                    pl.col(name='OPP_SIMULATED_POINTS').alias('POINTS')
-                      )
-                      .with_columns(
-                            pl.lit(f'{opp_team_name}').alias('NAME')
-                        )
-            )
-            all_sims = pl.concat([nda, opp])
-            all_sims = all_sims.to_pandas()
-            fig = px.histogram(
-                data_frame=all_sims,
-                x='POINTS',
-                histnorm='percent', 
-                color='NAME',
-                color_discrete_sequence=['blue', 'indianred'],
 
-            )
-            fig.update_layout(barmode='overlay')
-            # Reduce opacity to see both histograms
-            fig.update_traces(opacity=0.75)
-            fig.update_layout(
-                title='Simulated scoring distribution',
-                xaxis_title='Points scored',
-                yaxis_title='Share of simulations (%)',
-                legend_title='Team',
-            )
             simulation_view = st.segmented_control(
                 'Simulation display',
                 options=['Distribution chart', 'Percentile table'],
                 default='Distribution chart',
-                key='expected_points_simulation_display',
+                key='expected_points_simulation_display'
             )
             if simulation_view == 'Percentile table':
-                simulation_data = all_sims.to_pandas()
                 percentile_table = pd.DataFrame({
                     'Team': ['NDA', opp_team_name],
-                    '10th percentile points': [
-                        simulation_data['NDA_SIMULATED_POINTS'].quantile(0.1),
-                        simulation_data['OPP_SIMULATED_POINTS'].quantile(0.1),
-                    ],
+                    '10th percentile points': [lower_nda, lower_opp],
                     'Median points': [
-                        simulation_data['NDA_SIMULATED_POINTS'].median(),
-                        simulation_data['OPP_SIMULATED_POINTS'].median(),
+                        all_sims['NDA_SIMULATED_POINTS'].median(),
+                        all_sims['OPP_SIMULATED_POINTS'].median()
                     ],
-                    '90th percentile points': [
-                        simulation_data['NDA_SIMULATED_POINTS'].quantile(0.9),
-                        simulation_data['OPP_SIMULATED_POINTS'].quantile(0.9),
-                    ],
+                    '90th percentile points': [upper_nda, upper_opp]
                 }).round(1)
-                st.dataframe(percentile_table, width='stretch', hide_index=True)
+                st.dataframe(
+                    percentile_table,
+                    width='stretch',
+                    hide_index=True
+                )
             else:
+                chart_data = pd.DataFrame({
+                    'Team': (
+                        ['NDA'] * len(all_sims)
+                        + [opp_team_name] * len(all_sims)
+                    ),
+                    'Points': np.concatenate([
+                        all_sims['NDA_SIMULATED_POINTS'].to_numpy(),
+                        all_sims['OPP_SIMULATED_POINTS'].to_numpy()
+                    ])
+                })
+                fig = px.histogram(
+                    data_frame=chart_data,
+                    x='Points',
+                    histnorm='percent',
+                    color='Team',
+                    barmode='overlay',
+                    nbins=30,
+                    opacity=0.7,
+                    color_discrete_map={
+                        'NDA': '#1f4e79',
+                        opp_team_name: '#d95f59'
+                    },
+                    title='Simulated scoring distribution'
+                )
+                fig.update_layout(
+                    xaxis_title='Points scored',
+                    yaxis_title='Share of simulations (%)',
+                    legend_title='Team',
+                    bargap=0.08
+                )
                 st.plotly_chart(figure_or_data=fig, width='stretch')
-    else:
-        st.info('Select a game above to view expected points and run a simulation.')
+        else:
+            st.info('Run a simulation to see the scoring range and win rate.')

@@ -8,10 +8,12 @@ st.set_page_config(layout='wide')
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
-st.title('Team Shot Chart')
-st.caption('Compare shot selection, efficiency, and shot-quality grades across one or more games.')
-
-button = st.button(label='Clear cache', type='secondary')
+col1, col2 = st.columns([5, 1], vertical_alignment='bottom')
+with col1:
+     st.title('Team Shot Chart')
+     st.caption('Compare shot selection, efficiency, and shot-quality grades across one or more games.')
+with col2:
+     button = st.button(label='Clear cache', type='secondary')
 if button:
      st.cache_data.clear()
      st.cache_resource.clear()
@@ -314,7 +316,7 @@ if games_selected:
      shot_chart, buttons = st.columns([2, 1], vertical_alignment='top')
      with buttons:
           select_team = st.segmented_control(
-               label='Team on court',
+               label='Team Selection',
                options=['NDA', 'Opponent'],
                default='NDA'
           )
