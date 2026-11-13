@@ -198,11 +198,13 @@ def get_player_leaderboard(game_summary_season, selected_games):
     player_totals['eFG %'] = player_totals['EFG%'] * 100
     player_totals['2 PPA'] = player_totals['2PPA']
     player_totals['3 PPA'] = player_totals['3PPA']
+    player_totals['OE'] = player_totals['OFFENSIVE_EFFICENCY']
+    player_totals['PPP'] = player_totals['POINTS_PER_POSSESSION']
     columns = [
         'NAME', 'Games', 'Points / game', 'Rebounds / game',
         'Assists / game', 'Steals / game', 'Blocks / game',
         'Turnovers / game', 'Minutes / game', 'FG %', '2 PPA', '3 PPA',
-        'PPA', '3P %', 'FT %', 'eFG %', 'Game Score / game'
+        'PPA', 'PPP', 'OE', '3P %', 'FT %', 'eFG %', 'Game Score / game'
     ]
     return (
         player_totals[columns]
@@ -512,8 +514,8 @@ else:
             with stat_col:
                 st.metric(label=label, value=value)
 
-        overview_tab, player_tab, game_log_tab, detailed_tab = st.tabs([
-            'Team recap', 'Player leaders', 'Game log', 'All stats'
+        overview_tab, player_tab, chart_tab, game_log_tab, detailed_tab = st.tabs([
+            'Team recap', 'Player leaders', 'Player chart', 'Game log', 'All stats'
         ])
         with overview_tab:
             st.markdown('#### Shooting breakdown')
@@ -680,6 +682,67 @@ else:
                         'eFG %': st.column_config.NumberColumn(format='%.1f%%'),
                     }
                 )
+        with chart_tab:
+            st.caption(
+                'Compare a player stat across one or more games. Per-game '
+                'stats are averaged over each player’s games played; shooting '
+                'percentages use combined makes and attempts.'
+            )
+            chart_games = st.multiselect(
+                'Games to include',
+                options=games_list,
+                default=selected_games,
+                key='game_summary_chart_games',
+                help='Choose one game or combine several games for comparison.'
+            )
+            chart_stat = st.selectbox(
+                'Stat to chart',
+                options=[
+                    'Points / game',
+                    'Game Score / game',
+                    'OE',
+                    'eFG %',
+                    'PPA',
+                    '2 PPA',
+                    '3 PPA',
+                    'PPP',
+                    'Rebounds / game',
+                    'Assists / game',
+                    'Steals / game',
+                    'Blocks / game',
+                    'Turnovers / game',
+                    'Minutes / game',
+                    'FG %',
+                    '3P %',
+                    'FT %',
+                ],
+                key='game_summary_chart_stat'
+            )
+            if not chart_games:
+                st.info('Choose at least one game to build the player chart.')
+            else:
+                chart_players = get_player_leaderboard(
+                    game_summary_season,
+                    chart_games
+                )
+                if chart_players.empty:
+                    st.info('No player stats were found for the selected games.')
+                else:
+                    chart_players = chart_players.sort_values(
+                        chart_stat,
+                        ascending=(chart_stat == 'Turnovers / game'),
+                        kind='stable'
+                    )
+                    chart_data = chart_players[['Player', chart_stat]]
+                    st.bar_chart(
+                        data=chart_data,
+                        x='Player',
+                        y=chart_stat,
+                        horizontal=True,
+                        sort=False,
+                        height=max(300, min(800, len(chart_data) * 36)),
+                        alt=f'{chart_stat} by player for the selected games'
+                    )
         with game_log_tab:
             st.caption(
                 'Use the game log to spot scoring and ball-security trends '
