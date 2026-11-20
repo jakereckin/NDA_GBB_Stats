@@ -6,6 +6,10 @@ import polars as pl
 from py import sql, data_source, view_ui
 import joblib
 from pathlib import Path
+from py.expected_points import (
+    build_pre_shot_features,
+    predict_expected_points,
+)
 
 pd.options.mode.chained_assignment = None
 
@@ -50,14 +54,16 @@ def load_expected_points_data():
         sql=sql.get_play_by_play_sql(),
         connection=sql_lite_connect
     )
-    player_data = pl.from_pandas(data=player_data)
-    play_event_spot = build_features(player_data=player_data)
-    play_event_spot = apply_model(play_event_spot=play_event_spot)
-    return play_event_spot
+    shot_features = build_pre_shot_features(player_data)
+    predictions = predict_expected_points(
+        shot_features,
+        load_pipeline(),
+    )
+    return pl.from_pandas(data=predictions)
 
 
 # ----------------------------------------------------------------------------
-def build_features(player_data):
+def _legacy_build_features(player_data):
     '''
     Build features for basketball play events.
 
@@ -281,7 +287,7 @@ def build_features(player_data):
     # Compute LAST_ROLLING_POINTS_TEAM_NDA in polars before converting to pandas
     return play_event_spot
 
-def apply_model(play_event_spot):
+def _legacy_apply_model(play_event_spot):
     '''
     Apply a pre-trained model to predict the expected 
     points for a given play event spot.
