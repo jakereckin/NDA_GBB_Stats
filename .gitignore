@@ -1,6 +1,7 @@
 
 NDA_DB - game_summary.csv
 *.ipynb
+!notebooks/04-Expected_Points_Model.ipynb
 *.csv
 *.pyc
 /ipynb
