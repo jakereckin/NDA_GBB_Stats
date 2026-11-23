@@ -9,7 +9,7 @@ pd.options.mode.chained_assignment = None
 
 st.set_page_config(page_title='Minutes and Lineups', layout='wide')
 st.title('Minutes and Lineups')
-st.caption('Inspect player workload, lineup performance, and scoring margin by season.')
+st.caption('Inspect player workload, lineup performance, and plus/minus by season.')
 
 sql_lite_connect = st.secrets['nda_gbb_connection']['DB_CONNECTION']
 
@@ -17,7 +17,7 @@ _PLAYER_LINEUPS_MAP_NAMES = {
     'TOTAL_MIN': 'Total Minutes Played',
     'POINTS_PER_MINUTE': 'Team Points per Minute',
     'OPP_POINTS_PER_MINUTE': 'Opponent Points per Minute',
-    'PLUS_MINUS_PER_MINUTE': 'Scoring Margin per Minute',
+    'PLUS_MINUS_PER_MINUTE': 'Plus/Minus per Minute',
     'GAME_COUNT': 'Games Played'
 }
 
@@ -25,7 +25,7 @@ _PLAYER_MAP_NAMES = {
     'GAME_COUNT': 'Games Played',
     'POINTS_PER_MINUTE': 'Team Points per Minute on Court',
     'OPP_POINTS_PER_MINUTE': 'Opponent Points per Minute on Court',
-    'PLUS_MINUS_PER_MINUTE': 'Scoring Margin per Minute on Court',
+    'PLUS_MINUS_PER_MINUTE': 'Plus/Minus per Minute on Court',
     'MINUTES_PER_GAME': 'Minutes per Game'
 }
 
@@ -282,7 +282,7 @@ view_analytics = st.segmented_control(
     help='Compare combinations of players, individual players, or lineups from one game.'
 )
 st.caption(
-    'Scoring margin is your team’s points minus the opponent’s points while the '
+    'Plus/minus is your team’s points minus the opponent’s points while the '
     'player or lineup is on court. Per-minute rates make playing time easier to compare.'
 )
 
@@ -328,7 +328,7 @@ if view_analytics == 'Player Lineup':
         #lineup_level['Lineup'] = lineup_level['LINEUP_KEY']
         lineup_level['Lineup'] = lineup_level['LINEUP_KEY'].apply(lineup_ids_to_numbers)
         view_stats = [
-            'Scoring Margin per Minute', 'Games Played',
+            'Plus/Minus per Minute', 'Games Played',
             'Team Points per Minute',
             'Opponent Points per Minute'
         ]
@@ -383,7 +383,7 @@ if view_analytics == 'Player':
     player_clean_data['Name'] = player_clean_data['PLAYER_NAME']
     view_stats = [
         'Team Points per Minute on Court', 'Opponent Points per Minute on Court',
-        'Scoring Margin per Minute on Court', 'Minutes per Game', 'Games Played'
+        'Plus/Minus per Minute on Court', 'Minutes per Game', 'Games Played'
         ]
     data = st.selectbox(label='Measure', options=view_stats)
     results_view = st.segmented_control(
@@ -445,7 +445,7 @@ if view_analytics == 'Overall Lineup':
     lineup_level = lineup_level.rename(columns=_PLAYER_LINEUPS_MAP_NAMES)
     lineup_level['Lineup'] = lineup_level['LINEUP_KEY'].apply(lineup_ids_to_numbers)
     view_stats = [
-            'Scoring Margin per Minute',
+            'Plus/Minus per Minute',
             'Team Points per Minute',
             'Opponent Points per Minute'
     ]
@@ -525,7 +525,7 @@ if view_analytics == 'Game':
     st.subheader('Rotation timeline')
     st.caption(
         'Each bar shows a lineup stint from tip-off to the end of the game. '
-        'Green stints gained margin; red stints lost margin.'
+        'Green stints had positive plus/minus; red stints had negative plus/minus.'
     )
     timeline = go.Figure()
     for lineup, stint_group in rotation.groupby('Lineup', sort=False):
@@ -551,7 +551,7 @@ if view_analytics == 'Game':
                 'Stint: %{customdata[1]:.1f} min<br>'
                 'Score: %{customdata[2]}-%{customdata[4]} to '
                 '%{customdata[3]}-%{customdata[5]}<br>'
-                'Stint margin: %{customdata[6]:+.0f}<extra></extra>'
+                'Stint plus/minus: %{customdata[6]:+.0f}<extra></extra>'
             ),
             showlegend=False,
         ))
@@ -569,7 +569,7 @@ if view_analytics == 'Game':
     )
     st.plotly_chart(timeline, width='stretch')
     view_stats = [
-            'Scoring Margin per Minute',
+            'Plus/Minus per Minute',
             'Team Points per Minute',
             'Opponent Points per Minute'
         ]
@@ -594,11 +594,11 @@ if view_analytics == 'Game':
         )
         if not game_data.empty:
             best_lineup = game_data.sort_values(
-                'Scoring Margin per Minute', ascending=False
+                'Plus/Minus per Minute', ascending=False
             ).iloc[0]
             st.caption(
-                f"Best scoring margin: {best_lineup['Lineup']} at "
-                f"{best_lineup['Scoring Margin per Minute']:+.2f} points/min "
+                f"Best plus/minus: {best_lineup['Lineup']} at "
+                f"{best_lineup['Plus/Minus per Minute']:+.2f} points/min "
                 f"over {best_lineup['Total Minutes Played']:.1f} minutes."
             )
         st.caption(f"Sample size: {len(game_data)} lineups in this game.")
@@ -622,7 +622,7 @@ if view_analytics == 'Game':
                     'Total Minutes Played',
                     'Team Points per Minute',
                     'Opponent Points per Minute',
-                    'Scoring Margin per Minute',
+                    'Plus/Minus per Minute',
                 ]
                 st.dataframe(
                     sorted_lineup[['Rank'] + performance_columns].round(2),
