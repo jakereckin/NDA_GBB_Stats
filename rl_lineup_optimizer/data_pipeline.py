@@ -22,7 +22,10 @@ def _snapshot(group, clock, entering):
     clock_col = "TIME_IN" if entering else "TIME_OUT"
     a, b = (("TEAM_POINT_IN","OPP_POINT_IN") if entering
             else ("TEAM_POINT_OUT","OPP_POINT_OUT"))
-    rows = group.loc[group[clock_col] == clock, [a,b]].dropna().drop_duplicates()
+    rows = group.loc[group[clock_col] == clock, [a,b]]
+    if rows.empty or rows.isna().any().any():
+        return None
+    rows = rows.drop_duplicates()
     if len(rows) != 1:
         return None
     return int(rows.iloc[0][a]), int(rows.iloc[0][b])
