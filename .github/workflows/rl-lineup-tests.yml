@@ -1,0 +1,26 @@
+name: RL lineup optimizer tests
+
+on:
+  pull_request:
+    paths:
+      - "rl_lineup_optimizer/**"
+      - "tests/test_rl_*.py"
+      - ".github/workflows/rl-lineup-tests.yml"
+  push:
+    branches:
+      - main
+      - "feature/offline-rl-lineup-optimizer"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install test dependencies
+        run: python -m pip install --upgrade pip pandas numpy scikit-learn pytest
+      - name: Run RL unit tests
+        run: python -m pytest -q tests/test_rl_data_pipeline.py tests/test_rl_fqi.py
