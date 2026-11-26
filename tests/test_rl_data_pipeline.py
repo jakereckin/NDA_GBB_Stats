@@ -24,3 +24,11 @@ def test_non_five_player_game_is_excluded():
     stints, transitions, issues = build_dataset(game_frame(4))
     assert stints.empty and transitions.empty
     assert "LINEUP_SIZE" in set(issues.CODE)
+
+
+def test_missing_score_snapshot_excludes_game():
+    data = game_frame()
+    data.loc[0, "TEAM_POINT_IN"] = None
+    stints, transitions, issues = build_dataset(data)
+    assert stints.empty and transitions.empty
+    assert "MISSING_SCORE_SNAPSHOT" in set(issues.CODE)
