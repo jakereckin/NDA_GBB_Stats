@@ -125,6 +125,7 @@ else:
             st.Page("view_pages/view_minutes.py", title="Lineups"),
             st.Page("view_pages/view_lineup_network.py", title="Lineup Network"),
             st.Page("view_pages/view_season_trend.py", title="Season Trends"),
+            st.Page("view_pages/rl_lineup_optimizer.py", title="RL Lineup Optimizer"),
         ],
     }
 
